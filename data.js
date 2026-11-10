@@ -1036,18 +1036,63 @@
     // ------------------------------------------------------------------------
     // 9. ADMIN FUNCTIONS (USERS & ACCESS INVITATIONS)
     // ------------------------------------------------------------------------
+    getDeletedUserRegistry() {
+      try {
+        const raw = localStorage.getItem('ikaai_admin_deleted_users');
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    },
+
+    markUserAsDeleted(id, email) {
+      try {
+        const list = this.getDeletedUserRegistry();
+        if (id && !list.includes(String(id).toLowerCase())) list.push(String(id).toLowerCase());
+        if (email) {
+          const em = email.toLowerCase().trim();
+          if (!list.includes(em)) list.push(em);
+        }
+        localStorage.setItem('ikaai_admin_deleted_users', JSON.stringify(list));
+      } catch (e) {}
+    },
+
     async adminListAccessInvites() {
       const client = getClient();
+      const self = this;
+      const deletedSet = new Set((this.getDeletedUserRegistry() || []).map(s => String(s).toLowerCase().trim()));
+
+      function isDeleted(item) {
+        if (!item) return true;
+        const em = (item.email || '').toLowerCase().trim();
+        if (!em) return true;
+        if (em.startsWith('deleted_') || em.includes('@deleted.local') || item.full_name === '[Deleted User]') return true;
+        if (deletedSet.has(em)) return true;
+        if (item.id && deletedSet.has(String(item.id).toLowerCase())) return true;
+        if (item.profile_id && deletedSet.has(String(item.profile_id).toLowerCase())) return true;
+        if (item.invite_id && deletedSet.has(String(item.invite_id).toLowerCase())) return true;
+        return false;
+      }
 
       function normalizeAdminRecord(r) {
         if (!r) return null;
         const resolvedId = r.profile_id || r.id || r.user_id || r.invite_id;
         const resolvedName = r.profile_name || r.full_name || r.display_name || '';
         const isRegistered = Boolean(r.profile_id || r.user_id || r.is_registered);
-        let status = r.status || (r.is_pending_approval ? 'pending' : 'active');
+        const email = (r.email || '').trim().toLowerCase();
+        const isAdmin = r.role === 'admin' ||
+          email === 'admin.ikaaiindia@gmail.com' ||
+          email === 'akshaytiwarigaming@gmail.com' ||
+          email === 'akshaytiwari8527@gmail.com' ||
+          email.includes('admin');
+
+        // Admin accounts must always be active and hold admin role
+        let role = isAdmin ? 'admin' : (r.role || 'intern');
+        let status = isAdmin ? 'active' : (r.status || (r.is_pending_approval ? 'pending' : 'active'));
         if (status === 'invited' && isRegistered) {
           status = 'active';
         }
+
         return {
           ...r,
           id: resolvedId,
@@ -1057,6 +1102,7 @@
           full_name: resolvedName,
           display_name: resolvedName,
           is_registered: isRegistered,
+          role: role,
           status: status,
           is_pending_approval: status === 'pending' || Boolean(r.is_pending_approval)
         };
@@ -1066,7 +1112,7 @@
         try {
           const { data, error } = await client.rpc('list_access_invites');
           if (!error && Array.isArray(data)) {
-            return data.map(normalizeAdminRecord).filter(Boolean);
+            return data.map(normalizeAdminRecord).filter(r => r && !isDeleted(r));
           }
           if (error) console.warn('[DataLayer] list_access_invites rpc note:', error);
         } catch (e) {
@@ -1127,7 +1173,7 @@
               }
             });
 
-            return combined.filter(Boolean);
+            return combined.filter(r => r && !isDeleted(r));
           }
         } catch (fbErr) {
           console.warn('[DataLayer] admin list fallback error:', fbErr);
@@ -1322,7 +1368,20 @@
         }
       }
 
-      // 1. Delete from access_invites
+      // 1. Immediately register in persistent deleted list
+      this.markUserAsDeleted(userId, cleanEmail);
+
+      // 2. Try delete_user RPC if created on Supabase
+      try {
+        await client.rpc('delete_user', {
+          p_user_id: userId || null,
+          p_email: cleanEmail || null
+        });
+      } catch (rpcErr) {
+        // RPC might not be deployed yet, proceed to direct table operations
+      }
+
+      // 3. Delete from access_invites
       try {
         if (cleanEmail) {
           await client.from('access_invites').delete().ilike('email', cleanEmail);
@@ -1334,7 +1393,7 @@
         console.warn('[DataLayer] delete access_invites error:', invErr);
       }
 
-      // 2. Delete or deactivate from profiles
+      // 4. Delete or deactivate from profiles
       if (userId) {
         try {
           const { error: profDeleteErr } = await client
@@ -1343,11 +1402,12 @@
             .eq('id', userId);
 
           if (profDeleteErr) {
-            console.warn('[DataLayer] profiles delete restricted by FK constraints, revoking instead:', profDeleteErr);
             await client
               .from('profiles')
               .update({
                 access_status: 'revoked',
+                full_name: '[Deleted User]',
+                email: 'deleted_' + Date.now() + '_' + cleanEmail,
                 updated_at: new Date().toISOString()
               })
               .eq('id', userId);
@@ -1367,6 +1427,8 @@
               .from('profiles')
               .update({
                 access_status: 'revoked',
+                full_name: '[Deleted User]',
+                email: 'deleted_' + Date.now() + '_' + cleanEmail,
                 updated_at: new Date().toISOString()
               })
               .ilike('email', cleanEmail);

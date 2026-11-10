@@ -9554,8 +9554,9 @@
           if (!confirm(`Are you sure you want to revoke access for ${u.full_name || u.email}? They will immediately be locked out of all portal resources.`)) return;
           try {
             await window.DataLayer.adminRevokeUserAccess(targetId);
+            u.status = 'revoked';
             showToast(`Revoked access for ${u.email}`);
-            await renderAdminPortal();
+            renderAdminPortalFilteredTable();
           } catch (err) {
             alert('Failed to revoke access: ' + err.message);
           }
@@ -9572,8 +9573,9 @@
           }
           try {
             await window.DataLayer.adminRestoreUserAccess(targetId);
+            u.status = 'active';
             showToast(`Restored access for ${u.email}`);
-            await renderAdminPortal();
+            renderAdminPortalFilteredTable();
           } catch (err) {
             alert('Failed to restore access: ' + err.message);
           }
@@ -9582,22 +9584,33 @@
 
       const deleteBtn = tr.querySelector('.btn-delete-user');
       if (deleteBtn) {
-        deleteBtn.addEventListener('click', async () => {
+        deleteBtn.addEventListener('click', async (e) => {
+          e.stopPropagation();
           if (isAdminAccount) {
             alert('Administrator accounts are protected and cannot be deleted.');
             return;
           }
           const targetId = u.id || u.profile_id || u.invite_id;
+          const targetEmail = u.email;
           const confirmMsg = `Are you sure you want to permanently delete and remove ${u.full_name || u.email}? This action cannot be undone.`;
           if (!confirm(confirmMsg)) return;
 
           try {
             deleteBtn.disabled = true;
             deleteBtn.textContent = 'Deleting...';
-            await window.DataLayer.adminDeleteUser(targetId, u.email);
+            await window.DataLayer.adminDeleteUser(targetId, targetEmail);
+
+            // Immediately remove from cached user directory and re-render
+            adminPortalCachedUsers = adminPortalCachedUsers.filter(item => {
+              const matchesId = targetId && (item.id === targetId || item.profile_id === targetId || item.invite_id === targetId);
+              const matchesEmail = targetEmail && item.email && item.email.toLowerCase() === targetEmail.toLowerCase();
+              return !matchesId && !matchesEmail;
+            });
+
+            renderAdminPortalFilteredTable();
             showToast(`Deleted ${u.email} successfully.`);
-            await renderAdminPortal();
           } catch (err) {
+            console.error('[Admin] Delete user error:', err);
             alert('Failed to delete user: ' + err.message);
             deleteBtn.disabled = false;
             deleteBtn.textContent = 'Delete';
@@ -9871,10 +9884,18 @@
         el.adminDeleteModalUserBtn.textContent = 'Deleting...';
         try {
           const targetId = currentModalUser.id || currentModalUser.profile_id || currentModalUser.invite_id;
-          await window.DataLayer.adminDeleteUser(targetId, currentModalUser.email);
-          showToast(`Deleted ${currentModalUser.email} from directory`);
+          const targetEmail = currentModalUser.email;
+          await window.DataLayer.adminDeleteUser(targetId, targetEmail);
+
+          adminPortalCachedUsers = adminPortalCachedUsers.filter(item => {
+            const matchesId = targetId && (item.id === targetId || item.profile_id === targetId || item.invite_id === targetId);
+            const matchesEmail = targetEmail && item.email && item.email.toLowerCase() === targetEmail.toLowerCase();
+            return !matchesId && !matchesEmail;
+          });
+
           if (el.adminEditUserModal) el.adminEditUserModal.style.display = 'none';
-          await renderAdminPortal();
+          renderAdminPortalFilteredTable();
+          showToast(`Deleted ${currentModalUser.email} from directory`);
         } catch (err) {
           alert('Failed to delete user: ' + err.message);
         } finally {
