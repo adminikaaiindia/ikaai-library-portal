@@ -1,0 +1,28 @@
+I have received and reviewed the roadmap and status guide.
+
+### Current Implementation Status
+
+| Section / Prompt | Status | Details & Files |
+| :--- | :--- | :--- |
+| **Prompt 1: Access Control (Admin Approvals, Roles & Programmes)** | **Completed & Tested** | • Migration: `supabase/migrations/20261106_05_access_control_and_invites.sql`<br>• Full-screen `#accessPendingScreen` and `#accessRevokedScreen` gating in [index.html](file:///d:/IKAAI%20India/Ikaai%20Beginner%20Portal%201/index.html).<br>• Self-assignment modal (`#programmeSelectModal`) removed.<br>• Admin "Users & Access" panel with Single/Bulk (CSV) invites, directory table, and filters in [app.js](file:///d:/IKAAI%20India/Ikaai%20Beginner%20Portal%201/app.js). |
+| **Prompt 2: Account Settings** | **Completed & Tested** | • Migration: `supabase/migrations/20261106_04_account_settings_and_avatars.sql`<br>• Connected to real profile (`full_name`, `phone` **mandatory**, `avatar_url`, real member since date, real verified badge).<br>• Avatar upload to private `avatars/{user_id}/` folder with cleanup of replaced files.<br>• Email password update via `supabase.auth.updateUser` (hidden for Google users). |
+| **Prompt 3: Chat Enrolment Backfill** | **Ready for Check** | If your live database query (`select count(*) from public.chat_conversations;`) returns `0`, we can generate the backfill migration. |
+| **Prompt 4: Written Exam, Grade & Feedback** | **Next in Queue** | Connect Written Exam, Grade, and Feedback to Supabase; eliminate all demo data. |
+| **Prompt 5: Announcements** | **Queued** | Noticeboard system with realtime notifications. |
+| **Prompt 6: Security Audit & Hardening** | **Queued** | Final security review, RLS summary, private bucket verification. |
+| **Prompt 7: Deployment Readiness** | **Queued** | Static hosting config, clean redirects, legal placeholders. |
+
+---
+
+### Migrations to Run in Supabase SQL Editor (If Not Yet Executed)
+
+To activate Prompts 1 and 2 on your live Supabase database, run these two files in order in your **Supabase SQL Editor**:
+1. `supabase/migrations/20261106_04_account_settings_and_avatars.sql`
+2. `supabase/migrations/20261106_05_access_control_and_invites.sql`
+
+---
+
+### How would you like to proceed?
+1. **Proceed to Prompt 4**: Connect **Written Exam, Grade, and Feedback** to the live database and remove all demo data.
+2. **Generate Prompt 3 (Chat Enrolment Backfill)**: If your `chat_conversations` query returned `0`.
+3. Address any other specific step or test.
