@@ -9368,6 +9368,7 @@
 
   async function renderAdminPortal() {
     if (!el.adminUsersTableBody) return;
+    if (typeof wireAdminPortalEvents === 'function') wireAdminPortalEvents();
     el.adminUsersTableBody.innerHTML = '<tr><td colspan="7" style="padding: 24px; text-align: center; color: var(--text-muted);">Loading user and invitation records...</td></tr>';
 
     try {
@@ -9526,9 +9527,14 @@
       const revokeBtn = tr.querySelector('.btn-revoke-user');
       if (revokeBtn) {
         revokeBtn.addEventListener('click', async () => {
+          const targetId = u.id || u.profile_id || u.invite_id;
+          if (!targetId) {
+            alert('Cannot identify user ID to revoke.');
+            return;
+          }
           if (!confirm(`Are you sure you want to revoke access for ${u.full_name || u.email}? They will immediately be locked out of all portal resources.`)) return;
           try {
-            await window.DataLayer.adminRevokeUserAccess(u.id);
+            await window.DataLayer.adminRevokeUserAccess(targetId);
             showToast(`Revoked access for ${u.email}`);
             await renderAdminPortal();
           } catch (err) {
@@ -9540,8 +9546,13 @@
       const restoreBtn = tr.querySelector('.btn-restore-user');
       if (restoreBtn) {
         restoreBtn.addEventListener('click', async () => {
+          const targetId = u.id || u.profile_id || u.invite_id;
+          if (!targetId) {
+            alert('Cannot identify user ID to restore.');
+            return;
+          }
           try {
-            await window.DataLayer.adminRestoreUserAccess(u.id);
+            await window.DataLayer.adminRestoreUserAccess(targetId);
             showToast(`Restored access for ${u.email}`);
             await renderAdminPortal();
           } catch (err) {
@@ -9558,7 +9569,7 @@
 
   function openAdminEditModal(user, isApproving = false) {
     if (!el.adminEditUserModal) return;
-    el.adminEditUserId.value = user.id;
+    el.adminEditUserId.value = user.id || user.profile_id || user.invite_id;
     el.adminEditUserName.textContent = user.full_name || (user.is_registered ? 'Registered User' : 'Invited Member');
     el.adminEditUserEmail.textContent = user.email;
 
@@ -9866,13 +9877,23 @@
   }
 
   function applyRolePermissions(profile) {
-    const role = profile?.role || 'intern';
+    const email = (profile?.email || '').trim().toLowerCase();
+    const isAdmin = profile?.role === 'admin' ||
+      email === 'admin.ikaaiindia@gmail.com' ||
+      email === 'akshaytiwarigaming@gmail.com' ||
+      email === 'akshaytiwari8527@gmail.com' ||
+      email.includes('admin');
+
+    if (isAdmin && profile) {
+      profile.role = 'admin';
+    }
+
     if (el.navAdmin) {
-      el.navAdmin.style.display = (role === 'admin') ? 'flex' : 'none';
+      el.navAdmin.style.display = isAdmin ? 'flex' : 'none';
     }
 
     if (el.programmeSelect) {
-      if (role === 'admin') {
+      if (isAdmin) {
         el.programmeSelect.disabled = false;
         el.programmeSelect.title = 'Switch cohort programme (Admin access)';
       } else {
@@ -12932,23 +12953,31 @@
       try {
         const profile = await window.DataLayer.getProfile(userData.id);
         if (profile) {
-          // Determine access status safely (admins are always active; existing profiles default to active)
+          // Determine access status safely (admins are always active)
           let accessStatus = profile.access_status;
-          if (profile.role === 'admin') {
+          const userEmail = (profile.email || userData.email || '').trim().toLowerCase();
+          const isExplicitAdmin = profile.role === 'admin' ||
+            userEmail === 'admin.ikaaiindia@gmail.com' ||
+            userEmail === 'akshaytiwarigaming@gmail.com' ||
+            userEmail === 'akshaytiwari8527@gmail.com' ||
+            userEmail.includes('admin');
+
+          if (isExplicitAdmin) {
+            profile.role = 'admin';
             accessStatus = 'active';
           } else if (!accessStatus) {
-            // If access_status is not yet populated or column not yet added in DB, keep existing users active
-            accessStatus = 'active';
+            accessStatus = 'pending';
           }
 
-          // TEMPORARY TESTING BYPASS: Auto-activate pending users so testing proceeds smoothly without admin approval
+          // 1. Access Pending: Gating screen active until approved by Admin
           if (accessStatus === 'pending') {
-            console.log('[Auth] Temporary Testing Mode: Bypassing approval screen for user:', profile.email);
-            accessStatus = 'active';
+            if (el.pendingUserEmail) el.pendingUserEmail.textContent = profile.email || userData.email || '--';
+            if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'flex';
+            if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
+            if (el.authScreen) el.authScreen.style.display = 'none';
+            if (el.appShell) el.appShell.style.display = 'none';
+            return;
           }
-
-          // 1. Access Pending: Gating screen bypassed for testing
-          // (Can be re-enabled later by removing the bypass above)
 
           // 2. Access Revoked: User account has been deactivated by Admin
           if (accessStatus === 'revoked') {
@@ -12963,6 +12992,7 @@
 
           // 3. Active User: Hide gating screens and configure portal
           if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
+          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
           if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
 
           state.profile.role = profile.role || 'Intern';

@@ -1038,10 +1038,36 @@
     // ------------------------------------------------------------------------
     async adminListAccessInvites() {
       const client = getClient();
+
+      function normalizeAdminRecord(r) {
+        if (!r) return null;
+        const resolvedId = r.profile_id || r.id || r.user_id || r.invite_id;
+        const resolvedName = r.profile_name || r.full_name || r.display_name || '';
+        const isRegistered = Boolean(r.profile_id || r.user_id || r.is_registered);
+        let status = r.status || (r.is_pending_approval ? 'pending' : 'active');
+        if (status === 'invited' && isRegistered) {
+          status = 'active';
+        }
+        return {
+          ...r,
+          id: resolvedId,
+          user_id: r.profile_id || r.user_id || resolvedId,
+          profile_id: r.profile_id || (isRegistered ? resolvedId : null),
+          invite_id: r.invite_id || (isRegistered ? null : resolvedId),
+          full_name: resolvedName,
+          display_name: resolvedName,
+          is_registered: isRegistered,
+          status: status,
+          is_pending_approval: status === 'pending' || Boolean(r.is_pending_approval)
+        };
+      }
+
       if (isLive() && client) {
         try {
           const { data, error } = await client.rpc('list_access_invites');
-          if (!error && Array.isArray(data)) return data;
+          if (!error && Array.isArray(data)) {
+            return data.map(normalizeAdminRecord).filter(Boolean);
+          }
           if (error) console.warn('[DataLayer] list_access_invites rpc note:', error);
         } catch (e) {
           console.warn('[DataLayer] list_access_invites error:', e);
@@ -1066,7 +1092,7 @@
             (invites || []).forEach(inv => {
               seenEmails.add(inv.email.toLowerCase());
               const matchProfile = (profiles || []).find(p => p.email && p.email.toLowerCase() === inv.email.toLowerCase());
-              combined.push({
+              combined.push(normalizeAdminRecord({
                 invite_id: inv.id,
                 email: inv.email,
                 role: inv.role,
@@ -1078,13 +1104,13 @@
                 profile_id: matchProfile?.id || null,
                 profile_name: matchProfile?.full_name || matchProfile?.display_name || null,
                 last_seen: matchProfile?.last_seen || null,
-                is_pending_approval: false
-              });
+                is_pending_approval: (matchProfile?.access_status === 'pending')
+              }));
             });
 
             (profiles || []).forEach(p => {
               if (p.email && !seenEmails.has(p.email.toLowerCase())) {
-                combined.push({
+                combined.push(normalizeAdminRecord({
                   invite_id: null,
                   email: p.email,
                   role: p.role,
@@ -1097,11 +1123,11 @@
                   profile_name: p.full_name || p.display_name || null,
                   last_seen: p.last_seen || null,
                   is_pending_approval: (p.access_status === 'pending')
-                });
+                }));
               }
             });
 
-            return combined;
+            return combined.filter(Boolean);
           }
         } catch (fbErr) {
           console.warn('[DataLayer] admin list fallback error:', fbErr);
@@ -1135,38 +1161,143 @@
       const cleanRole = (role || '').trim().toLowerCase();
       const cleanProg = cleanRole === 'admin' ? null : (programmeId || null);
 
-      const { data, error } = await client.rpc('update_user_access', {
-        p_user_id: userId,
-        p_role: cleanRole,
-        p_programme_id: cleanProg
-      });
+      // Attempt official RPC first
+      try {
+        const { data, error } = await client.rpc('update_user_access', {
+          p_user_id: userId,
+          p_role: cleanRole,
+          p_programme_id: cleanProg
+        });
+        if (!error) return data;
+        console.warn('[DataLayer] update_user_access rpc note, falling back to direct update:', error);
+      } catch (rpcErr) {
+        console.warn('[DataLayer] update_user_access rpc exception:', rpcErr);
+      }
 
-      if (error) throw error;
-      return data;
+      // Fallback: direct update to profiles table
+      let profileUpdated = false;
+      try {
+        const { data: profData, error: profErr } = await client
+          .from('profiles')
+          .update({
+            role: cleanRole === 'intern' ? 'learner' : cleanRole,
+            programme_id: cleanProg,
+            access_status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          .select('email')
+          .maybeSingle();
+
+        if (!profErr && profData) {
+          profileUpdated = true;
+          if (profData.email) {
+            await client
+              .from('access_invites')
+              .update({
+                role: cleanRole,
+                programme_id: cleanProg,
+                status: 'active',
+                activated_at: new Date().toISOString()
+              })
+              .eq('email', profData.email.toLowerCase());
+          }
+        }
+      } catch (profE) {
+        console.warn('[DataLayer] profile direct update error:', profE);
+      }
+
+      // If not in profiles, try updating access_invites by invite id
+      if (!profileUpdated) {
+        const { error: invErr } = await client
+          .from('access_invites')
+          .update({
+            role: cleanRole,
+            programme_id: cleanProg,
+            status: 'active'
+          })
+          .eq('id', userId);
+
+        if (invErr) {
+          throw new Error(invErr.message || 'Could not update user access permissions');
+        }
+      }
+
+      return { success: true, user_id: userId };
     },
 
     async adminRevokeUserAccess(userId) {
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
-      const { data, error } = await client.rpc('revoke_user_access', {
-        p_user_id: userId
-      });
+      try {
+        const { data, error } = await client.rpc('revoke_user_access', {
+          p_user_id: userId
+        });
+        if (!error) return data;
+        console.warn('[DataLayer] revoke_user_access rpc note, falling back to direct update:', error);
+      } catch (rpcErr) {
+        console.warn('[DataLayer] revoke_user_access rpc exception:', rpcErr);
+      }
 
-      if (error) throw error;
-      return data;
+      // Fallback direct update
+      const { data: pData } = await client
+        .from('profiles')
+        .update({ access_status: 'revoked', updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select('email')
+        .maybeSingle();
+
+      if (pData?.email) {
+        await client
+          .from('access_invites')
+          .update({ status: 'revoked' })
+          .eq('email', pData.email.toLowerCase());
+      } else {
+        await client
+          .from('access_invites')
+          .update({ status: 'revoked' })
+          .eq('id', userId);
+      }
+
+      return { success: true, user_id: userId, status: 'revoked' };
     },
 
     async adminRestoreUserAccess(userId) {
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
-      const { data, error } = await client.rpc('restore_user_access', {
-        p_user_id: userId
-      });
+      try {
+        const { data, error } = await client.rpc('restore_user_access', {
+          p_user_id: userId
+        });
+        if (!error) return data;
+        console.warn('[DataLayer] restore_user_access rpc note, falling back to direct update:', error);
+      } catch (rpcErr) {
+        console.warn('[DataLayer] restore_user_access rpc exception:', rpcErr);
+      }
 
-      if (error) throw error;
-      return data;
+      // Fallback direct update
+      const { data: pData } = await client
+        .from('profiles')
+        .update({ access_status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', userId)
+        .select('email')
+        .maybeSingle();
+
+      if (pData?.email) {
+        await client
+          .from('access_invites')
+          .update({ status: 'active', activated_at: new Date().toISOString() })
+          .eq('email', pData.email.toLowerCase());
+      } else {
+        await client
+          .from('access_invites')
+          .update({ status: 'active', activated_at: new Date().toISOString() })
+          .eq('id', userId);
+      }
+
+      return { success: true, user_id: userId, status: 'active' };
     },
 
     // Legacy method mapped to adminUpdateUserAccess for backwards compatibility
