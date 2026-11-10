@@ -5451,6 +5451,93 @@ button.timer-locked,
   border-color: #cbd5e1 !important;
 }
 
+/* Sub-module Resource Timer (0.1, 0.2, etc.) */
+.resource-timer-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 14px 12px 14px;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.resource-timer-bar-wrap.paused {
+  background: rgba(245, 158, 11, 0.09);
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.resource-timer-bar-wrap.completed {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.res-timer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.res-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #10b981;
+  font-weight: 600;
+}
+
+.resource-timer-bar-wrap.paused .res-timer-badge {
+  color: #f59e0b;
+}
+
+.resource-timer-bar-wrap.completed .res-timer-badge {
+  color: #10b981;
+}
+
+.res-timer-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .res-timer-progress-track {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.res-timer-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981, #059669);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.resource-timer-bar-wrap.paused .res-timer-progress-fill {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.sidebar-resource-sublink.timer-active {
+  background: rgba(16, 185, 129, 0.12) !important;
+  border-left: 2px solid #10b981;
+}
+
+.sidebar-resource-sublink .res-mini-timer {
+  font-size: 10px;
+  font-weight: 700;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 1px 6px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Responsive: Timer on Mobile (above heading) vs Desktop (on the right) */
 @media (max-width: 768px) {
   .module-card-top {

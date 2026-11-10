@@ -2057,6 +2057,19 @@
       const senderRole = profile?.role || 'learner';
       const senderAvatar = (senderName.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U').toUpperCase();
 
+      // Ensure conversation record exists in chat_conversations
+      try {
+        await client.from('chat_conversations').upsert({
+          id: conversationId,
+          name: conversationId.startsWith('dm_') ? 'Direct Message' : (conversationId === 'all-members' ? 'All Members' : '#' + conversationId),
+          type: conversationId.startsWith('dm_') ? 'direct' : 'channel',
+          last_message_at: new Date().toISOString(),
+          last_message_preview: (content || '').substring(0, 100)
+        }, { onConflict: 'id' });
+      } catch (upsertErr) {
+        console.warn('[DataLayer] Non-blocking conv upsert warning:', upsertErr);
+      }
+
       // 1. Insert chat message
       const { data: newMsg, error: msgError } = await client
         .from('chat_messages')

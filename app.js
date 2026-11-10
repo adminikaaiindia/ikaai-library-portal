@@ -3638,8 +3638,10 @@
 
       if (mod.resources && mod.resources.length > 0) {
         mod.resources.forEach((res) => {
+          const isResDone = isResourceTimerUnlocked(res);
+          const isTimerActive = Boolean(activeResourceTimer && activeResourceTimer.resId === res.id);
           const sublink = document.createElement('div');
-          sublink.className = 'sidebar-resource-sublink';
+          sublink.className = `sidebar-resource-sublink ${isTimerActive ? 'timer-active' : ''}`;
           sublink.innerHTML = `
             <div class="sidebar-resource-left">
               <span class="sidebar-res-icon">
@@ -3650,11 +3652,22 @@
               </span>
               <span class="sidebar-res-title">${res.title}</span>
             </div>
-            <div class="completed-check-icon ${res.completed ? 'checked' : ''}" style="width: 14px; height: 14px;">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
+            ${isResDone ? `
+              <div class="completed-check-icon checked" style="width: 14px; height: 14px;" title="Completed">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+            ` : (isTimerActive ? `
+              <span class="res-mini-timer" id="sideResTimer_${res.id}">${activeResourceTimer.remaining}s</span>
+            ` : `
+              <div class="completed-check-icon timer-locked" style="width: 14px; height: 14px;" title="Review required">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </div>
+            `)}
           `;
 
           sublink.addEventListener('click', (e) => {
@@ -3662,12 +3675,15 @@
             currentModuleIndex = idx;
             expandedModules.add(idx);
             switchScreen('module');
-            // Expand preview of this resource
+            // Expand preview of this resource & trigger its timer
             setTimeout(() => {
               const resCard = document.querySelector(`[data-resource-id="${res.id}"]`);
               if (resCard) {
                 resCard.classList.add('preview-open');
                 resCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                if (!isResourceTimerUnlocked(res)) {
+                  startResourceTimer(res, mod);
+                }
               }
             }, 100);
           });
@@ -3717,6 +3733,10 @@
   let moduleTimerInterval = null;
   let isTimerPausedDueToVisibility = false;
 
+  // Sub-module Resource Timer (0.1, 0.2, etc.)
+  const RESOURCE_TIMER_SECONDS = 15;
+  let activeResourceTimer = null; // { resId, modId, remaining, total, interval, paused }
+
   function getCurrentUserId() {
     return (state.profile && state.profile.email)
       ? state.profile.email.trim().toLowerCase()
@@ -3728,6 +3748,11 @@
     return `ikaai_timer_${userId}_${currentProgrammeId}_${moduleId}`;
   }
 
+  function getResourceTimerStorageKey(resId) {
+    const userId = getCurrentUserId();
+    return `ikaai_timer_res_${userId}_${currentProgrammeId}_${resId}`;
+  }
+
   function isModuleTimerUnlocked(mod) {
     if (!mod) return false;
     const key = getModuleTimerStorageKey(mod.id);
@@ -3737,13 +3762,131 @@
     return false;
   }
 
+  function isResourceTimerUnlocked(res) {
+    if (!res) return false;
+    if (res.completed) return true;
+    const key = getResourceTimerStorageKey(res.id);
+    const stored = localStorage.getItem(key);
+    return stored === 'unlocked' || stored === 'completed';
+  }
+
+  function clearResourceTimer() {
+    if (activeResourceTimer && activeResourceTimer.interval) {
+      clearInterval(activeResourceTimer.interval);
+    }
+    activeResourceTimer = null;
+  }
+
   function clearModuleTimer() {
     if (moduleTimerInterval) {
       clearInterval(moduleTimerInterval);
       moduleTimerInterval = null;
     }
+    clearResourceTimer();
     isTimerPausedDueToVisibility = false;
     activeTimerModuleId = null;
+  }
+
+  function startResourceTimer(res, mod) {
+    if (!res || !mod) return;
+    if (isResourceTimerUnlocked(res)) {
+      updateResourceTimerUI(res, 0, RESOURCE_TIMER_SECONDS, false);
+      return;
+    }
+
+    if (activeResourceTimer && activeResourceTimer.resId === res.id) {
+      return; // already running for this resource
+    }
+
+    clearResourceTimer();
+
+    activeResourceTimer = {
+      resId: res.id,
+      modId: mod.id,
+      remaining: RESOURCE_TIMER_SECONDS,
+      total: RESOURCE_TIMER_SECONDS,
+      paused: (document.visibilityState === 'hidden')
+    };
+
+    updateResourceTimerUI(res, activeResourceTimer.remaining, activeResourceTimer.total, activeResourceTimer.paused);
+    renderSidebar();
+
+    activeResourceTimer.interval = setInterval(() => {
+      if (!activeResourceTimer) return;
+      if (document.visibilityState === 'hidden') {
+        activeResourceTimer.paused = true;
+        updateResourceTimerUI(res, activeResourceTimer.remaining, activeResourceTimer.total, true);
+        return;
+      }
+
+      activeResourceTimer.paused = false;
+      activeResourceTimer.remaining--;
+
+      if (activeResourceTimer.remaining > 0) {
+        updateResourceTimerUI(res, activeResourceTimer.remaining, activeResourceTimer.total, false);
+        const sideBadge = document.getElementById(`sideResTimer_${res.id}`);
+        if (sideBadge) sideBadge.textContent = `${activeResourceTimer.remaining}s`;
+      } else {
+        clearResourceTimer();
+        unlockResource(res, mod);
+      }
+    }, 1000);
+  }
+
+  function updateResourceTimerUI(res, remaining, total, isPaused) {
+    const wrap = document.getElementById(`resTimer_${res.id}`);
+    if (!wrap) return;
+
+    const fill = wrap.querySelector('.res-timer-progress-fill');
+    const badgeText = wrap.querySelector('.res-timer-text');
+    const headerTitle = wrap.querySelector('.res-timer-title');
+
+    if (remaining <= 0) {
+      wrap.className = 'resource-timer-bar-wrap completed';
+      if (fill) fill.style.width = '100%';
+      if (badgeText) {
+        badgeText.innerHTML = `✓ Review Completed`;
+      }
+      if (headerTitle) headerTitle.textContent = 'Resource unlocked and verified';
+    } else {
+      wrap.className = `resource-timer-bar-wrap ${isPaused ? 'paused' : ''}`;
+      const pct = Math.round(((total - remaining) / total) * 100);
+      if (fill) fill.style.width = `${pct}%`;
+      if (badgeText) {
+        badgeText.innerHTML = `⏱️ ${isPaused ? 'Paused (tab inactive)' : `${remaining}s remaining`}`;
+      }
+      if (headerTitle) {
+        headerTitle.textContent = isPaused ? 'Please switch back to complete review' : 'Active resource review in progress';
+      }
+    }
+  }
+
+  function unlockResource(res, mod) {
+    res.completed = true;
+    const key = getResourceTimerStorageKey(res.id);
+    localStorage.setItem(key, 'unlocked');
+
+    if (window.DataLayer) {
+      window.DataLayer.markResourceComplete(res.id).catch(err => {
+        console.warn('[DataLayer] markResourceComplete:', err?.message || err);
+      });
+    }
+
+    saveState();
+    updateResourceTimerUI(res, 0, RESOURCE_TIMER_SECONDS, false);
+
+    const card = document.querySelector(`[data-resource-id="${res.id}"]`);
+    if (card) {
+      const checkBtn = card.querySelector('.completed-check-icon');
+      if (checkBtn) {
+        checkBtn.classList.remove('timer-locked');
+        checkBtn.classList.add('checked');
+        checkBtn.title = 'Resource completed';
+      }
+    }
+
+    renderSidebar();
+    showToast(`✓ Completed review: ${res.title}`);
   }
 
   function updateTimerRingUI(remaining, total, isPaused) {
@@ -3919,14 +4062,25 @@
     if (activeScreen !== 'module') return;
     const prog = getCurrentProgramme();
     const mod = prog.modules ? prog.modules[currentModuleIndex] : null;
-    if (!mod || isModuleTimerUnlocked(mod)) return;
 
-    if (document.visibilityState === 'hidden') {
-      isTimerPausedDueToVisibility = true;
-      updateTimerRingUI(activeTimerSecondsRemaining, MODULE_TIMER_SECONDS, true);
-    } else {
-      isTimerPausedDueToVisibility = false;
-      updateTimerRingUI(activeTimerSecondsRemaining, MODULE_TIMER_SECONDS, false);
+    if (mod && !isModuleTimerUnlocked(mod)) {
+      if (document.visibilityState === 'hidden') {
+        isTimerPausedDueToVisibility = true;
+        updateTimerRingUI(activeTimerSecondsRemaining, MODULE_TIMER_SECONDS, true);
+      } else {
+        isTimerPausedDueToVisibility = false;
+        updateTimerRingUI(activeTimerSecondsRemaining, MODULE_TIMER_SECONDS, false);
+      }
+    }
+
+    // Sub-resource timer visibility pause/resume
+    if (activeResourceTimer && activeResourceTimer.remaining > 0) {
+      const isHidden = (document.visibilityState === 'hidden');
+      activeResourceTimer.paused = isHidden;
+      const res = mod && mod.resources ? mod.resources.find(r => r.id === activeResourceTimer.resId) : null;
+      if (res) {
+        updateResourceTimerUI(res, activeResourceTimer.remaining, activeResourceTimer.total, isHidden);
+      }
     }
   });
 
@@ -4071,7 +4225,7 @@
                 <line x1="12" y1="15" x2="12" y2="3"></line>
               </svg>
             </button>
-            <div class="completed-check-icon ${res.completed ? 'checked' : ''}" title="Mark as complete">
+            <div class="completed-check-icon ${isResourceTimerUnlocked(res) ? 'checked' : 'timer-locked'}" title="${isResourceTimerUnlocked(res) ? 'Completed' : '15s review required'}">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="20 6 9 17 4 12"></polyline>
               </svg>
@@ -4081,6 +4235,21 @@
 
         <!-- Inline Preview Accordion Drawer -->
         <div class="inline-doc-preview">
+          <!-- Resource Review Timer Bar -->
+          <div class="resource-timer-bar-wrap ${isResourceTimerUnlocked(res) ? 'completed' : ''}" id="resTimer_${res.id}">
+            <div class="res-timer-header">
+              <span class="res-timer-title">${isResourceTimerUnlocked(res) ? 'Resource unlocked and verified' : 'Active resource review'}</span>
+              <span class="res-timer-badge">
+                <span class="res-timer-text">
+                  ${isResourceTimerUnlocked(res) ? '✓ Review Completed' : `⏱️ ${RESOURCE_TIMER_SECONDS}s review required`}
+                </span>
+              </span>
+            </div>
+            <div class="res-timer-progress-track">
+              <div class="res-timer-progress-fill" style="width: ${isResourceTimerUnlocked(res) ? '100%' : '0%'}"></div>
+            </div>
+          </div>
+
           <div class="doc-slides-mock">
             <div class="doc-watermark">IKAAI</div>
             <div class="slide-content">
@@ -4116,7 +4285,11 @@
         if (e.target.closest('.download-icon-btn') || e.target.closest('.completed-check-icon')) {
           return;
         }
+        const willOpen = !card.classList.contains('preview-open');
         card.classList.toggle('preview-open');
+        if (willOpen && !isResourceTimerUnlocked(res)) {
+          startResourceTimer(res, mod);
+        }
       });
 
       // Download button action
@@ -4128,16 +4301,18 @@
 
       // Checkmark toggle
       const checkBtn = card.querySelector('.completed-check-icon');
-      const isUnlocked = isModuleTimerUnlocked(mod);
-      if (!isUnlocked) {
+      const isResUnlocked = isResourceTimerUnlocked(res);
+      if (!isResUnlocked) {
         checkBtn.classList.add('timer-locked');
-        checkBtn.title = 'Please spend at least 30 seconds on this module';
+        checkBtn.title = 'Please review this resource for at least 15 seconds';
       }
 
       checkBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (!isModuleTimerUnlocked(mod)) {
-          showToast('Please spend at least 30 seconds on this module');
+        if (!isResourceTimerUnlocked(res)) {
+          showToast(`Please review "${res.title}" for at least 15 seconds to complete`);
+          card.classList.add('preview-open');
+          startResourceTimer(res, mod);
           return;
         }
         const newState = !res.completed;
@@ -12741,6 +12916,7 @@
       localStorage.setItem('ikaai_portal_session', JSON.stringify(userData));
     }
 
+    if (userData.id) state.profile.id = userData.id;
     if (userData.name) state.profile.name = userData.name;
     if (userData.email) state.profile.email = userData.email;
 
@@ -12808,6 +12984,15 @@
 
     if (el.authScreen) el.authScreen.style.display = 'none';
     if (el.appShell) el.appShell.style.display = 'flex';
+
+    // Initialize background Realtime chat sync immediately upon sign-in
+    if (window.TeamChat && typeof window.TeamChat.initRealtime === 'function') {
+      try {
+        window.TeamChat.initRealtime();
+      } catch (chatErr) {
+        console.warn('[TeamChat] Background realtime sync startup note:', chatErr);
+      }
+    }
 
     // Sync curriculum live from database
     await syncCurriculumFromBackend();
@@ -16304,9 +16489,12 @@
 
     // Setup Supabase Realtime channel if available
     function initRealtimeSync() {
+      if (state.realtimeInitialized) return;
       try {
         const client = window.supabaseClient || (typeof supabase !== 'undefined' ? supabase : null);
         if (!client || typeof client.channel !== 'function') return;
+
+        state.realtimeInitialized = true;
 
         // 1. Live database sync for incoming messages and documents
         client.channel('chat-messages-live')
@@ -16350,13 +16538,28 @@
               renderMessages();
               showChatToast(`New message from ${row.sender_name}`);
             } else {
-              const targetConv = state.conversations.find(c => c.id === row.conversation_id);
+              let targetConv = state.conversations.find(c => c.id === row.conversation_id);
+              if (!targetConv && row.conversation_id.startsWith('dm_')) {
+                const otherMember = state.members.find(m => m.id === row.sender_id);
+                targetConv = {
+                  id: row.conversation_id,
+                  type: 'direct',
+                  name: otherMember ? otherMember.name : (row.sender_name || 'Direct Message'),
+                  recipientId: row.sender_id,
+                  description: otherMember ? `${otherMember.role} · ${otherMember.email}` : 'Direct conversation',
+                  unread: 0,
+                  hasMention: true,
+                  lastMessage: row.content?.substring(0, 40) || 'Attachment'
+                };
+                state.conversations.push(targetConv);
+              }
               if (targetConv) {
                 targetConv.unread = (targetConv.unread || 0) + 1;
                 targetConv.lastMessage = row.content?.substring(0, 40) || 'Attachment';
               }
               renderSidebarLists();
-              showChatToast(`New message in ${targetConv ? targetConv.name : 'chat'}`);
+              updateNavChatBadge();
+              showChatToast(`New message from ${row.sender_name}`);
             }
           })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, async (payload) => {
@@ -16375,7 +16578,25 @@
           })
           .subscribe();
 
-        // 3. Typing broadcast channel
+        // 3. Periodic fallback poll while on chat screen (every 3.5s)
+        if (!state.pollingInterval) {
+          state.pollingInterval = setInterval(async () => {
+            if (activeScreen === 'chat' && state.activeConvId && document.visibilityState === 'visible') {
+              try {
+                const dbMsgs = await window.DataLayer.getChatMessages(state.activeConvId);
+                if (dbMsgs && dbMsgs.length > 0) {
+                  const currentCount = (state.messages[state.activeConvId] || []).length;
+                  if (dbMsgs.length !== currentCount) {
+                    await loadConversationMessages(state.activeConvId);
+                    renderMessages();
+                  }
+                }
+              } catch (e) {}
+            }
+          }, 3500);
+        }
+
+        // 4. Typing broadcast channel
         state.supabaseChannel = client.channel('ikaai-team-chat')
           .on('broadcast', { event: 'typing' }, (payload) => {
             if (!payload || !payload.payload) return;
@@ -16420,10 +16641,13 @@
 
     return {
       render: renderScreen,
+      initRealtime: initRealtimeSync,
       selectConversation,
       getState: () => state
     };
   })();
+
+  window.TeamChat = TeamChat;
 
   // Hook into portal's screen rendering
   function renderTeamChatScreen() {
