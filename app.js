@@ -12848,7 +12848,13 @@
 
       if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function' && window.SUPABASE_CONFIG) {
         try {
-          window.supabaseClient = window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey);
+          window.supabaseClient = window.supabase.createClient(window.SUPABASE_CONFIG.url, window.SUPABASE_CONFIG.anonKey, {
+            auth: {
+              persistSession: true,
+              autoRefreshToken: true,
+              detectSessionInUrl: true
+            }
+          });
         } catch (e) {
           console.error("Supabase init error:", e);
         }
@@ -12856,7 +12862,20 @@
 
       if (window.supabaseClient) {
         try {
+          // Detect OAuth redirect error from URL query or hash params
+          const urlParams = new URLSearchParams(window.location.search);
+          const hashRaw = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+          const hashParams = new URLSearchParams(hashRaw);
+          const urlError = urlParams.get('error_description') || hashParams.get('error_description') || urlParams.get('error') || hashParams.get('error');
+          if (urlError) {
+            const cleanErr = decodeURIComponent(urlError.replace(/\+/g, ' '));
+            console.error('[Auth] Detected OAuth callback error:', cleanErr);
+            showAuthError('Google sign-in error: ' + cleanErr);
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+
           window.supabaseClient.auth.onAuthStateChange((event, session) => {
+            console.log('[Auth] onAuthStateChange event:', event, 'user:', session?.user?.email);
             if (session && session.user) {
               const u = session.user;
               const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
@@ -12871,7 +12890,10 @@
           });
 
           const { data, error } = await window.supabaseClient.auth.getSession();
-          if (!error && data?.session?.user) {
+          if (error) {
+            console.error('[Auth] getSession error:', error);
+            showAuthError(error.message || 'Authentication session could not be established.');
+          } else if (data?.session?.user) {
             const u = data.session.user;
             const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
             handleSuccessfulAuth({
@@ -12882,7 +12904,7 @@
             return;
           }
         } catch (err) {
-          console.warn('Supabase session error:', err);
+          console.warn('[Auth] Supabase session error:', err);
         }
       }
     }
