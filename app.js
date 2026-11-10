@@ -14149,18 +14149,26 @@
         `;
         }
 
-        // Attachments (Images, PDFs, Docs) with smooth downloading support
+        // Attachments (Images, PDFs, Docs) with smooth downloading & inline preview support
         let attachmentsHtml = '';
         if (msg.attachments && msg.attachments.length > 0) {
           attachmentsHtml = '<div class="chat-msg-attachments">';
           msg.attachments.forEach(att => {
             const fname = att.file_name || att.name || 'document';
-            const isImg = (att.mime_type || att.type || '').startsWith('image/') || /\.(png|jpe?g|gif|webp)$/i.test(fname);
+            const mime = att.mime_type || att.type || '';
+            const isImg = mime.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg)$/i.test(fname);
             const imgSrc = att.public_url || att.file_url || att.url || '';
             const storagePath = att.storage_path || '';
 
-            if (isImg && imgSrc) {
-              attachmentsHtml += `<img src="${imgSrc}" alt="${escapeHtml(fname)}" class="chat-img-thumb" data-full-img="${imgSrc}">`;
+            if (isImg && (imgSrc || storagePath)) {
+              attachmentsHtml += `
+                <div class="chat-img-thumb-wrap" data-action="preview" data-storage-path="${escapeHtml(storagePath)}" data-file-name="${escapeHtml(fname)}" data-direct-url="${escapeHtml(imgSrc)}" data-mime-type="${escapeHtml(mime)}">
+                  <img src="${imgSrc || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'1.5\'><rect x=\'3\' y=\'3\' width=\'18\' height=\'18\' rx=\'2\' ry=\'2\'/><circle cx=\'8.5\' cy=\'8.5\' r=\'1.5\'/><polyline points=\'21 15 16 10 5 21\'/></svg>'}" alt="${escapeHtml(fname)}" class="chat-img-thumb" data-full-img="${escapeHtml(imgSrc)}" data-storage-path="${escapeHtml(storagePath)}" data-file-name="${escapeHtml(fname)}">
+                  <div class="chat-img-overlay-actions">
+                    <button type="button" class="chat-img-action-btn" data-action="preview" data-direct-url="${escapeHtml(imgSrc)}" data-storage-path="${escapeHtml(storagePath)}" data-file-name="${escapeHtml(fname)}" data-mime-type="${escapeHtml(mime)}" title="Preview image">👁️ Preview</button>
+                    <button type="button" class="chat-img-action-btn chat-file-dl-btn" data-direct-url="${escapeHtml(imgSrc)}" data-storage-path="${escapeHtml(storagePath)}" data-file-name="${escapeHtml(fname)}" title="Download image">⬇️</button>
+                  </div>
+                </div>`;
             } else {
               const ext = fname.split('.').pop().toUpperCase();
               const rawSize = att.file_size || att.size || 0;
@@ -14169,19 +14177,28 @@
                 : (rawSize > 0 ? `${Math.round(rawSize / 1024)} KB` : '');
 
               attachmentsHtml += `
-              <div class="chat-file-chip" data-storage-path="${escapeHtml(storagePath)}" data-file-name="${escapeHtml(fname)}" data-direct-url="${escapeHtml(imgSrc)}" title="Click to download ${escapeHtml(fname)}">
+              <div class="chat-file-chip" data-storage-path="${escapeHtml(storagePath)}" data-file-name="${escapeHtml(fname)}" data-direct-url="${escapeHtml(imgSrc)}" data-mime-type="${escapeHtml(mime)}" title="Click to preview ${escapeHtml(fname)}">
                 <span class="chat-file-ext-badge">${ext}</span>
-                <div class="chat-file-meta">
+                <div class="chat-file-meta" data-action="preview">
                   <span class="chat-file-name">${escapeHtml(fname)}</span>
                   ${sizeStr ? `<small class="chat-file-size">${sizeStr}</small>` : ''}
                 </div>
-                <button type="button" class="chat-file-dl-btn" title="Download document">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                </button>
+                <div class="chat-file-actions">
+                  <button type="button" class="chat-file-preview-btn" data-action="preview" title="Preview document">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>Preview</span>
+                  </button>
+                  <button type="button" class="chat-file-dl-btn" title="Download document">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7 10 12 15 17 10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                  </button>
+                </div>
               </div>
             `;
             }
@@ -14229,7 +14246,7 @@
           </div>
           <div class="chat-bubble-card">
             ${quoteHtml}
-            <div class="chat-bubble-text">${bodyContent}</div>
+            ${msg.content && msg.content.trim() ? `<div class="chat-bubble-text">${bodyContent}</div>` : ''}
             ${sharedCardHtml}
             ${attachmentsHtml}
           </div>
@@ -14365,25 +14382,44 @@
         });
       }
 
-      // Wire document chips and download buttons
-      row.querySelectorAll('.chat-file-chip, .chat-file-dl-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
+      // Wire document preview buttons and clicks
+      row.querySelectorAll('[data-action="preview"]').forEach(elem => {
+        elem.addEventListener('click', (e) => {
           e.preventDefault();
           e.stopPropagation();
-          const chip = btn.closest('.chat-file-chip');
-          if (chip) {
-            const path = chip.getAttribute('data-storage-path');
-            const fname = chip.getAttribute('data-file-name');
-            const direct = chip.getAttribute('data-direct-url');
-            downloadChatAttachment(path, fname, direct);
-          }
+          const target = elem.closest('[data-storage-path]') || elem;
+          const path = target.getAttribute('data-storage-path');
+          const fname = target.getAttribute('data-file-name');
+          const direct = target.getAttribute('data-direct-url');
+          const mime = target.getAttribute('data-mime-type');
+          previewDocument(path, fname, direct, mime);
         });
       });
 
-      // Wire thumbnail images for full-screen lightbox preview
+      // Wire document download buttons
+      row.querySelectorAll('.chat-file-dl-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const target = btn.closest('[data-storage-path]') || btn;
+          const path = target.getAttribute('data-storage-path');
+          const fname = target.getAttribute('data-file-name');
+          const direct = target.getAttribute('data-direct-url');
+          downloadChatAttachment(path, fname, direct);
+        });
+      });
+
+      // Wire thumbnail images
       row.querySelectorAll('.chat-img-thumb').forEach(img => {
-        img.addEventListener('click', () => {
-          openLightbox(img.getAttribute('data-full-img'));
+        img.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const target = img.closest('[data-storage-path]') || img;
+          const path = target.getAttribute('data-storage-path');
+          const fname = target.getAttribute('data-file-name');
+          const direct = target.getAttribute('data-direct-url') || img.getAttribute('data-full-img');
+          const mime = target.getAttribute('data-mime-type') || 'image/jpeg';
+          previewDocument(path, fname, direct, mime);
         });
       });
 
@@ -14603,21 +14639,108 @@
       if (modal) modal.style.display = 'none';
     }
 
+    // Universal Document & Media Preview
+    async function previewDocument(storagePath, fileName, directUrl, mimeType) {
+      const fname = fileName || 'document';
+      let docUrl = directUrl;
+
+      if ((!docUrl || (!docUrl.startsWith('blob:') && !docUrl.startsWith('data:'))) && storagePath && window.DataLayer) {
+        showChatToast(`Opening preview for ${fname}...`);
+        try {
+          if (typeof window.DataLayer.getChatAttachmentPreviewUrl === 'function') {
+            docUrl = await window.DataLayer.getChatAttachmentPreviewUrl(storagePath);
+          } else {
+            docUrl = await window.DataLayer.getChatAttachmentDownloadUrl(storagePath, fname);
+          }
+        } catch (e) {
+          console.warn('Preview URL resolution error:', e);
+        }
+      }
+
+      if (!docUrl) {
+        showChatToast(`Could not open preview for ${fname}.`);
+        return;
+      }
+
+      openDocumentPreviewModal(docUrl, fname, mimeType);
+    }
+
+    function openDocumentPreviewModal(url, fileName, mimeType) {
+      const overlay = document.getElementById('chatLightboxOverlay');
+      const imgEl = document.getElementById('chatLightboxImg');
+      const iframeEl = document.getElementById('chatPreviewIframe');
+      const textWrapEl = document.getElementById('chatPreviewTextWrap');
+      const genericWrapEl = document.getElementById('chatPreviewGenericWrap');
+      const titleEl = document.getElementById('chatPreviewTitle');
+      const badgeEl = document.getElementById('chatPreviewBadge');
+      const openExternalBtn = document.getElementById('chatPreviewOpenExternal');
+      const downloadBtn = document.getElementById('chatLightboxDownload');
+
+      if (!overlay) return;
+
+      const fname = fileName || 'document';
+      const ext = fname.split('.').pop().toLowerCase();
+
+      if (titleEl) titleEl.textContent = fname;
+      if (badgeEl) badgeEl.textContent = ext.toUpperCase();
+      if (openExternalBtn) openExternalBtn.href = url;
+      if (downloadBtn) {
+        downloadBtn.href = url;
+        downloadBtn.setAttribute('download', fname);
+      }
+
+      // Reset all content containers
+      if (imgEl) { imgEl.style.display = 'none'; imgEl.src = ''; }
+      if (iframeEl) { iframeEl.style.display = 'none'; iframeEl.src = ''; }
+      if (textWrapEl) { textWrapEl.style.display = 'none'; textWrapEl.textContent = ''; }
+      if (genericWrapEl) { genericWrapEl.style.display = 'none'; }
+
+      const isImg = (mimeType && mimeType.startsWith('image/')) || /^(png|jpe?g|gif|webp|svg)$/i.test(ext);
+      const isPdf = (mimeType && mimeType.includes('pdf')) || ext === 'pdf';
+      const isText = (mimeType && (mimeType.startsWith('text/') || mimeType.includes('json') || mimeType.includes('javascript'))) || /^(txt|csv|json|md|js|css|html|log|xml)$/i.test(ext);
+
+      if (isImg && imgEl) {
+        imgEl.src = url;
+        imgEl.alt = fname;
+        imgEl.style.display = 'block';
+      } else if (isPdf && iframeEl) {
+        iframeEl.src = url;
+        iframeEl.style.display = 'block';
+      } else if (isText && textWrapEl) {
+        textWrapEl.style.display = 'block';
+        textWrapEl.textContent = 'Loading text preview...';
+        fetch(url)
+          .then(res => res.text())
+          .then(txt => { textWrapEl.textContent = txt.substring(0, 100000); })
+          .catch(err => { textWrapEl.textContent = 'Unable to render text preview: ' + err.message; });
+      } else if (genericWrapEl) {
+        genericWrapEl.style.display = 'block';
+        const nameEl = document.getElementById('chatPreviewGenericName');
+        if (nameEl) nameEl.textContent = fname;
+        const genDl = document.getElementById('chatPreviewGenericDownload');
+        if (genDl) {
+          genDl.href = url;
+          genDl.setAttribute('download', fname);
+        }
+      }
+
+      overlay.style.display = 'flex';
+    }
+
     // Open Image Lightbox
     function openLightbox(url) {
-      const overlay = document.getElementById('chatLightboxOverlay');
-      const img = document.getElementById('chatLightboxImg');
-      const downloadLink = document.getElementById('chatLightboxDownload');
-      if (overlay && img && downloadLink) {
-        img.src = url;
-        downloadLink.href = url;
-        overlay.style.display = 'flex';
-      }
+      openDocumentPreviewModal(url, 'Image Preview', 'image/jpeg');
     }
 
     function closeLightbox() {
       const overlay = document.getElementById('chatLightboxOverlay');
-      if (overlay) overlay.style.display = 'none';
+      if (overlay) {
+        overlay.style.display = 'none';
+        const imgEl = document.getElementById('chatLightboxImg');
+        const iframeEl = document.getElementById('chatPreviewIframe');
+        if (imgEl) imgEl.src = '';
+        if (iframeEl) iframeEl.src = '';
+      }
     }
 
     // Open shared portal item (Module, JD, FAQ)
@@ -16510,6 +16633,43 @@
               attachments: []
             };
 
+            // Check if message has attachments and resolve preview URLs immediately
+            try {
+              const { data: dbAtts } = await client
+                .from('chat_attachments')
+                .select('*')
+                .eq('message_id', row.id);
+
+              if (dbAtts && dbAtts.length > 0) {
+                for (const a of dbAtts) {
+                  let previewUrl = a.public_url || null;
+                  if (!previewUrl && a.storage_path && window.DataLayer) {
+                    try {
+                      if (typeof window.DataLayer.getChatAttachmentPreviewUrl === 'function') {
+                        previewUrl = await window.DataLayer.getChatAttachmentPreviewUrl(a.storage_path);
+                      } else {
+                        previewUrl = await window.DataLayer.getChatAttachmentDownloadUrl(a.storage_path, a.file_name);
+                      }
+                    } catch (e) {}
+                  }
+                  formattedMsg.attachments.push({
+                    id: a.id,
+                    name: a.file_name,
+                    file_name: a.file_name,
+                    size: a.file_size,
+                    file_size: a.file_size,
+                    type: a.mime_type,
+                    mime_type: a.mime_type,
+                    storage_path: a.storage_path,
+                    public_url: previewUrl,
+                    url: previewUrl || ''
+                  });
+                }
+              }
+            } catch (attErr) {
+              console.warn('[TeamChat] Error loading attachments for realtime message:', attErr);
+            }
+
             if (!state.messages[row.conversation_id].some(m => m.id === row.id)) {
               state.messages[row.conversation_id].push(formattedMsg);
             }
@@ -16542,6 +16702,60 @@
               showChatToast(`New message from ${row.sender_name}`);
             }
           })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_attachments' }, async (payload) => {
+            const attRow = payload.new;
+            if (!attRow || !attRow.message_id) return;
+            console.log('[TeamChat] Live attachment incoming:', attRow.file_name, 'for msg:', attRow.message_id);
+
+            let previewUrl = attRow.public_url || null;
+            if (!previewUrl && attRow.storage_path && window.DataLayer) {
+              try {
+                if (typeof window.DataLayer.getChatAttachmentPreviewUrl === 'function') {
+                  previewUrl = await window.DataLayer.getChatAttachmentPreviewUrl(attRow.storage_path);
+                } else {
+                  previewUrl = await window.DataLayer.getChatAttachmentDownloadUrl(attRow.storage_path, attRow.file_name);
+                }
+              } catch (e) {}
+            }
+
+            const formattedAtt = {
+              id: attRow.id,
+              name: attRow.file_name,
+              file_name: attRow.file_name,
+              size: attRow.file_size,
+              file_size: attRow.file_size,
+              type: attRow.mime_type,
+              mime_type: attRow.mime_type,
+              storage_path: attRow.storage_path,
+              public_url: previewUrl,
+              url: previewUrl || ''
+            };
+
+            const convId = attRow.conversation_id;
+            let foundMsg = null;
+            if (convId && state.messages[convId]) {
+              foundMsg = state.messages[convId].find(m => m.id === attRow.message_id);
+            }
+            if (!foundMsg) {
+              for (const cKey in state.messages) {
+                const cand = state.messages[cKey].find(m => m.id === attRow.message_id);
+                if (cand) { foundMsg = cand; break; }
+              }
+            }
+
+            if (foundMsg) {
+              if (!foundMsg.attachments) foundMsg.attachments = [];
+              if (!foundMsg.attachments.some(a => a.id === attRow.id || (a.storage_path && a.storage_path === attRow.storage_path))) {
+                foundMsg.attachments.push(formattedAtt);
+              }
+              if (convId === state.activeConvId || foundMsg.conversationId === state.activeConvId) {
+                renderMessages();
+                renderDetailsPanel();
+              }
+            } else if (convId) {
+              await loadConversationMessages(convId);
+            }
+          })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, async (payload) => {
             const row = payload.new;
             if (row && row.conversation_id === state.activeConvId) {
@@ -16565,10 +16779,14 @@
               try {
                 const dbMsgs = await window.DataLayer.getChatMessages(state.activeConvId);
                 if (dbMsgs && dbMsgs.length > 0) {
-                  const currentCount = (state.messages[state.activeConvId] || []).length;
-                  if (dbMsgs.length !== currentCount) {
+                  const currentMsgs = state.messages[state.activeConvId] || [];
+                  const needsRefresh = dbMsgs.length !== currentMsgs.length || dbMsgs.some((dbM, idx) => {
+                    const localM = currentMsgs[idx];
+                    if (!localM) return true;
+                    return (dbM.attachments?.length || 0) !== (localM.attachments?.length || 0);
+                  });
+                  if (needsRefresh) {
                     await loadConversationMessages(state.activeConvId);
-                    renderMessages();
                   }
                 }
               } catch (e) {}

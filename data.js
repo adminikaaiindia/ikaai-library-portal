@@ -1987,6 +1987,53 @@
           console.warn('[DataLayer] getChatMessages error:', msgError);
           return null;
         }
+
+        // Batch resolve signed URLs for attachments so images and documents can preview & render immediately
+        if (Array.isArray(messages)) {
+          const pathsToSign = [];
+          messages.forEach(m => {
+            (m.attachments || []).forEach(att => {
+              if (att.storage_path && !att.storage_path.startsWith('blob:') && !att.storage_path.startsWith('local/') && !att.storage_path.startsWith('http')) {
+                pathsToSign.push(att.storage_path);
+              }
+            });
+          });
+
+          if (pathsToSign.length > 0) {
+            try {
+              const uniquePaths = Array.from(new Set(pathsToSign));
+              const { data: signedList, error: signErr } = await client.storage
+                .from('chat-attachments')
+                .createSignedUrls(uniquePaths, 86400);
+
+              if (!signErr && Array.isArray(signedList)) {
+                const urlMap = new Map();
+                const baseUrl = window.SUPABASE_CONFIG?.url || '';
+                signedList.forEach(item => {
+                  const sUrl = item?.signedURL || item?.signedUrl;
+                  if (sUrl) {
+                    const fullUrl = sUrl.startsWith('http') ? sUrl : `${baseUrl}/storage/v1${sUrl}`;
+                    urlMap.set(item.path, fullUrl);
+                  }
+                });
+
+                messages.forEach(m => {
+                  (m.attachments || []).forEach(att => {
+                    if (att.storage_path && urlMap.has(att.storage_path)) {
+                      const resolved = urlMap.get(att.storage_path);
+                      att.public_url = resolved;
+                      att.file_url = resolved;
+                      att.url = resolved;
+                    }
+                  });
+                });
+              }
+            } catch (signEx) {
+              console.warn('[DataLayer] Batch signed URL generation note:', signEx);
+            }
+          }
+        }
+
         return messages;
       } catch (err) {
         console.warn('[DataLayer] getChatMessages exception:', err);
@@ -2027,8 +2074,12 @@
 
       let fileUrl = null;
       try {
-        const { data: signedData } = await client.storage.from('chat-attachments').createSignedUrl(storagePath, 3600);
-        if (signedData && signedData.signedUrl) fileUrl = signedData.signedUrl;
+        const { data: signedData } = await client.storage.from('chat-attachments').createSignedUrl(storagePath, 86400);
+        const sUrl = signedData?.signedURL || signedData?.signedUrl;
+        if (sUrl) {
+          const baseUrl = window.SUPABASE_CONFIG?.url || '';
+          fileUrl = sUrl.startsWith('http') ? sUrl : `${baseUrl}/storage/v1${sUrl}`;
+        }
       } catch (e) {
         // signed URL will be fetched on demand
       }
@@ -2038,8 +2089,33 @@
         file_size: file.size,
         mime_type: file.type || 'application/octet-stream',
         storage_path: storagePath,
-        file_url: fileUrl
+        file_url: fileUrl,
+        public_url: fileUrl
       };
+    },
+
+    async getChatAttachmentPreviewUrl(storagePath) {
+      if (!storagePath) return null;
+      if (storagePath.startsWith('blob:') || storagePath.startsWith('data:') || storagePath.startsWith('http')) {
+        return storagePath;
+      }
+      const client = getClient();
+      if (!isLive() || !client) return null;
+
+      try {
+        const { data, error } = await client.storage
+          .from('chat-attachments')
+          .createSignedUrl(storagePath, 86400);
+        const sUrl = data?.signedURL || data?.signedUrl;
+        if (!error && sUrl) {
+          const baseUrl = window.SUPABASE_CONFIG?.url || '';
+          return sUrl.startsWith('http') ? sUrl : `${baseUrl}/storage/v1${sUrl}`;
+        }
+        return null;
+      } catch (err) {
+        console.warn('[DataLayer] getChatAttachmentPreviewUrl error:', err);
+        return null;
+      }
     },
 
     async getChatAttachmentDownloadUrl(storagePath, fileName) {
@@ -2056,7 +2132,11 @@
           .createSignedUrl(storagePath, 3600, {
             download: fileName || true
           });
-        if (!error && data?.signedUrl) return data.signedUrl;
+        const sUrl = data?.signedURL || data?.signedUrl;
+        if (!error && sUrl) {
+          const baseUrl = window.SUPABASE_CONFIG?.url || '';
+          return sUrl.startsWith('http') ? sUrl : `${baseUrl}/storage/v1${sUrl}`;
+        }
         return null;
       } catch (err) {
         console.warn('[DataLayer] getChatAttachmentDownloadUrl error:', err);

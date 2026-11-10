@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261106_v10">
+  <link rel="stylesheet" href="styles.css?v=20261110_1315">
   
   <!-- Supabase JS Client v2 (Local bundle with CDN fallback) -->
   <script src="supabase.js"></script>
@@ -2701,13 +2701,44 @@
       </div>
     </div>
 
-    <!-- 4. IMAGE LIGHTBOX MODAL -->
-    <div class="chat-lightbox-overlay" id="chatLightboxOverlay" style="display: none;">
-      <div class="chat-lightbox-content">
-        <img id="chatLightboxImg" src="" alt="Full preview" loading="lazy">
-        <div class="chat-lightbox-actions">
-          <a id="chatLightboxDownload" href="#" download class="chat-lightbox-btn">Download</a>
-          <button type="button" id="chatLightboxClose" class="chat-lightbox-btn">&times; Close</button>
+    <!-- 4. DOCUMENT & MEDIA PREVIEW MODAL -->
+    <div class="chat-lightbox-overlay" id="chatLightboxOverlay" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="chatPreviewTitle">
+      <div class="chat-doc-preview-dialog">
+        <div class="chat-doc-preview-header">
+          <div class="chat-doc-preview-meta">
+            <span class="chat-file-ext-badge" id="chatPreviewBadge">DOC</span>
+            <span class="chat-doc-preview-title" id="chatPreviewTitle">Document Preview</span>
+          </div>
+          <div class="chat-doc-preview-actions">
+            <a id="chatPreviewOpenExternal" href="#" target="_blank" rel="noopener noreferrer" class="chat-preview-header-btn" title="Open in new browser tab">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+              <span>New Tab</span>
+            </a>
+            <a id="chatLightboxDownload" href="#" download class="chat-preview-header-btn btn-primary" title="Download file">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Download</span>
+            </a>
+            <button type="button" id="chatLightboxClose" class="chat-preview-header-btn btn-close" aria-label="Close preview">&times;</button>
+          </div>
+        </div>
+        <div class="chat-doc-preview-body" id="chatPreviewBody">
+          <img id="chatLightboxImg" src="" alt="Full preview" loading="lazy" style="display: none;">
+          <iframe id="chatPreviewIframe" src="" title="Document Preview" style="display: none; width: 100%; height: 100%; border: none;"></iframe>
+          <div id="chatPreviewTextWrap" class="chat-preview-text-content" style="display: none;"></div>
+          <div id="chatPreviewGenericWrap" class="chat-preview-generic-content" style="display: none;">
+            <div class="generic-file-icon">📄</div>
+            <div class="generic-file-name" id="chatPreviewGenericName">document</div>
+            <p style="font-size: 13px; color: #64748b; margin-bottom: 18px;">Direct inline preview is not supported for this file type. You can download it or open it directly.</p>
+            <a id="chatPreviewGenericDownload" href="#" download class="chat-preview-header-btn btn-primary">Download Document</a>
+          </div>
         </div>
       </div>
     </div>
@@ -3731,9 +3762,9 @@
   <script src="jspdf.umd.min.js"></script>
   <script>if (!window.jspdf) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'); }</script>
   <script src="supabase-config.js"></script>
-  <script src="supabase-client.js?v=20261110_1300"></script>
-  <script src="jd-data.js?v=20261110_1300"></script>
-  <script src="data.js?v=20261110_1300"></script>
-  <script src="app.js?v=20261110_1300"></script>
+  <script src="supabase-client.js?v=20261110_1315"></script>
+  <script src="jd-data.js?v=20261110_1315"></script>
+  <script src="data.js?v=20261110_1315"></script>
+  <script src="app.js?v=20261110_1315"></script>
 </body>
 </html>
