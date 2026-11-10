@@ -1312,29 +1312,49 @@
       }
     },
 
-    async adminUpdateUserAccess(userId, { role, programmeId, position }) {
+    async adminUpdateUserAccess(userId, { role, programmeId, position, email }) {
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
       const cleanRole = (role || '').trim().toLowerCase();
       const cleanProg = cleanRole === 'admin' ? null : (programmeId || '10000000-0000-0000-0000-000000000001');
+      const cleanEmail = (email || '').trim().toLowerCase();
 
-      // Attempt official RPC first
+      // Persist custom position locally if provided
+      if (position && cleanEmail) {
+        try {
+          const map = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
+          map[cleanEmail] = position;
+          localStorage.setItem('ikaai_custom_positions', JSON.stringify(map));
+        } catch (e) {}
+      }
+
+      // Attempt official RPC first (works when user is registered in profiles)
       try {
-        const { data, error } = await client.rpc('update_user_access', {
-          p_user_id: userId,
-          p_role: cleanRole,
-          p_programme_id: cleanProg
-        });
-        if (!error) {
-          if (position) {
-            try {
-              await client.from('profiles').update({ position: position }).eq('id', userId);
-            } catch (e) {}
+        if (userId) {
+          const { data, error } = await client.rpc('update_user_access', {
+            p_user_id: userId,
+            p_role: cleanRole,
+            p_programme_id: cleanProg
+          });
+          if (!error) {
+            if (position) {
+              try {
+                await client.from('profiles').update({ position: position }).eq('id', userId);
+              } catch (e) {}
+            }
+            if (cleanEmail) {
+              try {
+                await client.from('access_invites').update({
+                  role: cleanRole,
+                  programme_id: cleanProg
+                }).ilike('email', cleanEmail);
+              } catch (e) {}
+            }
+            return data;
           }
-          return data;
+          console.warn('[DataLayer] update_user_access rpc note, falling back to direct update:', error);
         }
-        console.warn('[DataLayer] update_user_access rpc note, falling back to direct update:', error);
       } catch (rpcErr) {
         console.warn('[DataLayer] update_user_access rpc exception:', rpcErr);
       }
@@ -1350,23 +1370,26 @@
         };
         if (position) profUpdatePayload.position = position;
 
-        const { data: profData, error: profErr } = await client
-          .from('profiles')
-          .update(profUpdatePayload)
-          .eq('id', userId)
-          .select('email')
-          .maybeSingle();
+        let profQuery = client.from('profiles').update(profUpdatePayload);
+        if (userId) {
+          profQuery = profQuery.eq('id', userId);
+        } else if (cleanEmail) {
+          profQuery = profQuery.ilike('email', cleanEmail);
+        }
+
+        const { data: profData, error: profErr } = await profQuery.select('email').maybeSingle();
 
         if (!profErr && profData) {
           profileUpdated = true;
-          if (profData.email && position) {
+          const userEm = (profData.email || cleanEmail).toLowerCase();
+          if (userEm && position) {
             try {
               const map = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
-              map[profData.email.toLowerCase()] = position;
+              map[userEm] = position;
               localStorage.setItem('ikaai_custom_positions', JSON.stringify(map));
             } catch (e) {}
           }
-          if (profData.email) {
+          if (userEm) {
             await client
               .from('access_invites')
               .update({
@@ -1375,30 +1398,36 @@
                 status: 'active',
                 activated_at: new Date().toISOString()
               })
-              .eq('email', profData.email.toLowerCase());
+              .ilike('email', userEm);
           }
         }
       } catch (profE) {
         console.warn('[DataLayer] profile direct update error:', profE);
       }
 
-      // If not in profiles, try updating access_invites by invite id
+      // If not in profiles, try updating access_invites by invite id or email
       if (!profileUpdated) {
-        const { error: invErr } = await client
-          .from('access_invites')
-          .update({
-            role: cleanRole,
-            programme_id: cleanProg,
-            status: 'active'
-          })
-          .eq('id', userId);
+        let invUpdate = {
+          role: cleanRole,
+          programme_id: cleanProg
+        };
+        let invQuery = client.from('access_invites').update(invUpdate);
+        if (userId) {
+          invQuery = invQuery.eq('id', userId);
+        } else if (cleanEmail) {
+          invQuery = invQuery.ilike('email', cleanEmail);
+        }
 
-        if (invErr) {
-          throw new Error(invErr.message || 'Could not update user access permissions');
+        const { error: invErr } = await invQuery;
+        if (invErr && cleanEmail) {
+          await client
+            .from('access_invites')
+            .update(invUpdate)
+            .ilike('email', cleanEmail);
         }
       }
 
-      return { success: true, user_id: userId };
+      return { success: true, user_id: userId, email: cleanEmail };
     },
 
     async adminRevokeUserAccess(userId) {
@@ -1418,11 +1447,11 @@
           'admin.ikaaiindia@gmail.com'
         ];
 
-        if (targetProfile?.role === 'admin' || protectedAdmins.includes(targetEmail)) {
-          throw new Error('Administrator accounts are protected and cannot be revoked.');
+        if (protectedAdmins.includes(targetEmail)) {
+          throw new Error('The primary administrator account is protected and cannot be revoked.');
         }
       } catch (checkErr) {
-        if (checkErr.message && checkErr.message.includes('Administrator accounts are protected')) {
+        if (checkErr.message && checkErr.message.includes('administrator account is protected')) {
           throw checkErr;
         }
       }

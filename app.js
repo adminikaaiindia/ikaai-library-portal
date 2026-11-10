@@ -9805,11 +9805,9 @@
       const joinedDateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '--';
       const lastSeenStr = u.last_seen ? new Date(u.last_seen).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : (u.is_registered ? 'Never' : 'Invited');
 
-      // Check if user is an administrator or protected root account
+      // Only the primary organization root account is strictly protected from deletion/revocation
       const userEmail = (u.email || '').trim().toLowerCase();
-      const isAdminAccount = u.role === 'admin' ||
-        userEmail === 'admin.ikaaiindia@gmail.com' ||
-        userEmail.includes('admin');
+      const isRootAdmin = userEmail === 'admin.ikaaiindia@gmail.com';
 
       // Actions buttons
       let actionButtons = '';
@@ -9818,8 +9816,8 @@
       }
       actionButtons += `<button type="button" class="form-action-btn secondary btn-edit-user" style="padding: 4px 10px; font-size: 11.5px; margin-right: 6px;">Edit</button>`;
 
-      if (isAdminAccount) {
-        actionButtons += `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 6px; background: rgba(168,85,247,0.1); color: #c084fc; font-weight: 600; border: 1px solid rgba(168,85,247,0.25);">Admin Protected</span>`;
+      if (isRootAdmin) {
+        actionButtons += `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 6px; background: rgba(168,85,247,0.1); color: #c084fc; font-weight: 600; border: 1px solid rgba(168,85,247,0.25);">Root Admin</span>`;
       } else {
         if (u.status === 'revoked') {
           actionButtons += `<button type="button" class="primary-accent-btn btn-restore-user" style="padding: 4px 10px; font-size: 11.5px; margin-right: 6px; background: #059669;">Restore</button>`;
@@ -9850,19 +9848,29 @@
       // Wire action events
       const approveBtn = tr.querySelector('.btn-approve-user');
       if (approveBtn) {
-        approveBtn.addEventListener('click', () => openAdminEditModal(u, true));
+        approveBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openAdminEditModal(u, true);
+        });
       }
 
       const editBtn = tr.querySelector('.btn-edit-user');
       if (editBtn) {
-        editBtn.addEventListener('click', () => openAdminEditModal(u, false));
+        editBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          openAdminEditModal(u, false);
+        });
       }
 
       const revokeBtn = tr.querySelector('.btn-revoke-user');
       if (revokeBtn) {
-        revokeBtn.addEventListener('click', async () => {
-          if (isAdminAccount) {
-            alert('Administrator accounts are protected and cannot be revoked.');
+        revokeBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (isRootAdmin) {
+            alert('The primary administrator account is protected and cannot be revoked.');
             return;
           }
           const targetId = u.id || u.profile_id || u.invite_id;
@@ -9884,7 +9892,9 @@
 
       const restoreBtn = tr.querySelector('.btn-restore-user');
       if (restoreBtn) {
-        restoreBtn.addEventListener('click', async () => {
+        restoreBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           const targetId = u.id || u.profile_id || u.invite_id;
           if (!targetId) {
             alert('Cannot identify user ID to restore.');
@@ -9904,9 +9914,10 @@
       const deleteBtn = tr.querySelector('.btn-delete-user');
       if (deleteBtn) {
         deleteBtn.addEventListener('click', async (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          if (isAdminAccount) {
-            alert('Administrator accounts are protected and cannot be deleted.');
+          if (isRootAdmin) {
+            alert('The primary administrator account is protected and cannot be deleted.');
             return;
           }
           const targetId = u.id || u.profile_id || u.invite_id;
@@ -9944,90 +9955,112 @@
   
 
   function openAdminEditModal(user, isApproving = false) {
-    if (!el.adminEditUserModal) return;
+    const modal = el.adminEditUserModal || document.getElementById('adminEditUserModal');
+    if (!modal) return;
     currentModalUser = user;
 
     const userEmail = (user.email || '').trim().toLowerCase();
-    const isAdminAccount = user.role === 'admin' ||
-      userEmail === 'admin.ikaaiindia@gmail.com' ||
-      userEmail.includes('admin');
+    const isRootAdmin = userEmail === 'admin.ikaaiindia@gmail.com';
 
-    el.adminEditUserId.value = user.id || user.profile_id || user.invite_id;
-    el.adminEditUserName.textContent = user.full_name || (user.is_registered ? 'Registered User' : 'Invited Member');
-    el.adminEditUserEmail.textContent = user.email;
+    const userIdEl = el.adminEditUserId || document.getElementById('adminEditUserId');
+    if (userIdEl) userIdEl.value = user.id || user.profile_id || user.invite_id || '';
+
+    const userNameEl = el.adminEditUserName || document.getElementById('adminEditUserName');
+    if (userNameEl) userNameEl.textContent = user.full_name || (user.is_registered ? 'Registered User' : 'Invited Member');
+
+    const userEmailEl = el.adminEditUserEmail || document.getElementById('adminEditUserEmail');
+    if (userEmailEl) userEmailEl.textContent = user.email || '--';
+
+    const roleSelect = el.adminEditRoleSelect || document.getElementById('adminEditRoleSelect');
+    const progSelect = el.adminEditProgSelect || document.getElementById('adminEditProgSelect');
+    const customRoleWrap = el.adminEditCustomRoleWrap || document.getElementById('adminEditCustomRoleWrap');
+    const customRoleInput = el.adminEditCustomRole || document.getElementById('adminEditCustomRole');
+    const customProgWrap = el.adminEditCustomProgWrap || document.getElementById('adminEditCustomProgWrap');
+    const customProgInput = el.adminEditCustomProg || document.getElementById('adminEditCustomProg');
+    const progNote = el.adminEditProgNote || document.getElementById('adminEditProgNote');
+    const deleteModalBtn = el.adminDeleteModalUserBtn || document.getElementById('adminDeleteModalUserBtn');
+    const saveBtn = el.adminSaveEditUserBtn || document.getElementById('adminSaveEditUserBtn');
 
     const isCustomPosition = user.position &&
       user.role !== 'admin' &&
       !Object.values(JD_ASSIGNMENT_MAP).some(item => item.title.toLowerCase() === user.position.toLowerCase()) &&
       !['intern', 'instructor', 'admin', 'full-time', 'full-time staff', 'administrator'].includes(user.position.toLowerCase());
 
-    if (isAdminAccount) {
-      el.adminEditRoleSelect.value = 'admin';
-      el.adminEditRoleSelect.disabled = true;
-      el.adminEditProgSelect.disabled = true;
-      if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
-      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'none';
-      if (el.adminEditProgNote) el.adminEditProgNote.style.display = 'block';
-      if (el.adminDeleteModalUserBtn) el.adminDeleteModalUserBtn.style.display = 'none';
+    if (isRootAdmin) {
+      if (roleSelect) {
+        roleSelect.value = 'admin';
+        roleSelect.disabled = true;
+      }
+      if (progSelect) progSelect.disabled = true;
+      if (customRoleWrap) customRoleWrap.style.display = 'none';
+      if (customProgWrap) customProgWrap.style.display = 'none';
+      if (progNote) progNote.style.display = 'block';
+      if (deleteModalBtn) deleteModalBtn.style.display = 'none';
     } else {
       let matchedVal = 'intern';
       const userRole = (user.role || '').trim().toLowerCase();
       if (isCustomPosition) {
         matchedVal = 'custom';
-        if (el.adminEditCustomRole) el.adminEditCustomRole.value = user.position;
-        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'block';
+        if (customRoleInput) customRoleInput.value = user.position;
+        if (customRoleWrap) customRoleWrap.style.display = 'block';
       } else if (userRole === 'instructor') {
         matchedVal = 'instructor';
-        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
+        if (customRoleWrap) customRoleWrap.style.display = 'none';
       } else if (userRole === 'admin') {
         matchedVal = 'admin';
-        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
+        if (customRoleWrap) customRoleWrap.style.display = 'none';
       } else {
         matchedVal = 'intern';
-        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
+        if (customRoleWrap) customRoleWrap.style.display = 'none';
       }
-      el.adminEditRoleSelect.value = matchedVal;
-      el.adminEditRoleSelect.disabled = false;
+      if (roleSelect) {
+        roleSelect.value = matchedVal;
+        roleSelect.disabled = false;
+      }
       const roleIsAdmin = matchedVal === 'admin';
-      el.adminEditProgSelect.disabled = roleIsAdmin;
-      if (el.adminEditProgNote) el.adminEditProgNote.style.display = roleIsAdmin ? 'block' : 'none';
-      if (el.adminDeleteModalUserBtn) {
-        el.adminDeleteModalUserBtn.style.display = isApproving ? 'none' : 'block';
+      if (progSelect) progSelect.disabled = roleIsAdmin;
+      if (progNote) progNote.style.display = roleIsAdmin ? 'block' : 'none';
+      if (deleteModalBtn) {
+        deleteModalBtn.style.display = isApproving ? 'none' : 'block';
       }
     }
 
-    // Preselect Programme Assignment in el.adminEditProgSelect
-    let matchedProgOption = null;
-    if (user.position && !isCustomPosition) {
-      const normPos = user.position.toLowerCase().trim();
-      matchedProgOption = Array.from(el.adminEditProgSelect.options).find(o =>
-        o.value.toLowerCase() === normPos ||
-        (o.textContent && o.textContent.toLowerCase().trim() === normPos) ||
-        (JD_ASSIGNMENT_MAP[o.value] && JD_ASSIGNMENT_MAP[o.value].title.toLowerCase() === normPos)
-      );
-    }
-    if (!matchedProgOption && user.programme_id) {
-      matchedProgOption = Array.from(el.adminEditProgSelect.options).find(o => o.value === user.programme_id);
-    }
-    if (matchedProgOption) {
-      el.adminEditProgSelect.value = matchedProgOption.value;
-      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'none';
-    } else if (isCustomPosition) {
-      el.adminEditProgSelect.value = 'custom';
-      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'block';
-      if (el.adminEditCustomProg) el.adminEditCustomProg.value = user.position;
-    } else if (el.adminEditProgSelect.options.length > 0) {
-      el.adminEditProgSelect.selectedIndex = 0;
-      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'none';
-    }
-
-    if (isApproving) {
-      el.adminSaveEditUserBtn.textContent = 'Approve & Activate';
-    } else {
-      el.adminSaveEditUserBtn.textContent = 'Save Changes';
+    // Preselect Programme Assignment in progSelect
+    if (progSelect) {
+      let matchedProgOption = null;
+      if (user.position && !isCustomPosition) {
+        const normPos = user.position.toLowerCase().trim();
+        matchedProgOption = Array.from(progSelect.options).find(o =>
+          (o.value && o.value.toLowerCase() === normPos) ||
+          (o.textContent && o.textContent.toLowerCase().trim() === normPos) ||
+          (JD_ASSIGNMENT_MAP[o.value] && JD_ASSIGNMENT_MAP[o.value].title.toLowerCase() === normPos)
+        );
+      }
+      if (!matchedProgOption && user.programme_id) {
+        matchedProgOption = Array.from(progSelect.options).find(o => o.value === user.programme_id);
+      }
+      if (matchedProgOption) {
+        progSelect.value = matchedProgOption.value;
+        if (customProgWrap) customProgWrap.style.display = 'none';
+      } else if (isCustomPosition) {
+        progSelect.value = 'custom';
+        if (customProgWrap) customProgWrap.style.display = 'block';
+        if (customProgInput) customProgInput.value = user.position;
+      } else if (progSelect.options.length > 0) {
+        progSelect.selectedIndex = 0;
+        if (customProgWrap) customProgWrap.style.display = 'none';
+      }
     }
 
-    el.adminEditUserModal.style.display = 'flex';
+    if (saveBtn) {
+      if (isApproving) {
+        saveBtn.textContent = 'Approve & Activate';
+      } else {
+        saveBtn.textContent = 'Save Changes';
+      }
+    }
+
+    modal.style.display = 'flex';
   }
 
   function wireAdminPortalEvents() {
@@ -10275,8 +10308,9 @@
 
     if (el.adminSaveEditUserBtn) {
       el.adminSaveEditUserBtn.addEventListener('click', async () => {
-        const userId = el.adminEditUserId.value;
-        const rawRole = el.adminEditRoleSelect.value;
+        const userId = el.adminEditUserId ? el.adminEditUserId.value : '';
+        const targetEmail = currentModalUser ? (currentModalUser.email || '').trim().toLowerCase() : '';
+        const rawRole = el.adminEditRoleSelect ? el.adminEditRoleSelect.value : 'intern';
         const isCustomRole = rawRole === 'custom';
         const customRoleVal = (el.adminEditCustomRole && isCustomRole) ? el.adminEditCustomRole.value.trim() : '';
 
@@ -10316,11 +10350,34 @@
           await window.DataLayer.adminUpdateUserAccess(userId, {
             role,
             position: position,
-            programmeId
+            programmeId,
+            email: targetEmail
           });
+
+          // Immediately reflect update in cached user list
+          if (targetEmail || userId) {
+            const cached = adminPortalCachedUsers.find(item =>
+              (targetEmail && item.email && item.email.toLowerCase() === targetEmail) ||
+              item.id === userId || item.profile_id === userId || item.invite_id === userId
+            );
+            if (cached) {
+              cached.role = role;
+              cached.position = position || null;
+              cached.programme_id = programmeId;
+              if (role === 'admin') {
+                cached.programme_name = 'All Programmes';
+              } else if (position) {
+                cached.programme_name = position;
+              } else {
+                const p = resolveProgrammeAssignment(programmeId);
+                cached.programme_name = p.progName || cached.programme_name;
+              }
+            }
+          }
+
           showToast(`Updated user permissions successfully (${position || role}).`);
           if (el.adminEditUserModal) el.adminEditUserModal.style.display = 'none';
-          await renderAdminPortal();
+          renderAdminPortalFilteredTable();
         } catch (err) {
           alert('Failed to update user: ' + err.message);
         } finally {
@@ -10334,12 +10391,10 @@
       el.adminDeleteModalUserBtn.addEventListener('click', async () => {
         if (!currentModalUser) return;
         const targetEmail = (currentModalUser.email || '').trim().toLowerCase();
-        const isAdminAccount = currentModalUser.role === 'admin' ||
-          targetEmail === 'admin.ikaaiindia@gmail.com' ||
-          targetEmail.includes('admin');
+        const isRootAdmin = targetEmail === 'admin.ikaaiindia@gmail.com';
 
-        if (isAdminAccount) {
-          alert('Administrator accounts are protected and cannot be deleted.');
+        if (isRootAdmin) {
+          alert('The primary administrator account is protected and cannot be deleted.');
           return;
         }
 
@@ -10349,12 +10404,12 @@
         el.adminDeleteModalUserBtn.textContent = 'Deleting...';
         try {
           const targetId = currentModalUser.id || currentModalUser.profile_id || currentModalUser.invite_id;
-          const targetEmail = currentModalUser.email;
-          await window.DataLayer.adminDeleteUser(targetId, targetEmail);
+          const emailToDelete = currentModalUser.email;
+          await window.DataLayer.adminDeleteUser(targetId, emailToDelete);
 
           adminPortalCachedUsers = adminPortalCachedUsers.filter(item => {
             const matchesId = targetId && (item.id === targetId || item.profile_id === targetId || item.invite_id === targetId);
-            const matchesEmail = targetEmail && item.email && item.email.toLowerCase() === targetEmail.toLowerCase();
+            const matchesEmail = emailToDelete && item.email && item.email.toLowerCase() === emailToDelete.toLowerCase();
             return !matchesId && !matchesEmail;
           });
 
@@ -10378,6 +10433,13 @@
     if (el.closeAdminEditUserModalBtn) {
       el.closeAdminEditUserModalBtn.addEventListener('click', () => {
         if (el.adminEditUserModal) el.adminEditUserModal.style.display = 'none';
+      });
+    }
+    if (el.adminEditUserModal) {
+      el.adminEditUserModal.addEventListener('click', (e) => {
+        if (e.target === el.adminEditUserModal) {
+          el.adminEditUserModal.style.display = 'none';
+        }
       });
     }
   }
