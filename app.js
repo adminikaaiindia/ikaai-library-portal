@@ -13603,29 +13603,106 @@
       }
     };
 
-    // Helper: Get Current User details
+    // Helper: Get Current User details (Dynamically resolved from active session)
     function getCurrentUser() {
-      let name = 'Akshay Tiwari';
-      let email = 'akshay@ikaaiindia.in';
-      let role = 'learner';
-      let avatar = 'AT';
+      let id = 'u-anon';
+      let name = (state.profile && state.profile.name) ? state.profile.name : 'Learner';
+      let email = (state.profile && state.profile.email) ? state.profile.email : '';
+      let role = (state.profile && state.profile.role) ? state.profile.role : 'learner';
+      let avatar = (state.profile && state.profile.initials) ? state.profile.initials : 'U';
 
       try {
-        if (typeof currentUserProfile !== 'undefined' && currentUserProfile) {
-          name = currentUserProfile.full_name || currentUserProfile.display_name || name;
-          email = currentUserProfile.email || email;
-          role = currentUserProfile.role || role;
-          avatar = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AT';
-        } else if (typeof authState !== 'undefined' && authState && authState.user) {
-          email = authState.user.email || email;
-          name = authState.user.user_metadata?.full_name || authState.user.email?.split('@')[0] || name;
-          avatar = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AT';
+        const sessionRaw = localStorage.getItem('ikaai_portal_session');
+        if (sessionRaw) {
+          const u = JSON.parse(sessionRaw);
+          if (u.id) id = u.id;
+          if (u.name) name = u.name;
+          if (u.email) email = u.email;
+        }
+        if (window.supabaseClient && window.supabaseClient.auth) {
+          const session = window.supabaseClient.auth.session ? window.supabaseClient.auth.session() : null;
+          if (session && session.user && session.user.id) {
+            id = session.user.id;
+          }
         }
       } catch (e) {
         // fallback
       }
 
-      return { id: 'u-intern-1', name, email, role, avatar };
+      if (state.profile && state.profile.id) {
+        id = state.profile.id;
+      }
+
+      const initials = name.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+      return { id, name, email, role, avatar: initials };
+    }
+
+    // Dynamic loader: fetch real registered users from Supabase and build direct conversations
+    async function loadRealDirectoryMembers() {
+      const client = window.supabaseClient;
+      if (!client) return;
+
+      try {
+        const { data: profiles, error } = await client
+          .from('profiles')
+          .select('id, full_name, display_name, email, role, avatar_url, last_seen, chat_status')
+          .order('full_name', { ascending: true });
+
+        if (error) {
+          console.warn('[TeamChat] loadRealDirectoryMembers error:', error);
+          return;
+        }
+
+        if (profiles && profiles.length > 0) {
+          const currentUser = getCurrentUser();
+
+          // Transform DB profiles into state.members
+          state.members = profiles.map(p => {
+            const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
+            const initials = displayName.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+            return {
+              id: p.id,
+              name: displayName,
+              role: p.role || 'learner',
+              email: p.email || '',
+              avatar: initials,
+              avatarUrl: p.avatar_url || null,
+              online: p.chat_status !== 'offline',
+              lastSeen: p.last_seen ? formatTimestamp(p.last_seen) : 'Offline'
+            };
+          });
+
+          // Create or update canonical Direct Message conversations for all members
+          profiles.forEach(p => {
+            if (p.id === currentUser.id) return; // Don't DM yourself
+            const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
+            // Canonical DM room ID so both participants share the exact same room ID
+            const dmConvId = 'dm_' + [currentUser.id, p.id].sort().join('_');
+
+            const existing = state.conversations.find(c => c.id === dmConvId || c.recipientId === p.id);
+            if (!existing) {
+              state.conversations.push({
+                id: dmConvId,
+                type: 'direct',
+                name: displayName,
+                recipientId: p.id,
+                description: `${p.role || 'Intern'} · ${p.email || ''}`,
+                unread: 0,
+                hasMention: false,
+                lastMessage: 'Direct conversation'
+              });
+            } else {
+              existing.id = dmConvId;
+              existing.name = displayName;
+              existing.recipientId = p.id;
+            }
+          });
+
+          renderSidebarLists();
+        }
+      } catch (err) {
+        console.warn('[TeamChat] loadRealDirectoryMembers exception:', err);
+      }
     }
 
     // Helper: Escape HTML to avoid XSS
@@ -16231,24 +16308,55 @@
         const client = window.supabaseClient || (typeof supabase !== 'undefined' ? supabase : null);
         if (!client || typeof client.channel !== 'function') return;
 
-        // Live database sync for incoming messages and documents
+        // 1. Live database sync for incoming messages and documents
         client.channel('chat-messages-live')
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
             const row = payload.new;
             if (!row) return;
             const currentUser = getCurrentUser();
+            // Ignore own messages that were already optimistically rendered
             if (row.sender_id && row.sender_id === currentUser.id) return;
 
+            console.log('[TeamChat] Live incoming message received in:', row.conversation_id, 'from:', row.sender_name);
+
+            if (!state.messages[row.conversation_id]) {
+              state.messages[row.conversation_id] = [];
+            }
+
+            const formattedMsg = {
+              id: row.id,
+              conversationId: row.conversation_id,
+              senderId: row.sender_id,
+              senderName: row.sender_name,
+              senderRole: row.sender_role,
+              senderAvatar: row.sender_avatar,
+              content: row.content,
+              parentMessageId: row.parent_message_id,
+              sharedItem: row.shared_item,
+              isPinned: row.is_pinned,
+              isEdited: row.is_edited,
+              isDeleted: row.is_deleted,
+              createdAt: row.created_at,
+              receipt: 'Seen',
+              reactions: [],
+              attachments: []
+            };
+
+            if (!state.messages[row.conversation_id].some(m => m.id === row.id)) {
+              state.messages[row.conversation_id].push(formattedMsg);
+            }
+
             if (row.conversation_id === state.activeConvId) {
-              await loadConversationMessages(state.activeConvId);
+              renderMessages();
               showChatToast(`New message from ${row.sender_name}`);
             } else {
               const targetConv = state.conversations.find(c => c.id === row.conversation_id);
               if (targetConv) {
                 targetConv.unread = (targetConv.unread || 0) + 1;
                 targetConv.lastMessage = row.content?.substring(0, 40) || 'Attachment';
-                renderSidebarLists();
               }
+              renderSidebarLists();
+              showChatToast(`New message in ${targetConv ? targetConv.name : 'chat'}`);
             }
           })
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'chat_messages' }, async (payload) => {
@@ -16259,12 +16367,21 @@
           })
           .subscribe();
 
+        // 2. Realtime listener for newly registered profiles (Directory sync)
+        client.channel('realtime-profiles-sync')
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+            console.log('[TeamChat] Realtime profiles table update - reloading directory');
+            loadRealDirectoryMembers();
+          })
+          .subscribe();
+
+        // 3. Typing broadcast channel
         state.supabaseChannel = client.channel('ikaai-team-chat')
           .on('broadcast', { event: 'typing' }, (payload) => {
             if (!payload || !payload.payload) return;
             const { convId, user, isTyping } = payload.payload;
             const currentUser = getCurrentUser();
-            if (user === currentUser.name) return; // ignore own broadcast
+            if (user === currentUser.name) return;
 
             const typingStatus = document.getElementById('chatTypingStatus');
             const typingText = document.getElementById('chatTypingText');
@@ -16291,14 +16408,14 @@
         state.initialized = true;
       }
 
+      loadRealDirectoryMembers();
       renderSidebarLists();
       renderActiveConversationHeader();
       renderPinnedBanner();
       renderMessages();
       renderDetailsPanel();
 
-      // Asynchronously fetch latest messages and shared documents from Supabase database
-      loadConversationMessages(convId);
+      loadConversationMessages(state.activeConvId);
     }
 
     return {
