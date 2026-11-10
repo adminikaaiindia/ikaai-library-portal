@@ -1230,6 +1230,30 @@
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
+      // Guard: Administrator accounts are strictly protected from revocation
+      try {
+        const { data: targetProfile } = await client
+          .from('profiles')
+          .select('role, email')
+          .eq('id', userId)
+          .maybeSingle();
+
+        const targetEmail = (targetProfile?.email || '').trim().toLowerCase();
+        const protectedAdmins = [
+          'admin.ikaaiindia@gmail.com',
+          'akshaytiwarigaming@gmail.com',
+          'akshaytiwari8527@gmail.com'
+        ];
+
+        if (targetProfile?.role === 'admin' || protectedAdmins.includes(targetEmail)) {
+          throw new Error('Administrator accounts are protected and cannot be revoked.');
+        }
+      } catch (checkErr) {
+        if (checkErr.message && checkErr.message.includes('Administrator accounts are protected')) {
+          throw checkErr;
+        }
+      }
+
       try {
         const { data, error } = await client.rpc('revoke_user_access', {
           p_user_id: userId
@@ -1261,6 +1285,98 @@
       }
 
       return { success: true, user_id: userId, status: 'revoked' };
+    },
+
+    async adminDeleteUser(userId, userEmail) {
+      const client = getClient();
+      if (!isLive() || !client) throw new Error('Backend connection required.');
+
+      const cleanEmail = (userEmail || '').trim().toLowerCase();
+      const protectedAdmins = [
+        'admin.ikaaiindia@gmail.com',
+        'akshaytiwarigaming@gmail.com',
+        'akshaytiwari8527@gmail.com'
+      ];
+
+      if (cleanEmail && protectedAdmins.includes(cleanEmail)) {
+        throw new Error('Administrator accounts are protected and cannot be deleted.');
+      }
+
+      // Check profile role before deleting
+      if (userId) {
+        try {
+          const { data: prof } = await client
+            .from('profiles')
+            .select('role, email')
+            .eq('id', userId)
+            .maybeSingle();
+
+          const emailCheck = (prof?.email || '').trim().toLowerCase();
+          if (prof?.role === 'admin' || protectedAdmins.includes(emailCheck)) {
+            throw new Error('Administrator accounts are protected and cannot be deleted.');
+          }
+        } catch (chkErr) {
+          if (chkErr.message && chkErr.message.includes('Administrator accounts are protected')) {
+            throw chkErr;
+          }
+        }
+      }
+
+      // 1. Delete from access_invites
+      try {
+        if (cleanEmail) {
+          await client.from('access_invites').delete().ilike('email', cleanEmail);
+        }
+        if (userId) {
+          await client.from('access_invites').delete().eq('id', userId);
+        }
+      } catch (invErr) {
+        console.warn('[DataLayer] delete access_invites error:', invErr);
+      }
+
+      // 2. Delete or deactivate from profiles
+      if (userId) {
+        try {
+          const { error: profDeleteErr } = await client
+            .from('profiles')
+            .delete()
+            .eq('id', userId);
+
+          if (profDeleteErr) {
+            console.warn('[DataLayer] profiles delete restricted by FK constraints, revoking instead:', profDeleteErr);
+            await client
+              .from('profiles')
+              .update({
+                access_status: 'revoked',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', userId);
+          }
+        } catch (profE) {
+          console.warn('[DataLayer] profiles delete exception:', profE);
+        }
+      } else if (cleanEmail) {
+        try {
+          const { error: profDeleteErr } = await client
+            .from('profiles')
+            .delete()
+            .ilike('email', cleanEmail);
+
+          if (profDeleteErr) {
+            await client
+              .from('profiles')
+              .update({
+                access_status: 'revoked',
+                updated_at: new Date().toISOString()
+              })
+              .ilike('email', cleanEmail);
+          }
+        } catch (profE) {
+          console.warn('[DataLayer] profiles delete by email exception:', profE);
+        }
+      }
+
+      return { success: true, email: cleanEmail, id: userId };
     },
 
     async adminRestoreUserAccess(userId) {

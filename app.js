@@ -3211,6 +3211,7 @@
     adminSaveEditUserBtn: document.getElementById('adminSaveEditUserBtn'),
     adminCancelEditUserBtn: document.getElementById('adminCancelEditUserBtn'),
     closeAdminEditUserModalBtn: document.getElementById('closeAdminEditUserModalBtn'),
+    adminDeleteModalUserBtn: document.getElementById('adminDeleteModalUserBtn'),
 
     // Auth Screen Elements
     authScreen: document.getElementById('authScreen'),
@@ -9365,6 +9366,7 @@
   var adminPortalCachedUsers = [];
   var adminPortalEventsWired = false;
   var bulkParsedEntries = [];
+  var currentModalUser = null;
 
   async function renderAdminPortal() {
     if (!el.adminUsersTableBody) return;
@@ -9482,6 +9484,14 @@
       const joinedDateStr = u.created_at ? new Date(u.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '--';
       const lastSeenStr = u.last_seen ? new Date(u.last_seen).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : (u.is_registered ? 'Never' : 'Invited');
 
+      // Check if user is an administrator or protected root account
+      const userEmail = (u.email || '').trim().toLowerCase();
+      const isAdminAccount = u.role === 'admin' ||
+        userEmail === 'admin.ikaaiindia@gmail.com' ||
+        userEmail === 'akshaytiwarigaming@gmail.com' ||
+        userEmail === 'akshaytiwari8527@gmail.com' ||
+        userEmail.includes('admin');
+
       // Actions buttons
       let actionButtons = '';
       if (u.status === 'pending') {
@@ -9489,10 +9499,15 @@
       }
       actionButtons += `<button type="button" class="form-action-btn secondary btn-edit-user" style="padding: 4px 10px; font-size: 11.5px; margin-right: 6px;">Edit</button>`;
 
-      if (u.status === 'revoked') {
-        actionButtons += `<button type="button" class="primary-accent-btn btn-restore-user" style="padding: 4px 10px; font-size: 11.5px; background: #059669;">Restore</button>`;
+      if (isAdminAccount) {
+        actionButtons += `<span style="display: inline-block; padding: 4px 8px; font-size: 11px; border-radius: 6px; background: rgba(168,85,247,0.1); color: #c084fc; font-weight: 600; border: 1px solid rgba(168,85,247,0.25);">Admin Protected</span>`;
       } else {
-        actionButtons += `<button type="button" class="form-action-btn secondary btn-revoke-user" style="padding: 4px 10px; font-size: 11.5px; color: #ef4444;" title="Revoke user access">Revoke</button>`;
+        if (u.status === 'revoked') {
+          actionButtons += `<button type="button" class="primary-accent-btn btn-restore-user" style="padding: 4px 10px; font-size: 11.5px; margin-right: 6px; background: #059669;">Restore</button>`;
+        } else {
+          actionButtons += `<button type="button" class="form-action-btn secondary btn-revoke-user" style="padding: 4px 10px; font-size: 11.5px; margin-right: 6px; color: #f59e0b;" title="Revoke user access">Revoke</button>`;
+        }
+        actionButtons += `<button type="button" class="form-action-btn secondary btn-delete-user" style="padding: 4px 10px; font-size: 11.5px; color: #ef4444;" title="Permanently delete user/invitation">Delete</button>`;
       }
 
       tr.innerHTML = `
@@ -9527,6 +9542,10 @@
       const revokeBtn = tr.querySelector('.btn-revoke-user');
       if (revokeBtn) {
         revokeBtn.addEventListener('click', async () => {
+          if (isAdminAccount) {
+            alert('Administrator accounts are protected and cannot be revoked.');
+            return;
+          }
           const targetId = u.id || u.profile_id || u.invite_id;
           if (!targetId) {
             alert('Cannot identify user ID to revoke.');
@@ -9561,6 +9580,31 @@
         });
       }
 
+      const deleteBtn = tr.querySelector('.btn-delete-user');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', async () => {
+          if (isAdminAccount) {
+            alert('Administrator accounts are protected and cannot be deleted.');
+            return;
+          }
+          const targetId = u.id || u.profile_id || u.invite_id;
+          const confirmMsg = `Are you sure you want to permanently delete and remove ${u.full_name || u.email}? This action cannot be undone.`;
+          if (!confirm(confirmMsg)) return;
+
+          try {
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Deleting...';
+            await window.DataLayer.adminDeleteUser(targetId, u.email);
+            showToast(`Deleted ${u.email} successfully.`);
+            await renderAdminPortal();
+          } catch (err) {
+            alert('Failed to delete user: ' + err.message);
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Delete';
+          }
+        });
+      }
+
       el.adminUsersTableBody.appendChild(tr);
     });
   }
@@ -9569,14 +9613,35 @@
 
   function openAdminEditModal(user, isApproving = false) {
     if (!el.adminEditUserModal) return;
+    currentModalUser = user;
+
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const isAdminAccount = user.role === 'admin' ||
+      userEmail === 'admin.ikaaiindia@gmail.com' ||
+      userEmail === 'akshaytiwarigaming@gmail.com' ||
+      userEmail === 'akshaytiwari8527@gmail.com' ||
+      userEmail.includes('admin');
+
     el.adminEditUserId.value = user.id || user.profile_id || user.invite_id;
     el.adminEditUserName.textContent = user.full_name || (user.is_registered ? 'Registered User' : 'Invited Member');
     el.adminEditUserEmail.textContent = user.email;
 
-    el.adminEditRoleSelect.value = user.role || 'intern';
-    const roleIsAdmin = el.adminEditRoleSelect.value === 'admin';
-    el.adminEditProgSelect.disabled = roleIsAdmin;
-    if (el.adminEditProgNote) el.adminEditProgNote.style.display = roleIsAdmin ? 'block' : 'none';
+    if (isAdminAccount) {
+      el.adminEditRoleSelect.value = 'admin';
+      el.adminEditRoleSelect.disabled = true;
+      el.adminEditProgSelect.disabled = true;
+      if (el.adminEditProgNote) el.adminEditProgNote.style.display = 'block';
+      if (el.adminDeleteModalUserBtn) el.adminDeleteModalUserBtn.style.display = 'none';
+    } else {
+      el.adminEditRoleSelect.value = user.role || 'intern';
+      el.adminEditRoleSelect.disabled = false;
+      const roleIsAdmin = el.adminEditRoleSelect.value === 'admin';
+      el.adminEditProgSelect.disabled = roleIsAdmin;
+      if (el.adminEditProgNote) el.adminEditProgNote.style.display = roleIsAdmin ? 'block' : 'none';
+      if (el.adminDeleteModalUserBtn) {
+        el.adminDeleteModalUserBtn.style.display = isApproving ? 'none' : 'block';
+      }
+    }
 
     if (user.programme_id) {
       el.adminEditProgSelect.value = user.programme_id;
@@ -9781,6 +9846,40 @@
         } finally {
           el.adminSaveEditUserBtn.disabled = false;
           el.adminSaveEditUserBtn.textContent = 'Save Changes';
+        }
+      });
+    }
+
+    if (el.adminDeleteModalUserBtn) {
+      el.adminDeleteModalUserBtn.addEventListener('click', async () => {
+        if (!currentModalUser) return;
+        const targetEmail = (currentModalUser.email || '').trim().toLowerCase();
+        const isAdminAccount = currentModalUser.role === 'admin' ||
+          targetEmail === 'admin.ikaaiindia@gmail.com' ||
+          targetEmail === 'akshaytiwarigaming@gmail.com' ||
+          targetEmail === 'akshaytiwari8527@gmail.com' ||
+          targetEmail.includes('admin');
+
+        if (isAdminAccount) {
+          alert('Administrator accounts are protected and cannot be deleted.');
+          return;
+        }
+
+        if (!confirm(`Are you sure you want to permanently delete and remove ${currentModalUser.full_name || currentModalUser.email}? This cannot be undone.`)) return;
+
+        el.adminDeleteModalUserBtn.disabled = true;
+        el.adminDeleteModalUserBtn.textContent = 'Deleting...';
+        try {
+          const targetId = currentModalUser.id || currentModalUser.profile_id || currentModalUser.invite_id;
+          await window.DataLayer.adminDeleteUser(targetId, currentModalUser.email);
+          showToast(`Deleted ${currentModalUser.email} from directory`);
+          if (el.adminEditUserModal) el.adminEditUserModal.style.display = 'none';
+          await renderAdminPortal();
+        } catch (err) {
+          alert('Failed to delete user: ' + err.message);
+        } finally {
+          el.adminDeleteModalUserBtn.disabled = false;
+          el.adminDeleteModalUserBtn.textContent = 'Delete User';
         }
       });
     }
