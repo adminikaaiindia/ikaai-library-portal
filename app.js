@@ -9461,7 +9461,7 @@
       if (u.role === 'admin') {
         roleBadge = `<span style="background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); color: #c084fc; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Admin</span>`;
       } else if (u.role === 'instructor') {
-        roleBadge = `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Instructor</span>`;
+        roleBadge = `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Full-Time</span>`;
       } else {
         roleBadge = `<span style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;">Intern</span>`;
       }
@@ -9937,7 +9937,7 @@
 
       let role = 'intern';
       if (roleRaw.includes('admin')) role = 'admin';
-      else if (roleRaw.includes('instruct')) role = 'instructor';
+      else if (roleRaw.includes('instruct') || roleRaw.includes('full-time') || roleRaw.includes('fulltime') || roleRaw.includes('full time')) role = 'instructor';
 
       const emailValid = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
       let programmeId = null;
@@ -10104,7 +10104,7 @@
     const fullName = liveProfile?.full_name || liveProfile?.display_name || liveUser?.user_metadata?.full_name || p.name || 'User';
     const email = liveUser?.email || liveProfile?.email || p.email || '--';
     const roleKey = (liveProfile?.role || p.role || 'learner').toLowerCase();
-    const roleFormatted = roleKey === 'admin' ? 'Administrator' : (roleKey === 'instructor' ? 'Instructor' : 'Intern / Learner');
+    const roleFormatted = roleKey === 'admin' ? 'Administrator' : (roleKey === 'instructor' ? 'Full-Time' : 'Intern / Learner');
     const programmeName = liveProfile?.programme?.name || p.programmeName || 'Unassigned';
     const branch = liveProfile?.branch || p.branch || 'Ikaai HQ - New Delhi / Remote';
     const position = liveProfile?.position || p.position || 'Not specified';
@@ -14388,7 +14388,7 @@
 
         // Role badge
         const roleStr = msg.senderRole ? msg.senderRole.toLowerCase() : 'learner';
-        const roleBadgeHtml = `<span class="chat-role-badge ${roleStr}">${roleStr === 'instructor' ? 'Instructor' : (roleStr === 'admin' ? 'Admin' : 'Learner')}</span>`;
+        const roleBadgeHtml = `<span class="chat-role-badge ${roleStr}">${roleStr === 'instructor' ? 'Full-Time' : (roleStr === 'admin' ? 'Admin' : 'Learner')}</span>`;
 
         // Bubble content
         const bodyContent = msg.isDeleted
