@@ -72,6 +72,25 @@
       } catch (e) {
         return null;
       }
+    },
+    getProfile: async () => {
+      if (window.DataLayer && typeof window.DataLayer.getMyProfile === 'function') {
+        return await window.DataLayer.getMyProfile();
+      }
+      const client = SupabaseClient.getClient();
+      const user = await SupabaseClient.getUser();
+      if (!client || !user) return null;
+      try {
+        const { data, error } = await client
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (error) throw error;
+        return data;
+      } catch (e) {
+        return null;
+      }
     }
   };
 

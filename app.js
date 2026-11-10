@@ -14234,7 +14234,18 @@
             ${attachmentsHtml}
           </div>
           ${reactionsHtml}
-          ${isOwn && !msg.isDeleted ? `<div class="chat-receipt-status"><span>✓✓</span> ${msg.receipt || 'Sent'}</div>` : ''}
+          ${isOwn && !msg.isDeleted ? (
+            msg.receipt === 'Failed'
+              ? `<div class="chat-receipt-status chat-receipt-failed" role="button" data-retry-msg-id="${escapeHtml(msg.id)}" title="${escapeHtml(msg.errorMessage || 'Database error')}" style="cursor: pointer; color: #ef4444; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; background: rgba(239, 68, 68, 0.08); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.25); margin-top: 4px;">
+                  <span style="font-size: 13px;">⚠️</span>
+                  <span>Failed, tap to retry</span>
+                  <span style="font-size: 11px; opacity: 0.85; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">(${escapeHtml(msg.errorMessage || 'Unknown error')})</span>
+                </div>`
+              : (msg.receipt === 'Sending'
+                  ? `<div class="chat-receipt-status" style="color: var(--chat-text-dim); display: inline-flex; align-items: center; gap: 4px;"><span>⏳</span> Sending...</div>`
+                  : `<div class="chat-receipt-status"><span>✓✓</span> ${escapeHtml(msg.receipt || 'Sent')}</div>`
+                )
+          ) : ''}
         </div>
       `;
 
@@ -14344,6 +14355,16 @@
     }
 
     function wireMessageEventListeners(row, msg) {
+      // Retry sending failed message
+      const retryBtn = row.querySelector('.chat-receipt-failed');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          retrySendMessage(msg.id);
+        });
+      }
+
       // Wire document chips and download buttons
       row.querySelectorAll('.chat-file-chip, .chat-file-dl-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -14694,9 +14715,15 @@
       }
       if (sendBtn) sendBtn.disabled = false;
 
-      // Create optimistic message object
+      // Deduplicate previous failed attempt for the same content
+      if (state.messages[conv.id]) {
+        state.messages[conv.id] = state.messages[conv.id].filter(m => !(m.receipt === 'Failed' && m.content === text));
+      }
+
+      // Create optimistic message object with Sending state
+      const tempMsgId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
       const newMsg = {
-        id: 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        id: tempMsgId,
         conversationId: conv.id,
         senderId: currentUser.id,
         senderName: currentUser.name,
@@ -14708,7 +14735,7 @@
         isEdited: false,
         isDeleted: false,
         createdAt: new Date().toISOString(),
-        receipt: 'Sent',
+        receipt: 'Sending',
         reactions: [],
         attachments: finalAttachments
       };
@@ -14717,52 +14744,133 @@
         state.messages[conv.id] = [];
       }
       state.messages[conv.id].push(newMsg);
+      renderMessages();
 
-      // Persist to Supabase database if available
-      if (window.DataLayer) {
-        try {
-          const saved = await window.DataLayer.sendChatMessage({
-            conversationId: conv.id,
-            content: text,
-            senderId: currentUser.id,
-            senderName: currentUser.name,
-            senderRole: currentUser.role,
-            senderAvatar: currentUser.avatar,
-            parentMessageId: state.replyingTo ? state.replyingTo.id : null,
-            sharedItem: null,
-            attachments: finalAttachments
-          });
-          if (saved) {
-            newMsg.id = saved.id;
-            newMsg.createdAt = saved.created_at || newMsg.createdAt;
-            if (saved.attachments && saved.attachments.length > 0) {
-              newMsg.attachments = saved.attachments;
-            }
-          }
-        } catch (dbErr) {
-          console.error('[TeamChat] Database persistence error:', dbErr);
+      // Persist to Supabase database without silent local fallback
+      let dbSuccess = false;
+      let dbError = null;
+      let saved = null;
+
+      try {
+        if (!window.DataLayer || typeof window.DataLayer.sendChatMessage !== 'function') {
+          throw new Error('DataLayer.sendChatMessage is unavailable.');
         }
+
+        saved = await window.DataLayer.sendChatMessage({
+          conversationId: conv.id,
+          content: text,
+          senderId: currentUser.id,
+          senderName: currentUser.name,
+          senderRole: currentUser.role,
+          senderAvatar: currentUser.avatar,
+          parentMessageId: state.replyingTo ? state.replyingTo.id : null,
+          sharedItem: null,
+          attachments: finalAttachments
+        });
+
+        if (!saved || !saved.id) {
+          throw new Error('Database returned empty response.');
+        }
+        dbSuccess = true;
+      } catch (dbErr) {
+        dbError = dbErr;
+        console.error('[TeamChat] Database persistence error:', dbErr);
       }
 
-      // Update conversation metadata
-      conv.lastMessage = text.substring(0, 40) || (finalAttachments.length > 0 ? `📎 ${finalAttachments[0].name}` : 'Document');
-      conv.unread = 0;
+      if (dbSuccess && saved) {
+        newMsg.id = saved.id;
+        newMsg.createdAt = saved.created_at || newMsg.createdAt;
+        newMsg.receipt = 'Sent';
+        delete newMsg.errorMessage;
+        if (saved.attachments && saved.attachments.length > 0) {
+          newMsg.attachments = saved.attachments;
+        }
 
-      // Reset composer
-      textarea.value = '';
-      state.drafts[conv.id] = '';
-      state.pendingFiles = [];
-      renderPendingFiles();
-      hideReplyBar();
-      updateCharCounter();
+        // Update conversation metadata
+        conv.lastMessage = text.substring(0, 40) || (finalAttachments.length > 0 ? `📎 ${finalAttachments[0].name}` : 'Document');
+        conv.unread = 0;
 
-      // Re-render
+        // Reset composer only after verified DB save
+        textarea.value = '';
+        state.drafts[conv.id] = '';
+        state.pendingFiles = [];
+        renderPendingFiles();
+        hideReplyBar();
+        updateCharCounter();
+
+        // Re-render
+        renderMessages();
+        renderSidebarLists();
+        renderDetailsPanel();
+
+        // Clear typing broadcast if active
+        broadcastTyping(false);
+      } else {
+        // Saving to database failed: do NOT mark as Sent, keep text in box, display "Failed, tap to retry"
+        newMsg.receipt = 'Failed';
+        newMsg.errorMessage = dbError?.message || 'Database persistence failed';
+        textarea.value = text;
+        state.drafts[conv.id] = text;
+        updateCharCounter();
+        renderMessages();
+      }
+    }
+
+    // Retry sending a message that previously failed persistence
+    async function retrySendMessage(msgId) {
+      const convMessages = state.messages[conv.id] || [];
+      const msg = convMessages.find(m => m.id === msgId);
+      if (!msg) return;
+
+      msg.receipt = 'Sending';
       renderMessages();
-      renderSidebarLists();
-      renderDetailsPanel();
 
-      // Clear typing broadcast if active
-      broadcastTyping(false);
+      try {
+        if (!window.DataLayer || typeof window.DataLayer.sendChatMessage !== 'function') {
+          throw new Error('DataLayer.sendChatMessage is unavailable.');
+        }
+
+        const saved = await window.DataLayer.sendChatMessage({
+          conversationId: conv.id,
+          content: msg.content,
+          senderId: msg.senderId || currentUser.id,
+          senderName: msg.senderName || currentUser.name,
+          senderRole: msg.senderRole || currentUser.role,
+          senderAvatar: msg.senderAvatar || currentUser.avatar,
+          parentMessageId: msg.parentMessageId || null,
+          sharedItem: null,
+          attachments: msg.attachments || []
+        });
+
+        if (!saved || !saved.id) {
+          throw new Error('Database returned empty response.');
+        }
+
+        msg.id = saved.id;
+        msg.createdAt = saved.created_at || msg.createdAt;
+        msg.receipt = 'Sent';
+        delete msg.errorMessage;
+        if (saved.attachments && saved.attachments.length > 0) {
+          msg.attachments = saved.attachments;
+        }
+
+        const textarea = document.getElementById('chatComposerTextarea');
+        if (textarea && textarea.value === msg.content) {
+          textarea.value = '';
+          state.drafts[conv.id] = '';
+          updateCharCounter();
+        }
+
+        conv.lastMessage = msg.content.substring(0, 40) || 'Message';
+        renderMessages();
+        renderSidebarLists();
+        renderDetailsPanel();
+      } catch (retryErr) {
+        console.error('[TeamChat] Database persistence error (retry failed):', retryErr);
+        msg.receipt = 'Failed';
+        msg.errorMessage = retryErr?.message || 'Database persistence failed';
+        renderMessages();
+      }
     }
 
     // Character counter

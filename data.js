@@ -808,6 +808,27 @@
     // ------------------------------------------------------------------------
     // 8. PROFILE & ACCOUNT SETTINGS
     // ------------------------------------------------------------------------
+    async getCurrentUser() {
+      if (window.SupabaseClient && typeof window.SupabaseClient.getUser === 'function') {
+        const u = await window.SupabaseClient.getUser();
+        if (u) return u;
+      }
+      const client = getClient();
+      if (client?.auth) {
+        try {
+          const { data: { user }, error } = await client.auth.getUser();
+          if (!error && user) return user;
+        } catch (e) {}
+      }
+      return null;
+    },
+
+    async getMyProfile() {
+      const user = await DataLayer.getCurrentUser();
+      if (!user?.id) return null;
+      return await DataLayer.getProfile(user.id);
+    },
+
     async getProfile(userId) {
       const client = getClient();
       if (isLive()) {
@@ -1595,8 +1616,7 @@
         }
 
         // 2. Programme docs new in last 14 days
-        const user = await window.SupabaseClient.getUser();
-        const profile = await window.SupabaseClient.getProfile();
+        const profile = await DataLayer.getMyProfile();
         const progId = profile?.programme_id;
         const progDocs = await DataLayer.getCompanyDocuments({
           programmeId: progId,
@@ -2048,7 +2068,7 @@
       const client = getClient();
       if (!client) {
         console.warn('[DataLayer] sendChatMessage: Supabase client unavailable.');
-        return null;
+        throw new Error('Supabase client unavailable. Message could not be saved to database.');
       }
 
       // 1. Resolve sender credentials
@@ -2058,17 +2078,29 @@
       let resolvedAvatar = senderAvatar || 'U';
 
       // Fallback: try Supabase auth or DataLayer profile if not passed
-      if (!resolvedId || resolvedId === 'u-anon') {
-        try {
-          const authUser = await window.SupabaseClient.getUser();
-          if (authUser?.id) resolvedId = authUser.id;
-          if (!resolvedName && authUser) resolvedName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
-        } catch (e) {}
-      }
+      let authUser = null;
+      try {
+        authUser = await DataLayer.getCurrentUser();
+        if (authUser?.id) {
+          if (!resolvedId || resolvedId === 'u-anon') resolvedId = authUser.id;
+          if (!resolvedName) resolvedName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
+        }
+      } catch (e) {}
+
+      // Normalize sender_role to satisfy PostgreSQL constraint: check (sender_role in ('learner', 'instructor', 'admin'))
+      const normalizeRole = (role) => {
+        if (!role) return 'learner';
+        const r = String(role).trim().toLowerCase();
+        if (r === 'intern' || r === 'learner' || r === 'student') return 'learner';
+        if (r === 'instructor' || r === 'teacher' || r === 'mentor') return 'instructor';
+        if (r === 'admin' || r === 'administrator' || r === 'superadmin') return 'admin';
+        return 'learner';
+      };
+      const finalSenderRole = normalizeRole(resolvedRole);
 
       // Check if resolvedId is a valid UUID so Postgres uuid column never throws 22P02
       const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      const dbSenderId = isValidUUID(resolvedId) ? resolvedId : null;
+      const dbSenderId = isValidUUID(resolvedId) ? resolvedId : (isValidUUID(authUser?.id) ? authUser.id : null);
 
       // 2. Ensure conversation record exists in chat_conversations
       try {
@@ -2090,7 +2122,7 @@
           conversation_id: conversationId,
           sender_id: dbSenderId,
           sender_name: resolvedName || 'Member',
-          sender_role: resolvedRole,
+          sender_role: finalSenderRole,
           sender_avatar: resolvedAvatar,
           content: content || '',
           parent_message_id: parentMessageId || null,
@@ -2104,7 +2136,10 @@
         throw msgError;
       }
 
-      // 2. Insert chat attachments if any
+      // Temporary verification log on successful chat save as requested
+      console.log('[TeamChat] saved message ' + newMsg.id);
+
+      // 4. Insert chat attachments if any
       const insertedAttachments = [];
       if (attachments && attachments.length > 0) {
         const attRows = attachments.map(att => ({
@@ -2115,7 +2150,7 @@
           mime_type: att.mime_type || att.type || 'application/octet-stream',
           storage_path: att.storage_path,
           public_url: att.file_url || null,
-          uploaded_by: currentUser.id
+          uploaded_by: dbSenderId || authUser?.id || null
         }));
 
         const { data: attData, error: attErr } = await client
