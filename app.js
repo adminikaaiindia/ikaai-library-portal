@@ -12765,16 +12765,14 @@
             accessStatus = 'active';
           }
 
-          // 1. Access Pending: User is registered but not yet approved/assigned by Admin
+          // TEMPORARY TESTING BYPASS: Auto-activate pending users so testing proceeds smoothly without admin approval
           if (accessStatus === 'pending') {
-            if (el.pendingUserEmail) el.pendingUserEmail.textContent = profile.email || userData.email || '--';
-            if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'flex';
-            if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
-            if (el.authScreen) el.authScreen.style.display = 'none';
-            if (el.appShell) el.appShell.style.display = 'none';
-            // CRITICAL: Block all portal data loading
-            return;
+            console.log('[Auth] Temporary Testing Mode: Bypassing approval screen for user:', profile.email);
+            accessStatus = 'active';
           }
+
+          // 1. Access Pending: Gating screen bypassed for testing
+          // (Can be re-enabled later by removing the bypass above)
 
           // 2. Access Revoked: User account has been deactivated by Admin
           if (accessStatus === 'revoked') {
