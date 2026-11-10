@@ -18,7 +18,13 @@ if (typeof window !== 'undefined') {
 let supabaseClient = null;
 if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.createClient === 'function') {
   try {
-    supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+    supabaseClient = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
   } catch (e) {
     console.error("Failed to initialize Supabase client:", e);
   }

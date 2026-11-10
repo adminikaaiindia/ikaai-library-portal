@@ -10,6 +10,10 @@
 
   function initClient() {
     if (clientInstance) return clientInstance;
+    if (window.supabaseClient) {
+      clientInstance = window.supabaseClient;
+      return clientInstance;
+    }
 
     const config = window.SUPABASE_CONFIG;
     if (!config || !config.url || !config.anonKey) {

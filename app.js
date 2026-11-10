@@ -13116,16 +13116,28 @@
         showToast('Signed in via Google Demo Account');
       } else {
         try {
-          const { data, error } = await window.supabaseClient.auth.signInWithOAuth({
+          const client = window.supabaseClient || (window.SupabaseClient && window.SupabaseClient.getClient && window.SupabaseClient.getClient());
+          if (!client || !client.auth) {
+            showAuthError('Authentication service is initializing. Please try again in a moment.');
+            return;
+          }
+          const redirectUrl = window.location.origin + window.location.pathname;
+          console.log('[Auth] Initiating Google Sign-In with redirect URL:', redirectUrl);
+          const { data, error } = await client.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: window.location.origin + window.location.pathname
+              redirectTo: redirectUrl
             }
           });
           if (error) {
+            console.error('[Auth] Google sign-in error:', error);
             showAuthError(error.message || 'Google sign-in was cancelled or failed.');
+          } else if (data && data.url) {
+            // Explicit navigation guarantee across all modern browsers
+            window.location.assign(data.url);
           }
         } catch (err) {
+          console.error('[Auth] Google sign-in exception:', err);
           showAuthError(err.message || 'Google sign-in was cancelled or failed.');
         }
       }
