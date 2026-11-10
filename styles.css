@@ -11981,3 +11981,448 @@ button.timer-locked,
   font-weight: 600;
   color: var(--text-secondary);
 }
+
+
+/* ==========================================================================
+   COMPREHENSIVE MOBILE RESPONSIVENESS & TOUCH OPTIMIZATIONS
+   ========================================================================== */
+
+/* Global Mobile Viewport Hygiene */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+.portal-root,
+.app-shell,
+.main-wrapper,
+.main-content-container,
+.main-content {
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+/* Base Mobile Overrides (<= 1023px) */
+@media (max-width: 1023px) {
+  .top-bar {
+    height: 58px;
+    padding: 0 16px;
+  }
+
+  .main-content-container,
+  .main-content {
+    padding: 16px 16px 88px;
+    gap: 18px;
+  }
+
+  .sidebar {
+    width: 280px;
+    max-width: 85vw;
+    z-index: 1000;
+  }
+
+  .sidebar-overlay {
+    z-index: 999;
+  }
+
+  .user-dropdown-card {
+    max-width: calc(100vw - 24px);
+    right: 8px;
+  }
+
+  .module-columns-layout,
+  .settings-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}
+
+/* Tablet & Mobile Screens (<= 768px) */
+@media (max-width: 768px) {
+  /* Prevent iOS Safari auto-zoom on input focus */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="url"],
+  select,
+  textarea,
+  .form-text-input,
+  .auth-input,
+  .admin-filter-input,
+  .custom-select {
+    font-size: 16px !important;
+    min-height: 42px;
+    line-height: 1.4;
+  }
+
+  /* Accessible Touch Target Heights */
+  button,
+  .primary-accent-btn,
+  .secondary-btn,
+  .form-action-btn,
+  .admin-tab-nav-btn {
+    min-height: 42px;
+    touch-action: manipulation;
+  }
+
+  /* General Cards & Headers */
+  .card,
+  .admin-invite-card,
+  .programme-header-card,
+  .module-overview-card {
+    padding: 16px 14px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .view-title {
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+  }
+
+  .view-subtitle {
+    font-size: 13px !important;
+  }
+
+  .programme-main-title {
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+  }
+
+  .programme-description {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Modals: Mobile Friendly Centered / Bottom Sheet */
+  .modal-overlay {
+    padding: 10px !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: calc(100vh - 20px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 16px !important;
+    padding: 18px 14px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .modal-footer {
+    display: flex !important;
+    flex-direction: column-reverse !important;
+    gap: 10px !important;
+    margin-top: 20px !important;
+  }
+
+  .modal-footer button,
+  .modal-footer .primary-accent-btn,
+  .modal-footer .secondary-btn,
+  .modal-footer .form-action-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  /* Admin Portal Responsive Styles */
+  #adminSingleInviteForm > div:first-child {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  #adminSingleInviteForm button[type="submit"] {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .admin-tab-nav {
+    display: flex !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px !important;
+  }
+
+  .admin-tab-nav-btn {
+    flex: 1 0 auto !important;
+    text-align: center !important;
+    padding: 9px 14px !important;
+  }
+
+  #adminPendingAlert {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px 12px !important;
+  }
+
+  #adminFilterPendingBtn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Platform Directory Filter & Table */
+  #adminScreenView div[style*="grid-template-columns: repeat(auto-fit"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  #adminBulkTextInput {
+    font-size: 16px !important;
+  }
+
+  #adminBulkValidateBtn,
+  #adminBulkConfirmBtn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Modules / Learning Screen */
+  .module-bottom-nav {
+    display: flex !important;
+    flex-direction: column-reverse !important;
+    gap: 10px !important;
+  }
+
+  .module-bottom-nav button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .sticky-bottom-nav {
+    margin: 14px -14px -14px !important;
+    padding: 10px 12px 14px !important;
+  }
+
+  .sticky-nav-buttons-row {
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+  }
+
+  .sticky-nav-buttons-row button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .module-resource-item {
+    padding: 10px 12px !important;
+  }
+
+  /* Job Descriptions Responsive Styles */
+  .jds-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .jd-card {
+    padding: 16px 14px !important;
+  }
+
+  .jd-filter-chips {
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px !important;
+    scrollbar-width: thin;
+    display: flex !important;
+    gap: 6px !important;
+  }
+
+  .jd-detail-view {
+    padding: 16px 12px !important;
+    margin: 0 !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .jd-detail-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+  }
+
+  .jd-detail-header-actions {
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .jd-detail-header-actions button,
+  .jd-detail-header-actions a {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .jd-document-body table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100% !important;
+    white-space: nowrap;
+    border-collapse: collapse !important;
+  }
+
+  /* Written Exam Screen */
+  .exam-header-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  .exam-timer-chip {
+    align-self: flex-start !important;
+  }
+
+  .exam-nav-actions,
+  .exam-actions-bar {
+    flex-direction: column-reverse !important;
+    gap: 10px !important;
+  }
+
+  .exam-nav-actions button,
+  .exam-actions-bar button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .exam-question-item {
+    padding: 16px 12px !important;
+  }
+
+  .exam-option-label {
+    padding: 12px 14px !important;
+    min-height: 44px !important;
+  }
+
+  /* Grade Report Screen */
+  .grade-overview-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .grade-table-card {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Feedback Screen */
+  .feedback-card {
+    padding: 16px 14px !important;
+  }
+
+  #submitFeedbackBtn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Account Settings Screen */
+  .account-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    padding: 14px 0 !important;
+  }
+
+  .account-row > div:last-child {
+    width: 100% !important;
+    text-align: left !important;
+  }
+
+  .theme-options-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Auth Screen */
+  .auth-screen {
+    padding: 14px !important;
+    align-items: center !important;
+  }
+
+  .auth-card {
+    padding: 24px 18px !important;
+    width: 100% !important;
+    max-width: 440px !important;
+  }
+
+  .auth-google-btn,
+  .auth-submit-btn {
+    width: 100% !important;
+    min-height: 44px !important;
+  }
+}
+
+/* Small Smartphone Screens (<= 480px) */
+@media (max-width: 480px) {
+  .top-bar {
+    padding: 0 10px;
+    height: 54px;
+  }
+
+  .top-bar-brand .brand-title {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .top-bar-brand .brand-sub {
+    display: none !important;
+  }
+
+  .top-bar-brand img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .top-bar-actions {
+    gap: 4px;
+  }
+
+  .main-content-container,
+  .main-content {
+    padding: 10px 10px 80px;
+    gap: 14px;
+  }
+
+  .card,
+  .admin-invite-card,
+  .programme-header-card,
+  .module-overview-card {
+    padding: 14px 12px !important;
+  }
+
+  .view-title {
+    font-size: 18px !important;
+  }
+
+  .programme-main-title {
+    font-size: 18px !important;
+  }
+
+  /* Directory table touch indicators */
+  .admin-users-table-wrap {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
+  }
+
+  /* Full screen user dropdown card on ultra small screens */
+  .user-dropdown-card {
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+
+  /* Edit User Modal Compact Padding */
+  #adminEditUserModal .modal-card {
+    padding: 14px 12px !important;
+  }
+}

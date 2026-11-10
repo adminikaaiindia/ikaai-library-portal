@@ -3576,6 +3576,9 @@
     currentModuleIndex = 0;
     expandedModules = new Set([0]);
     renderAll();
+    if (window.innerWidth < 1024 && typeof closeSidebar === 'function') {
+      closeSidebar();
+    }
     showToast(`Switched to ${getCurrentProgramme().title}`);
   });
 
