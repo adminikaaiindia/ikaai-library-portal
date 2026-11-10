@@ -48,6 +48,7 @@ drop policy if exists "chat_conversations_open" on public.chat_conversations;
 -- 2. Drop foreign key constraints (allows custom string room IDs like 'all-members', 'general', 'dm_...')
 alter table if exists public.chat_conversation_members drop constraint if exists chat_conversation_members_conversation_id_fkey cascade;
 alter table if exists public.chat_messages drop constraint if exists chat_messages_conversation_id_fkey cascade;
+alter table if exists public.chat_messages drop constraint if exists chat_messages_sender_id_fkey cascade;
 alter table if exists public.chat_attachments drop constraint if exists chat_attachments_conversation_id_fkey cascade;
 
 -- 3. Drop function overloads that expect UUID
@@ -58,6 +59,7 @@ drop function if exists public.can_access_chat_conversation(text, uuid) cascade;
 alter table if exists public.chat_conversations alter column id type text;
 alter table if exists public.chat_conversation_members alter column conversation_id type text;
 alter table if exists public.chat_messages alter column conversation_id type text;
+alter table if exists public.chat_messages alter column sender_id type text;
 alter table if exists public.chat_attachments alter column conversation_id type text;
 
 -- 5. Delete all dummy # channels and duplicate conversations

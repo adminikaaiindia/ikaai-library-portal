@@ -13529,37 +13529,64 @@
       messages: {}
     };
 
-    // Helper: Get Current User details (Dynamically resolved from active session)
+    // Helper: Get Current User details (Dynamically resolved from active session & profiles)
     function getCurrentUser() {
-      let id = 'u-anon';
+      let id = null;
       let name = (state.profile && state.profile.name) ? state.profile.name : 'Learner';
-      let email = (state.profile && state.profile.email) ? state.profile.email : '';
+      let email = (state.profile && state.profile.email) ? state.profile.email.trim().toLowerCase() : '';
       let role = (state.profile && state.profile.role) ? state.profile.role : 'learner';
-      let avatar = (state.profile && state.profile.initials) ? state.profile.initials : 'U';
+
+      if (state.profile && state.profile.id && state.profile.id !== 'u-anon') {
+        id = state.profile.id;
+      }
 
       try {
         const sessionRaw = localStorage.getItem('ikaai_portal_session');
         if (sessionRaw) {
           const u = JSON.parse(sessionRaw);
-          if (u.id) id = u.id;
+          if (!id && u.id && u.id !== 'u-anon') id = u.id;
           if (u.name) name = u.name;
-          if (u.email) email = u.email;
+          if (u.email) email = u.email.trim().toLowerCase();
+          if (u.role) role = u.role;
         }
-        if (window.supabaseClient && window.supabaseClient.auth) {
-          const session = window.supabaseClient.auth.session ? window.supabaseClient.auth.session() : null;
-          if (session && session.user && session.user.id) {
-            id = session.user.id;
+
+        // Check Supabase Auth session token in localStorage (sb-*-auth-token)
+        if (!id) {
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
+              try {
+                const val = JSON.parse(localStorage.getItem(key));
+                if (val?.user?.id) {
+                  id = val.user.id;
+                  if (!email && val.user.email) email = val.user.email.trim().toLowerCase();
+                  if (val.user.user_metadata?.full_name) name = val.user.user_metadata.full_name;
+                  break;
+                }
+              } catch (e) {}
+            }
           }
         }
       } catch (e) {
         // fallback
       }
 
-      if (state.profile && state.profile.id) {
-        id = state.profile.id;
+      // Check against directory members by email to resolve authentic UUID
+      if (email && state.members && state.members.length > 0) {
+        const matched = state.members.find(m => m.email && m.email.trim().toLowerCase() === email);
+        if (matched) {
+          if (!id) id = matched.id;
+          if (!name || name === 'Learner') name = matched.name;
+          if (!role || role === 'learner') role = matched.role;
+        }
       }
 
-      const initials = name.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+      if (!id) id = 'u-anon';
+      if (state.profile) {
+        state.profile.id = id;
+      }
+
+      const initials = (name.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2) || 'U').toUpperCase();
       return { id, name, email, role, avatar: initials };
     }
 
@@ -14697,6 +14724,10 @@
           const saved = await window.DataLayer.sendChatMessage({
             conversationId: conv.id,
             content: text,
+            senderId: currentUser.id,
+            senderName: currentUser.name,
+            senderRole: currentUser.role,
+            senderAvatar: currentUser.avatar,
             parentMessageId: state.replyingTo ? state.replyingTo.id : null,
             sharedItem: null,
             attachments: finalAttachments
@@ -14709,7 +14740,7 @@
             }
           }
         } catch (dbErr) {
-          console.warn('[TeamChat] Database persistence error (local fallback active):', dbErr);
+          console.error('[TeamChat] Database persistence error:', dbErr);
         }
       }
 

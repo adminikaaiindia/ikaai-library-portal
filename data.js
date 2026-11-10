@@ -1950,7 +1950,7 @@
 
     async getChatMessages(conversationId) {
       const client = getClient();
-      if (!isLive() || !client || !conversationId) return null;
+      if (!client || !conversationId) return null;
 
       try {
         const { data: messages, error: msgError } = await client
@@ -2044,20 +2044,33 @@
       }
     },
 
-    async sendChatMessage({ conversationId, content, parentMessageId, sharedItem, attachments = [] }) {
+    async sendChatMessage({ conversationId, content, senderId, senderName, senderRole, senderAvatar, parentMessageId, sharedItem, attachments = [] }) {
       const client = getClient();
-      const currentUser = await window.SupabaseClient.getUser();
-      const profile = await DataLayer.getMyProfile();
-
-      if (!isLive() || !client || !currentUser) {
-        return null; // Fallback to local in-memory
+      if (!client) {
+        console.warn('[DataLayer] sendChatMessage: Supabase client unavailable.');
+        return null;
       }
 
-      const senderName = profile?.full_name || profile?.display_name || currentUser.email.split('@')[0];
-      const senderRole = profile?.role || 'learner';
-      const senderAvatar = (senderName.split(' ').map(n => n[0]).join('').slice(0, 2) || 'U').toUpperCase();
+      // 1. Resolve sender credentials
+      let resolvedId = senderId;
+      let resolvedName = senderName;
+      let resolvedRole = senderRole || 'learner';
+      let resolvedAvatar = senderAvatar || 'U';
 
-      // Ensure conversation record exists in chat_conversations
+      // Fallback: try Supabase auth or DataLayer profile if not passed
+      if (!resolvedId || resolvedId === 'u-anon') {
+        try {
+          const authUser = await window.SupabaseClient.getUser();
+          if (authUser?.id) resolvedId = authUser.id;
+          if (!resolvedName && authUser) resolvedName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
+        } catch (e) {}
+      }
+
+      // Check if resolvedId is a valid UUID so Postgres uuid column never throws 22P02
+      const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      const dbSenderId = isValidUUID(resolvedId) ? resolvedId : null;
+
+      // 2. Ensure conversation record exists in chat_conversations
       try {
         await client.from('chat_conversations').upsert({
           id: conversationId,
@@ -2067,18 +2080,18 @@
           last_message_preview: (content || '').substring(0, 100)
         }, { onConflict: 'id' });
       } catch (upsertErr) {
-        console.warn('[DataLayer] Non-blocking conv upsert warning:', upsertErr);
+        console.warn('[DataLayer] Non-blocking conv upsert note:', upsertErr);
       }
 
-      // 1. Insert chat message
+      // 3. Insert chat message into Supabase
       const { data: newMsg, error: msgError } = await client
         .from('chat_messages')
         .insert({
           conversation_id: conversationId,
-          sender_id: currentUser.id,
-          sender_name: senderName,
-          sender_role: senderRole,
-          sender_avatar: senderAvatar,
+          sender_id: dbSenderId,
+          sender_name: resolvedName || 'Member',
+          sender_role: resolvedRole,
+          sender_avatar: resolvedAvatar,
           content: content || '',
           parent_message_id: parentMessageId || null,
           shared_item: sharedItem || null
