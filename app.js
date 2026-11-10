@@ -2815,6 +2815,14 @@
     }
   };
 
+  const TRACK_TO_DEFAULT_JD = {
+    'hr': 'hr-intern',
+    'data': 'data-analyst-intern',
+    'research': 'research-intern',
+    'design': 'social-media-design-intern',
+    'bd': 'associate-partnerships-bd'
+  };
+
   function getProgrammeDbId(keyOrSlug) {
     if (JD_PROGRAMME_MAP[keyOrSlug]) {
       keyOrSlug = JD_PROGRAMME_MAP[keyOrSlug].baseTrack;
@@ -2832,15 +2840,19 @@
     if (JD_PROGRAMME_MAP[idOrSlug]) return idOrSlug;
     for (const k of Object.keys(PROGRAMME_META)) {
       if (PROGRAMME_META[k].slug === idOrSlug || PROGRAMME_META[k].id === idOrSlug || k === idOrSlug) {
-        return k;
+        return TRACK_TO_DEFAULT_JD[k] || k;
       }
     }
-    return 'hr';
+    return 'hr-intern';
   }
 
   let state = loadState();
   const savedProgId = localStorage.getItem('ikaai_active_programme');
-  let currentProgrammeId = (savedProgId && (INITIAL_DATA.programmes[savedProgId] || JD_PROGRAMME_MAP[savedProgId])) ? savedProgId : 'hr';
+  let currentProgrammeId = (savedProgId && JD_PROGRAMME_MAP[savedProgId])
+    ? savedProgId
+    : (savedProgId && TRACK_TO_DEFAULT_JD[savedProgId])
+      ? TRACK_TO_DEFAULT_JD[savedProgId]
+      : 'hr-intern';
   let currentModuleIndex = 0;
   let expandedModules = new Set([0]);
   let activeScreen = 'module'; // 'module', 'exam', 'messages', 'chat', 'announcements', 'feedback', 'grade', 'settings'
@@ -3560,22 +3572,28 @@
   });
 
   function getCurrentProgramme() {
-    if (state.programmes && state.programmes[currentProgrammeId]) {
-      return state.programmes[currentProgrammeId];
+    let progId = currentProgrammeId;
+    if (TRACK_TO_DEFAULT_JD[progId]) {
+      progId = TRACK_TO_DEFAULT_JD[progId];
     }
-    if (JD_PROGRAMME_MAP[currentProgrammeId]) {
-      const jdMeta = JD_PROGRAMME_MAP[currentProgrammeId];
+    if (JD_PROGRAMME_MAP[progId]) {
+      const jdMeta = JD_PROGRAMME_MAP[progId];
       const baseProg = (state.programmes && state.programmes[jdMeta.baseTrack]) || INITIAL_DATA.programmes[jdMeta.baseTrack] || INITIAL_DATA.programmes.hr;
       if (!state.programmes) state.programmes = {};
-      state.programmes[currentProgrammeId] = {
-        ...JSON.parse(JSON.stringify(baseProg)),
-        id: currentProgrammeId,
-        title: jdMeta.title,
-        roleTag: jdMeta.roleTag,
-        description: jdMeta.description || baseProg.description,
-        baseTrack: jdMeta.baseTrack
-      };
-      return state.programmes[currentProgrammeId];
+      if (!state.programmes[progId]) {
+        state.programmes[progId] = {
+          ...JSON.parse(JSON.stringify(baseProg)),
+          id: progId,
+          title: jdMeta.title,
+          roleTag: jdMeta.roleTag,
+          description: jdMeta.description || baseProg.description,
+          baseTrack: jdMeta.baseTrack
+        };
+      }
+      return state.programmes[progId];
+    }
+    if (state.programmes && state.programmes[progId]) {
+      return state.programmes[progId];
     }
     return (state.programmes && state.programmes.hr) || INITIAL_DATA.programmes.hr;
   }
@@ -9473,6 +9491,121 @@
     'graphic design intern': { baseRole: 'intern', position: 'Social Media cum Graphic Design Intern', progId: '10000000-0000-0000-0000-000000000004', progName: 'Design & Social Media' }
   };
 
+  const JD_ASSIGNMENT_MAP = {
+    'hr-intern': {
+      title: 'HR Intern',
+      category: 'Human Resources & Admin',
+      progId: '10000000-0000-0000-0000-000000000001',
+      progName: 'Human Resources',
+      baseTrack: 'hr'
+    },
+    'hr-and-admin': {
+      title: 'HR and Admin Associate',
+      category: 'Human Resources & Admin',
+      progId: '10000000-0000-0000-0000-000000000001',
+      progName: 'Human Resources',
+      baseTrack: 'hr'
+    },
+    'data-analyst-intern': {
+      title: 'Data Analyst Intern',
+      category: 'Data & Analytics',
+      progId: '10000000-0000-0000-0000-000000000002',
+      progName: 'Data Analyst',
+      baseTrack: 'data'
+    },
+    'research-intern': {
+      title: 'Research Intern',
+      category: 'Social Research & Policy',
+      progId: '10000000-0000-0000-0000-000000000003',
+      progName: 'Social Research & Policy',
+      baseTrack: 'research'
+    },
+    'research-trainee': {
+      title: 'Research Trainee',
+      category: 'Social Research & Policy',
+      progId: '10000000-0000-0000-0000-000000000003',
+      progName: 'Social Research & Policy',
+      baseTrack: 'research'
+    },
+    'research-assistant': {
+      title: 'Research Assistant',
+      category: 'Social Research & Policy',
+      progId: '10000000-0000-0000-0000-000000000003',
+      progName: 'Social Research & Policy',
+      baseTrack: 'research'
+    },
+    'research-associate': {
+      title: 'Research Associate',
+      category: 'Social Research & Policy',
+      progId: '10000000-0000-0000-0000-000000000003',
+      progName: 'Social Research & Policy',
+      baseTrack: 'research'
+    },
+    'research-executive': {
+      title: 'Research Executive',
+      category: 'Social Research & Policy',
+      progId: '10000000-0000-0000-0000-000000000003',
+      progName: 'Social Research & Policy',
+      baseTrack: 'research'
+    },
+    'sr-research-associate': {
+      title: 'Sr. Research Associate',
+      category: 'Social Research & Policy',
+      progId: '10000000-0000-0000-0000-000000000003',
+      progName: 'Social Research & Policy',
+      baseTrack: 'research'
+    },
+    'social-media-design-intern': {
+      title: 'Social Media cum Graphic Design Intern',
+      category: 'Design & Social Media',
+      progId: '10000000-0000-0000-0000-000000000004',
+      progName: 'Design & Social Media',
+      baseTrack: 'design'
+    },
+    'associate-partnerships-bd': {
+      title: 'Associate – Partnerships and Business Development',
+      category: 'Business Development & Partnerships',
+      progId: '10000000-0000-0000-0000-000000000005',
+      progName: 'Business Development',
+      baseTrack: 'bd'
+    }
+  };
+
+  function resolveProgrammeAssignment(input) {
+    if (!input) {
+      return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: CANONICAL_PROGRAMMES[0].name };
+    }
+    const norm = String(input).trim().toLowerCase();
+
+    // Check direct key in JD_ASSIGNMENT_MAP
+    if (JD_ASSIGNMENT_MAP[norm]) {
+      return {
+        progId: JD_ASSIGNMENT_MAP[norm].progId,
+        position: JD_ASSIGNMENT_MAP[norm].title,
+        progName: JD_ASSIGNMENT_MAP[norm].progName
+      };
+    }
+
+    // Check canonical UUID or slug
+    const matchCanon = CANONICAL_PROGRAMMES.find(p => p.id === input || p.slug === norm);
+    if (matchCanon) {
+      return { progId: matchCanon.id, position: null, progName: matchCanon.name };
+    }
+
+    // Check by title match
+    for (const [slug, item] of Object.entries(JD_ASSIGNMENT_MAP)) {
+      if (item.title.toLowerCase() === norm || norm.includes(slug) || slug.includes(norm)) {
+        return {
+          progId: item.progId,
+          position: item.title,
+          progName: item.progName
+        };
+      }
+    }
+
+    return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: CANONICAL_PROGRAMMES[0].name };
+  }
+
   function resolveRoleDetails(roleInput) {
     if (!roleInput) return { baseRole: 'intern', position: 'Intern', progId: null, progName: null };
     const norm = roleInput.trim().toLowerCase();
@@ -9572,8 +9705,15 @@
       if (progFilter) {
         if (u.role === 'admin') {
           // Admins belong to all programmes, keep them visible or match
-        } else if (u.programme_id !== progFilter) {
-          return false;
+        } else {
+          const jdMeta = JD_ASSIGNMENT_MAP[progFilter];
+          if (jdMeta) {
+            const matchPos = u.position && u.position.toLowerCase() === jdMeta.title.toLowerCase();
+            if (!matchPos && u.programme_id !== jdMeta.progId) return false;
+            if (u.position && !matchPos) return false;
+          } else if (u.programme_id !== progFilter) {
+            return false;
+          }
         }
       }
       if (statusFilter && u.status !== statusFilter) {
@@ -9607,17 +9747,17 @@
       if (u.role === 'admin') {
         roleBadge = `<span style="background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); color: #c084fc; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Admin</span>`;
       } else if (u.role === 'instructor') {
-        const titleText = (u.position && u.position !== 'Full-Time Staff') ? u.position : 'Full-Time';
-        roleBadge = `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;" title="Full-Time Staff">${escapeHtml(titleText)}</span>`;
+        roleBadge = `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;" title="Full-Time Staff">Full-Time</span>`;
       } else {
-        const titleText = (u.position && u.position !== 'Intern') ? u.position : 'Intern';
-        roleBadge = `<span style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;" title="Intern">${escapeHtml(titleText)}</span>`;
+        roleBadge = `<span style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;" title="Intern">Intern</span>`;
       }
 
       // Programme assignment name
       let progName = u.programme_name || '--';
       if (u.role === 'admin') {
         progName = `<span style="color: var(--accent-light); font-weight: 600;">All Programmes</span>`;
+      } else if (u.position) {
+        progName = `<span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(u.position)}</span>`;
       } else if (!u.programme_id) {
         progName = `<span style="color: var(--text-muted); font-style: italic;">(Unassigned)</span>`;
       }
@@ -9797,11 +9937,8 @@
       if (el.adminDeleteModalUserBtn) el.adminDeleteModalUserBtn.style.display = 'none';
     } else {
       let matchedVal = 'intern';
-      const pos = (user.position || '').trim();
       const userRole = (user.role || '').trim().toLowerCase();
-      if (pos && Array.from(el.adminEditRoleSelect.options).some(o => o.value.toLowerCase() === pos.toLowerCase())) {
-        matchedVal = Array.from(el.adminEditRoleSelect.options).find(o => o.value.toLowerCase() === pos.toLowerCase()).value;
-      } else if (userRole === 'instructor') {
+      if (userRole === 'instructor') {
         matchedVal = 'instructor';
       } else if (userRole === 'admin') {
         matchedVal = 'admin';
@@ -9816,10 +9953,23 @@
       }
     }
 
-    if (user.programme_id) {
-      el.adminEditProgSelect.value = user.programme_id;
-    } else {
-      el.adminEditProgSelect.value = CANONICAL_PROGRAMMES[0].id;
+    // Preselect Programme Assignment in el.adminEditProgSelect
+    let matchedProgOption = null;
+    if (user.position) {
+      const normPos = user.position.toLowerCase().trim();
+      matchedProgOption = Array.from(el.adminEditProgSelect.options).find(o =>
+        o.value.toLowerCase() === normPos ||
+        (o.textContent && o.textContent.toLowerCase().trim() === normPos) ||
+        (JD_ASSIGNMENT_MAP[o.value] && JD_ASSIGNMENT_MAP[o.value].title.toLowerCase() === normPos)
+      );
+    }
+    if (!matchedProgOption && user.programme_id) {
+      matchedProgOption = Array.from(el.adminEditProgSelect.options).find(o => o.value === user.programme_id);
+    }
+    if (matchedProgOption) {
+      el.adminEditProgSelect.value = matchedProgOption.value;
+    } else if (el.adminEditProgSelect.options.length > 0) {
+      el.adminEditProgSelect.selectedIndex = 0;
     }
 
     if (isApproving) {
@@ -9881,9 +10031,6 @@
         const isAdmin = details.baseRole === 'admin';
         if (el.adminInviteProgramme) {
           el.adminInviteProgramme.disabled = isAdmin;
-          if (details.progId && !isAdmin) {
-            el.adminInviteProgramme.value = details.progId;
-          }
         }
         if (el.adminInviteProgNote) {
           el.adminInviteProgNote.style.display = isAdmin ? 'block' : 'none';
@@ -9898,7 +10045,10 @@
         const email = el.adminInviteEmail.value.trim().toLowerCase();
         const rawRole = el.adminInviteRole ? el.adminInviteRole.value : 'intern';
         const roleDetails = resolveRoleDetails(rawRole);
-        const programmeId = roleDetails.baseRole === 'admin' ? null : (el.adminInviteProgramme.value || roleDetails.progId);
+        const isAdmin = roleDetails.baseRole === 'admin';
+        const progAssignment = resolveProgrammeAssignment(el.adminInviteProgramme ? el.adminInviteProgramme.value : null);
+        const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId);
+        const position = isAdmin ? 'Administrator' : (progAssignment.position || roleDetails.position);
 
         if (!email) {
           alert('Please enter a valid email address.');
@@ -9912,10 +10062,10 @@
           await window.DataLayer.adminInviteUser({
             email,
             role: roleDetails.baseRole,
-            position: roleDetails.position,
+            position: position,
             programmeId
           });
-          showToast(`Access approved/invited for ${email} (${roleDetails.position})`);
+          showToast(`Access approved/invited for ${email} (${position || roleDetails.baseRole})`);
           el.adminInviteEmail.value = '';
           await renderAdminPortal();
         } catch (err) {
@@ -10005,9 +10155,6 @@
         const isAdmin = details.baseRole === 'admin';
         if (el.adminEditProgSelect) {
           el.adminEditProgSelect.disabled = isAdmin;
-          if (details.progId && !isAdmin) {
-            el.adminEditProgSelect.value = details.progId;
-          }
         }
         if (el.adminEditProgNote) {
           el.adminEditProgNote.style.display = isAdmin ? 'block' : 'none';
@@ -10021,7 +10168,11 @@
         const rawRole = el.adminEditRoleSelect.value;
         const roleDetails = resolveRoleDetails(rawRole);
         const role = roleDetails.baseRole;
-        const programmeId = role === 'admin' ? null : (el.adminEditProgSelect.value || roleDetails.progId);
+        const isAdmin = role === 'admin';
+
+        const progAssignment = resolveProgrammeAssignment(el.adminEditProgSelect ? el.adminEditProgSelect.value : null);
+        const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId);
+        const position = isAdmin ? 'Administrator' : (progAssignment.position || roleDetails.position);
 
         el.adminSaveEditUserBtn.disabled = true;
         el.adminSaveEditUserBtn.textContent = 'Saving...';
@@ -10029,10 +10180,10 @@
         try {
           await window.DataLayer.adminUpdateUserAccess(userId, {
             role,
-            position: roleDetails.position,
+            position: position,
             programmeId
           });
-          showToast(`Updated user permissions successfully (${roleDetails.position}).`);
+          showToast(`Updated user permissions successfully (${position || role}).`);
           if (el.adminEditUserModal) el.adminEditUserModal.style.display = 'none';
           await renderAdminPortal();
         } catch (err) {
@@ -10116,7 +10267,7 @@
 
       const roleDetails = resolveRoleDetails(roleRaw);
       const role = roleDetails.baseRole;
-      const position = roleDetails.position;
+      let position = roleDetails.position;
 
       const emailValid = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
       let programmeId = null;
@@ -10126,22 +10277,23 @@
       if (!emailValid) {
         error = 'Invalid email syntax';
       } else if (role !== 'admin') {
-        const matchProg = CANONICAL_PROGRAMMES.find(p =>
-          p.name.toLowerCase().includes(progRaw) ||
-          p.slug.toLowerCase().includes(progRaw) ||
-          p.id === progRaw
-        );
-        if (matchProg) {
-          programmeId = matchProg.id;
-          programmeName = matchProg.name;
-        } else if (!progRaw && roleDetails.progId) {
+        if (progRaw) {
+          const progAssign = resolveProgrammeAssignment(progRaw);
+          if (progAssign && progAssign.progId) {
+            programmeId = progAssign.progId;
+            programmeName = progAssign.position || progAssign.progName;
+            if (progAssign.position) {
+              position = progAssign.position;
+            }
+          } else {
+            error = `Unknown programme "${parts[2]}"`;
+          }
+        } else if (roleDetails.progId) {
           programmeId = roleDetails.progId;
           programmeName = roleDetails.progName;
-        } else if (!progRaw) {
+        } else {
           programmeId = CANONICAL_PROGRAMMES[0].id;
           programmeName = CANONICAL_PROGRAMMES[0].name;
-        } else {
-          error = `Unknown programme "${parts[2]}"`;
         }
       }
 
