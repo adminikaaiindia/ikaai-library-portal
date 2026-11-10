@@ -2746,7 +2746,79 @@
     }
   };
 
+  const JD_PROGRAMME_MAP = {
+    'data-analyst-intern': {
+      title: 'Data Analyst Intern',
+      roleTag: 'Data Analyst Intern',
+      baseTrack: 'data',
+      description: 'Data extraction, statistical modeling, quantitative survey analysis, dataset cleaning, and interactive dashboard visualization.'
+    },
+    'hr-intern': {
+      title: 'HR Intern',
+      roleTag: 'HR Intern',
+      baseTrack: 'hr',
+      description: 'Talent acquisition coordination, candidate sourcing, internship onboarding, attendance records, and day-to-day HR operational support.'
+    },
+    'hr-and-admin': {
+      title: 'HR and Admin Associate',
+      roleTag: 'HR and Admin Associate',
+      baseTrack: 'hr',
+      description: 'Full-cycle recruitment, statutory compliance, HR policy implementation, office facilities management, vendor contracts, and team engagement.'
+    },
+    'associate-partnerships-bd': {
+      title: 'Associate – Partnerships and Business Development',
+      roleTag: 'Partnerships & BD Associate',
+      baseTrack: 'bd',
+      description: 'RFP sourcing, institutional proposal drafting, client relationship management, development sector pitching, and consortium building.'
+    },
+    'research-intern': {
+      title: 'Research Intern',
+      roleTag: 'Research Intern',
+      baseTrack: 'research',
+      description: 'Literature reviews, quantitative dataset validation, qualitative interview transcription, field data collation, and policy brief drafting.'
+    },
+    'research-trainee': {
+      title: 'Research Trainee',
+      roleTag: 'Research Trainee',
+      baseTrack: 'research',
+      description: 'Foundational research methodology training, survey tool testing, primary field data collection, and structured research documentation.'
+    },
+    'research-assistant': {
+      title: 'Research Assistant',
+      roleTag: 'Research Assistant',
+      baseTrack: 'research',
+      description: '10-15 days field evaluation assignment: household surveys, enumerator coordination, and primary data collection across designated state districts.'
+    },
+    'research-associate': {
+      title: 'Research Associate',
+      roleTag: 'Research Associate',
+      baseTrack: 'research',
+      description: 'Mixed-methods research design, quantitative/qualitative data analysis, field team supervision, client presentations, and evaluation report authorship.'
+    },
+    'research-executive': {
+      title: 'Research Executive',
+      roleTag: 'Research Executive',
+      baseTrack: 'research',
+      description: 'Project leadership (1-3 yrs experience), field evaluation oversight, donor deliverable management, and technical evaluation report writing.'
+    },
+    'sr-research-associate': {
+      title: 'Sr. Research Associate',
+      roleTag: 'Sr. Research Associate',
+      baseTrack: 'research',
+      description: 'Senior research leadership (3+ yrs experience): multi-state study design, advanced statistical frameworks, client liaison, and team mentorship.'
+    },
+    'social-media-design-intern': {
+      title: 'Social Media cum Graphic Design Intern',
+      roleTag: 'Social Media & Design Intern',
+      baseTrack: 'design',
+      description: 'Visual identity design, multi-page publication layouts, high-impact LinkedIn carousels, data infographics, and social media outreach.'
+    }
+  };
+
   function getProgrammeDbId(keyOrSlug) {
+    if (JD_PROGRAMME_MAP[keyOrSlug]) {
+      keyOrSlug = JD_PROGRAMME_MAP[keyOrSlug].baseTrack;
+    }
     if (PROGRAMME_META[keyOrSlug]) return PROGRAMME_META[keyOrSlug].id;
     for (const k of Object.keys(PROGRAMME_META)) {
       if (PROGRAMME_META[k].slug === keyOrSlug || PROGRAMME_META[k].id === keyOrSlug) {
@@ -2757,6 +2829,7 @@
   }
 
   function getProgrammeKey(idOrSlug) {
+    if (JD_PROGRAMME_MAP[idOrSlug]) return idOrSlug;
     for (const k of Object.keys(PROGRAMME_META)) {
       if (PROGRAMME_META[k].slug === idOrSlug || PROGRAMME_META[k].id === idOrSlug || k === idOrSlug) {
         return k;
@@ -2767,7 +2840,7 @@
 
   let state = loadState();
   const savedProgId = localStorage.getItem('ikaai_active_programme');
-  let currentProgrammeId = (savedProgId && INITIAL_DATA.programmes[savedProgId]) ? savedProgId : 'hr';
+  let currentProgrammeId = (savedProgId && (INITIAL_DATA.programmes[savedProgId] || JD_PROGRAMME_MAP[savedProgId])) ? savedProgId : 'hr';
   let currentModuleIndex = 0;
   let expandedModules = new Set([0]);
   let activeScreen = 'module'; // 'module', 'exam', 'messages', 'chat', 'announcements', 'feedback', 'grade', 'settings'
@@ -3487,7 +3560,24 @@
   });
 
   function getCurrentProgramme() {
-    return state.programmes[currentProgrammeId] || state.programmes.hr;
+    if (state.programmes && state.programmes[currentProgrammeId]) {
+      return state.programmes[currentProgrammeId];
+    }
+    if (JD_PROGRAMME_MAP[currentProgrammeId]) {
+      const jdMeta = JD_PROGRAMME_MAP[currentProgrammeId];
+      const baseProg = (state.programmes && state.programmes[jdMeta.baseTrack]) || INITIAL_DATA.programmes[jdMeta.baseTrack] || INITIAL_DATA.programmes.hr;
+      if (!state.programmes) state.programmes = {};
+      state.programmes[currentProgrammeId] = {
+        ...JSON.parse(JSON.stringify(baseProg)),
+        id: currentProgrammeId,
+        title: jdMeta.title,
+        roleTag: jdMeta.roleTag,
+        description: jdMeta.description || baseProg.description,
+        baseTrack: jdMeta.baseTrack
+      };
+      return state.programmes[currentProgrammeId];
+    }
+    return (state.programmes && state.programmes.hr) || INITIAL_DATA.programmes.hr;
   }
 
   function calculateProgrammeCompletion(prog) {
@@ -10108,10 +10198,21 @@
         // Intern or Instructor locked to their assigned programme
         el.programmeSelect.disabled = true;
         el.programmeSelect.title = 'Assigned cohort programme (managed by Admin)';
-        if (profile?.programme_id) {
-          const key = getProgrammeKey(profile.programme_id);
-          currentProgrammeId = key;
-          el.programmeSelect.value = key;
+        let matchedKey = null;
+        if (profile?.position) {
+          const normPos = profile.position.toLowerCase().trim();
+          matchedKey = Object.keys(JD_PROGRAMME_MAP).find(k =>
+            JD_PROGRAMME_MAP[k].title.toLowerCase() === normPos ||
+            normPos.includes(k) ||
+            k.includes(normPos)
+          );
+        }
+        if (!matchedKey && profile?.programme_id) {
+          matchedKey = getProgrammeKey(profile.programme_id);
+        }
+        if (matchedKey) {
+          currentProgrammeId = matchedKey;
+          el.programmeSelect.value = matchedKey;
         }
       }
     }
