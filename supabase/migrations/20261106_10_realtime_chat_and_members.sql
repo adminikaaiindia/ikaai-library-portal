@@ -3,20 +3,20 @@
 -- Migration: 20261106_10_realtime_chat_and_members.sql
 -- ====================================================================
 
--- 1. Drop existing policies FIRST so column types can be altered
-drop policy if exists "chat_conv_select" on public.chat_conversations;
-drop policy if exists "chat_conv_insert" on public.chat_conversations;
-drop policy if exists "chat_conv_update" on public.chat_conversations;
-drop policy if exists "chat_conversations_open" on public.chat_conversations;
-
-drop policy if exists "chat_msg_select" on public.chat_messages;
-drop policy if exists "chat_msg_insert" on public.chat_messages;
-drop policy if exists "chat_msg_update" on public.chat_messages;
-drop policy if exists "chat_msg_delete" on public.chat_messages;
-drop policy if exists "chat_messages_open" on public.chat_messages;
-
-drop policy if exists "chat_attachments_open" on public.chat_attachments;
-drop policy if exists "chat_reactions_open" on public.chat_reactions;
+-- 1. Dynamically drop ALL existing policies on chat tables so column types can be altered without conflict
+do $$
+declare
+  r record;
+begin
+  for r in (
+    select policyname, tablename 
+    from pg_policies 
+    where schemaname = 'public' 
+      and tablename in ('chat_conversations', 'chat_messages', 'chat_attachments', 'chat_reactions', 'chat_conversation_members')
+  ) loop
+    execute format('drop policy if exists %I on public.%I', r.policyname, r.tablename);
+  end loop;
+end $$;
 
 -- 2. Drop foreign key constraints
 alter table if exists public.chat_attachments drop constraint if exists chat_attachments_conversation_id_fkey;
