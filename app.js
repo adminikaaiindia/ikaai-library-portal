@@ -13598,7 +13598,15 @@
             };
           });
 
-          // 1. Fetch real groups and channels from Supabase chat_conversations table
+          const DUMMY_CHANNELS = new Set([
+            'general', '#general',
+            'announcements', '#announcements',
+            'random', '#random',
+            'group-hr-interns',
+            'channel-general', 'channel-help', 'channel-intro'
+          ]);
+
+          // 1. Fetch real user-created groups and channels from Supabase chat_conversations table
           try {
             const { data: dbConvs } = await client
               .from('chat_conversations')
@@ -13607,7 +13615,13 @@
 
             if (dbConvs && dbConvs.length > 0) {
               dbConvs.forEach(dc => {
-                if (dc.id === 'group-hr-interns') return; // ignore legacy dummy group
+                const normName = (dc.name || '').toLowerCase().trim();
+                const normSlug = (dc.slug || '').toLowerCase().trim();
+                // Filter out all dummy # groups
+                if (DUMMY_CHANNELS.has(normName) || DUMMY_CHANNELS.has(normSlug) || DUMMY_CHANNELS.has(dc.id)) {
+                  return;
+                }
+
                 const existing = state.conversations.find(c => c.id === dc.id);
                 if (!existing) {
                   state.conversations.push({
@@ -13629,12 +13643,17 @@
             console.warn('[TeamChat] load dbConvs note:', e);
           }
 
-          // 2. Strict Filter: Retain ONLY 'all-members', real channels/groups, and valid real DMs
+          // 2. Strict Filter: Retain ONLY 'all-members', real custom channels/groups, and valid real DMs
           const validUserIds = new Set(profiles.map(p => p.id));
           state.conversations = state.conversations.filter(c => {
             if (c.id === 'all-members') return true;
             if (c.type === 'channel' || c.type === 'group') {
-              return c.id !== 'group-hr-interns'; // filter dummy
+              const normName = (c.name || '').toLowerCase().trim();
+              const normSlug = (c.slug || '').toLowerCase().trim();
+              if (DUMMY_CHANNELS.has(normName) || DUMMY_CHANNELS.has(normSlug) || DUMMY_CHANNELS.has(c.id)) {
+                return false; // remove dummy # groups
+              }
+              return true;
             }
             if (c.type === 'direct') {
               return c.recipientId && validUserIds.has(c.recipientId) && c.recipientId !== currentUser.id;

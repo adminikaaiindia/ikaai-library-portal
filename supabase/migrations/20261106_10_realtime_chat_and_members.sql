@@ -60,11 +60,17 @@ alter table if exists public.chat_conversation_members alter column conversation
 alter table if exists public.chat_messages alter column conversation_id type text;
 alter table if exists public.chat_attachments alter column conversation_id type text;
 
--- 5. Seed default community channels
+-- 5. Delete all dummy # channels and duplicate conversations
+delete from public.chat_conversations 
+where lower(trim(slug)) in ('general', 'announcements', 'random')
+   or lower(trim(name)) in ('general', '#general', 'announcements', '#announcements', 'random', '#random')
+   or id in ('general', 'announcements', 'random', 'group-hr-interns')
+   or (name = 'All Members' and id != 'all-members');
+
+-- Seed default universal All Members community channel
 insert into public.chat_conversations (id, name, type, slug, description, is_announcement_only)
 values 
-  ('all-members', 'All Members', 'all_members', 'all-members', 'Programme-wide community for all learners, mentors, and staff.', false),
-  ('general', '#general', 'channel', 'general', 'General discussions, questions, and daily updates.', false)
+  ('all-members', 'All Members', 'all_members', 'all-members', 'Programme-wide community for all registered learners and mentors.', false)
 on conflict (id) do update set
   name = excluded.name,
   description = excluded.description;
