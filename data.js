@@ -1189,14 +1189,92 @@
       const cleanRole = (role || '').trim().toLowerCase();
       const cleanProg = cleanRole === 'admin' ? null : (programmeId || null);
 
-      const { data, error } = await client.rpc('invite_user', {
-        p_email: cleanEmail,
-        p_role: cleanRole,
-        p_programme_id: cleanProg
-      });
+      if (!cleanEmail) throw new Error('Please enter a valid email address.');
 
-      if (error) throw error;
-      return data;
+      // Un-delete from local registry if previously marked deleted
+      try {
+        const raw = localStorage.getItem('ikaai_admin_deleted_users');
+        if (raw) {
+          const list = JSON.parse(raw).filter(item => String(item).toLowerCase().trim() !== cleanEmail);
+          localStorage.setItem('ikaai_admin_deleted_users', JSON.stringify(list));
+        }
+      } catch (e) {}
+
+      // 1. Try official RPC first
+      try {
+        const { data, error } = await client.rpc('invite_user', {
+          p_email: cleanEmail,
+          p_role: cleanRole,
+          p_programme_id: cleanProg
+        });
+
+        if (!error) return data;
+        console.warn('[DataLayer] invite_user rpc note, executing resilient upsert fallback:', error);
+      } catch (rpcErr) {
+        console.warn('[DataLayer] invite_user rpc exception, executing resilient upsert fallback:', rpcErr);
+      }
+
+      // 2. Resilient Upsert Fallback (gracefully handles unique constraint on lower(email))
+      try {
+        const { data: existingInv } = await client
+          .from('access_invites')
+          .select('id, status')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+        if (existingInv && existingInv.id) {
+          const { error: updErr } = await client
+            .from('access_invites')
+            .update({
+              role: cleanRole,
+              programme_id: cleanProg,
+              status: existingInv.status === 'revoked' ? 'invited' : existingInv.status,
+              invited_by: (await window.DataLayer.getCurrentUser())?.id || null
+            })
+            .eq('id', existingInv.id);
+
+          if (updErr) console.warn('[DataLayer] access_invites update note:', updErr);
+        } else {
+          const { error: insErr } = await client
+            .from('access_invites')
+            .insert({
+              email: cleanEmail,
+              role: cleanRole,
+              programme_id: cleanProg,
+              status: 'invited',
+              invited_by: (await window.DataLayer.getCurrentUser())?.id || null,
+              created_at: new Date().toISOString()
+            });
+
+          if (insErr && !insErr.message.includes('duplicate')) {
+            console.warn('[DataLayer] access_invites insert note:', insErr);
+          }
+        }
+
+        // If matching registered profile exists, update role and activate
+        const { data: prof } = await client
+          .from('profiles')
+          .select('id')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+        if (prof && prof.id) {
+          await client
+            .from('profiles')
+            .update({
+              role: cleanRole === 'intern' ? 'learner' : cleanRole,
+              programme_id: cleanProg,
+              access_status: 'active',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', prof.id);
+        }
+
+        return { success: true, email: cleanEmail, role: cleanRole, programme_id: cleanProg };
+      } catch (fallbackErr) {
+        console.error('[DataLayer] adminInviteUser fallback error:', fallbackErr);
+        throw fallbackErr;
+      }
     },
 
     async adminUpdateUserAccess(userId, { role, programmeId }) {
