@@ -13649,19 +13649,27 @@
                   return;
                 }
 
+                const isGroup = dc.id.startsWith('group-') || dc.type === 'group';
+                const convType = isGroup ? 'group' : (dc.type || 'channel');
+                let groupName = dc.name;
+                if (groupName && (groupName.startsWith('#group-') || groupName.startsWith('group-'))) {
+                  groupName = dc.description && dc.description !== 'Group conversation' ? dc.description : 'Team Group';
+                }
+
                 const existing = state.conversations.find(c => c.id === dc.id);
                 if (!existing) {
                   state.conversations.push({
                     id: dc.id,
-                    type: dc.type || 'group',
-                    name: dc.name,
+                    type: convType,
+                    name: groupName,
                     description: dc.description || '',
                     unread: 0,
                     hasMention: false,
                     lastMessage: dc.last_message_preview || 'Group conversation'
                   });
                 } else {
-                  existing.name = dc.name;
+                  existing.type = convType;
+                  existing.name = groupName;
                   existing.description = dc.description || existing.description;
                 }
               });
@@ -13827,8 +13835,10 @@
             <span class="chat-online-dot ${isOnline ? '' : 'offline'}"></span>
           </div>
         `;
-        } else if (conv.type === 'group') {
+        } else if (conv.type === 'group' || (conv.id && conv.id.startsWith('group-'))) {
           avatarHtml = `<div class="chat-conv-item-avatar">👥</div>`;
+        } else if (conv.type === 'channel') {
+          avatarHtml = `<div class="chat-conv-item-avatar channel-hash">#</div>`;
         }
 
         // Preview snippet
@@ -16679,19 +16689,42 @@
               showChatToast(`New message from ${row.sender_name}`);
             } else {
               let targetConv = state.conversations.find(c => c.id === row.conversation_id);
-              if (!targetConv && row.conversation_id.startsWith('dm_')) {
-                const otherMember = state.members.find(m => m.id === row.sender_id);
-                targetConv = {
-                  id: row.conversation_id,
-                  type: 'direct',
-                  name: otherMember ? otherMember.name : (row.sender_name || 'Direct Message'),
-                  recipientId: row.sender_id,
-                  description: otherMember ? `${otherMember.role} · ${otherMember.email}` : 'Direct conversation',
-                  unread: 0,
-                  hasMention: true,
-                  lastMessage: row.content?.substring(0, 40) || 'Attachment'
-                };
-                state.conversations.push(targetConv);
+              if (!targetConv) {
+                if (row.conversation_id.startsWith('dm_')) {
+                  const otherMember = state.members.find(m => m.id === row.sender_id);
+                  targetConv = {
+                    id: row.conversation_id,
+                    type: 'direct',
+                    name: otherMember ? otherMember.name : (row.sender_name || 'Direct Message'),
+                    recipientId: row.sender_id,
+                    description: otherMember ? `${otherMember.role} · ${otherMember.email}` : 'Direct conversation',
+                    unread: 0,
+                    hasMention: true,
+                    lastMessage: row.content?.substring(0, 40) || 'Attachment'
+                  };
+                  state.conversations.push(targetConv);
+                } else {
+                  try {
+                    const { data: dbC } = await client.from('chat_conversations').select('*').eq('id', row.conversation_id).maybeSingle();
+                    if (dbC) {
+                      const isGrp = dbC.id.startsWith('group-') || dbC.type === 'group';
+                      let gName = dbC.name;
+                      if (gName && (gName.startsWith('#group-') || gName.startsWith('group-'))) {
+                        gName = dbC.description && dbC.description !== 'Group conversation' ? dbC.description : 'Team Group';
+                      }
+                      targetConv = {
+                        id: dbC.id,
+                        type: isGrp ? 'group' : (dbC.type || 'channel'),
+                        name: gName,
+                        description: dbC.description || '',
+                        unread: 0,
+                        hasMention: true,
+                        lastMessage: row.content?.substring(0, 40) || 'Attachment'
+                      };
+                      state.conversations.push(targetConv);
+                    }
+                  } catch (e) {}
+                }
               }
               if (targetConv) {
                 targetConv.unread = (targetConv.unread || 0) + 1;

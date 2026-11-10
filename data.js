@@ -2182,17 +2182,41 @@
       const isValidUUID = (id) => typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
       const dbSenderId = isValidUUID(resolvedId) ? resolvedId : (isValidUUID(authUser?.id) ? authUser.id : null);
 
-      // 2. Ensure conversation record exists in chat_conversations
+      // 2. Update conversation activity timestamp and preview WITHOUT clobbering existing group name or type
       try {
-        await client.from('chat_conversations').upsert({
-          id: conversationId,
-          name: conversationId.startsWith('dm_') ? 'Direct Message' : (conversationId === 'all-members' ? 'All Members' : '#' + conversationId),
-          type: conversationId.startsWith('dm_') ? 'direct' : 'channel',
-          last_message_at: new Date().toISOString(),
-          last_message_preview: (content || '').substring(0, 100)
-        }, { onConflict: 'id' });
-      } catch (upsertErr) {
-        console.warn('[DataLayer] Non-blocking conv upsert note:', upsertErr);
+        const previewText = (content && content.trim())
+          ? content.substring(0, 100)
+          : (attachments && attachments.length > 0 ? `📎 ${attachments[0].file_name || attachments[0].name || 'Document'}` : 'New message');
+
+        const { data: existingConv } = await client
+          .from('chat_conversations')
+          .select('id, name, type')
+          .eq('id', conversationId)
+          .maybeSingle();
+
+        if (existingConv) {
+          // Keep existing name and type completely intact!
+          await client
+            .from('chat_conversations')
+            .update({
+              last_message_at: new Date().toISOString(),
+              last_message_preview: previewText
+            })
+            .eq('id', conversationId);
+        } else {
+          // Insert initial record only if completely absent
+          const isDM = conversationId.startsWith('dm_');
+          const isAll = conversationId === 'all-members';
+          await client.from('chat_conversations').insert({
+            id: conversationId,
+            name: isDM ? 'Direct Message' : (isAll ? 'All Members' : 'Group Chat'),
+            type: isDM ? 'direct' : 'group',
+            last_message_at: new Date().toISOString(),
+            last_message_preview: previewText
+          });
+        }
+      } catch (convErr) {
+        console.warn('[DataLayer] Non-blocking conv update note:', convErr);
       }
 
       // 3. Insert chat message into Supabase
