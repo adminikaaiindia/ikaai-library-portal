@@ -2433,7 +2433,11 @@
                   <option value="intern" selected>Intern</option>
                   <option value="instructor">Full-Time</option>
                   <option value="admin">Admin</option>
+                  <option value="custom">Custom Role...</option>
                 </select>
+                <div id="adminInviteCustomRoleWrap" style="display: none; margin-top: 6px;">
+                  <input type="text" id="adminInviteCustomRole" class="form-text-input" placeholder="Enter custom role title (e.g. Field Operations Lead)">
+                </div>
               </div>
               <div>
                 <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Programme Assignment *</label>
@@ -2464,7 +2468,13 @@
                     <option value="associate-partnerships-bd">Associate – Partnerships &amp; BD</option>
                     <option value="10000000-0000-0000-0000-000000000005">Business Development</option>
                   </optgroup>
+                  <optgroup label="Custom Role / Track">
+                    <option value="custom">Custom Role...</option>
+                  </optgroup>
                 </select>
+                <div id="adminInviteCustomProgWrap" style="display: none; margin-top: 6px;">
+                  <input type="text" id="adminInviteCustomProg" class="form-text-input" placeholder="Enter custom position / role title">
+                </div>
                 <div id="adminInviteProgNote" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: none;">Admins have unrestricted access across all programmes.</div>
               </div>
             </div>
@@ -2535,6 +2545,7 @@
               <option value="intern">Intern</option>
               <option value="instructor">Full-Time</option>
               <option value="admin">Admin</option>
+              <option value="custom">Custom Roles</option>
             </select>
             <select id="adminFilterProg" class="form-text-input">
               <option value="">All Programmes &amp; Roles</option>
@@ -2621,7 +2632,11 @@
             <option value="intern" selected>Intern</option>
             <option value="instructor">Full-Time</option>
             <option value="admin">Admin</option>
+            <option value="custom">Custom Role...</option>
           </select>
+          <div id="adminEditCustomRoleWrap" style="display: none; margin-top: 6px;">
+            <input type="text" id="adminEditCustomRole" class="form-text-input" placeholder="Enter custom role title (e.g. Field Operations Lead)">
+          </div>
         </div>
         <div style="margin-bottom: 20px;">
           <label style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Programme Assignment *</label>
@@ -2652,7 +2667,13 @@
               <option value="associate-partnerships-bd">Associate – Partnerships &amp; BD</option>
               <option value="10000000-0000-0000-0000-000000000005">Business Development</option>
             </optgroup>
+            <optgroup label="Custom Role / Track">
+              <option value="custom">Custom Role...</option>
+            </optgroup>
           </select>
+          <div id="adminEditCustomProgWrap" style="display: none; margin-top: 6px;">
+            <input type="text" id="adminEditCustomProg" class="form-text-input" placeholder="Enter custom position / role title">
+          </div>
           <div id="adminEditProgNote" style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: none;">Admins have unrestricted access across all programmes.</div>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
@@ -3844,9 +3865,9 @@
   <script src="jspdf.umd.min.js"></script>
   <script>if (!window.jspdf) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'); }</script>
   <script src="supabase-config.js"></script>
-  <script src="supabase-client.js?v=20261110_1635"></script>
-  <script src="jd-data.js?v=20261110_1635"></script>
-  <script src="data.js?v=20261110_1635"></script>
-  <script src="app.js?v=20261110_1635"></script>
+  <script src="supabase-client.js?v=20261110_1650"></script>
+  <script src="jd-data.js?v=20261110_1650"></script>
+  <script src="data.js?v=20261110_1650"></script>
+  <script src="app.js?v=20261110_1650"></script>
 </body>
 </html>

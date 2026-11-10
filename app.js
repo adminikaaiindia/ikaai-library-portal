@@ -3271,7 +3271,11 @@
     adminSingleInviteForm: document.getElementById('adminSingleInviteForm'),
     adminInviteEmail: document.getElementById('adminInviteEmail'),
     adminInviteRole: document.getElementById('adminInviteRole'),
+    adminInviteCustomRoleWrap: document.getElementById('adminInviteCustomRoleWrap'),
+    adminInviteCustomRole: document.getElementById('adminInviteCustomRole'),
     adminInviteProgramme: document.getElementById('adminInviteProgramme'),
+    adminInviteCustomProgWrap: document.getElementById('adminInviteCustomProgWrap'),
+    adminInviteCustomProg: document.getElementById('adminInviteCustomProg'),
     adminInviteProgNote: document.getElementById('adminInviteProgNote'),
     adminSubmitInviteBtn: document.getElementById('adminSubmitInviteBtn'),
     adminBulkInviteSection: document.getElementById('adminBulkInviteSection'),
@@ -3291,7 +3295,11 @@
     adminEditUserName: document.getElementById('adminEditUserName'),
     adminEditUserEmail: document.getElementById('adminEditUserEmail'),
     adminEditRoleSelect: document.getElementById('adminEditRoleSelect'),
+    adminEditCustomRoleWrap: document.getElementById('adminEditCustomRoleWrap'),
+    adminEditCustomRole: document.getElementById('adminEditCustomRole'),
     adminEditProgSelect: document.getElementById('adminEditProgSelect'),
+    adminEditCustomProgWrap: document.getElementById('adminEditCustomProgWrap'),
+    adminEditCustomProg: document.getElementById('adminEditCustomProg'),
     adminEditProgNote: document.getElementById('adminEditProgNote'),
     adminSaveEditUserBtn: document.getElementById('adminSaveEditUserBtn'),
     adminCancelEditUserBtn: document.getElementById('adminCancelEditUserBtn'),
@@ -9576,6 +9584,9 @@
       return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: CANONICAL_PROGRAMMES[0].name };
     }
     const norm = String(input).trim().toLowerCase();
+    if (norm === 'custom') {
+      return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: null, isCustom: true };
+    }
 
     // Check direct key in JD_ASSIGNMENT_MAP
     if (JD_ASSIGNMENT_MAP[norm]) {
@@ -9617,6 +9628,9 @@
     }
     if (norm === 'intern' || norm === 'learner') {
       return { baseRole: 'intern', position: 'Intern', progId: null, progName: null };
+    }
+    if (norm === 'custom') {
+      return { baseRole: 'instructor', position: null, progId: null, progName: null, isCustom: true };
     }
     if (JD_ROLE_MAP[norm]) {
       return JD_ROLE_MAP[norm];
@@ -9693,6 +9707,10 @@
           if (u.role !== 'instructor') return false;
         } else if (roleFilter === 'intern') {
           if (u.role !== 'intern' && u.role !== 'learner') return false;
+        } else if (roleFilter === 'custom') {
+          const isStandardJD = u.position && Object.values(JD_ASSIGNMENT_MAP).some(item => item.title.toLowerCase() === u.position.toLowerCase());
+          const isGeneric = !u.position || ['intern', 'instructor', 'admin', 'full-time', 'full-time staff', 'administrator'].includes(u.position.toLowerCase());
+          if (isGeneric || isStandardJD) return false;
         } else {
           const filterNorm = roleFilter.toLowerCase();
           const posNorm = (u.position || '').toLowerCase();
@@ -9744,8 +9762,15 @@
 
       // Role badge
       let roleBadge = '';
+      const isCustomPos = u.position &&
+        u.role !== 'admin' &&
+        !Object.values(JD_ASSIGNMENT_MAP).some(item => item.title.toLowerCase() === u.position.toLowerCase()) &&
+        !['intern', 'instructor', 'admin', 'full-time', 'full-time staff', 'administrator'].includes(u.position.toLowerCase());
+
       if (u.role === 'admin') {
         roleBadge = `<span style="background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); color: #c084fc; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Admin</span>`;
+      } else if (isCustomPos) {
+        roleBadge = `<span style="background: rgba(14,165,233,0.15); border: 1px solid rgba(14,165,233,0.35); color: #38bdf8; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;" title="Custom Role: ${escapeHtml(u.position)}">${escapeHtml(u.position)}</span>`;
       } else if (u.role === 'instructor') {
         roleBadge = `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;" title="Full-Time Staff">Full-Time</span>`;
       } else {
@@ -9756,6 +9781,8 @@
       let progName = u.programme_name || '--';
       if (u.role === 'admin') {
         progName = `<span style="color: var(--accent-light); font-weight: 600;">All Programmes</span>`;
+      } else if (u.position && isCustomPos) {
+        progName = `<span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(u.position)}</span>${u.programme_name ? ` <span style="font-size: 11px; color: var(--text-muted);">(${escapeHtml(u.programme_name)})</span>` : ''}`;
       } else if (u.position) {
         progName = `<span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(u.position)}</span>`;
       } else if (!u.programme_id) {
@@ -9929,19 +9956,35 @@
     el.adminEditUserName.textContent = user.full_name || (user.is_registered ? 'Registered User' : 'Invited Member');
     el.adminEditUserEmail.textContent = user.email;
 
+    const isCustomPosition = user.position &&
+      user.role !== 'admin' &&
+      !Object.values(JD_ASSIGNMENT_MAP).some(item => item.title.toLowerCase() === user.position.toLowerCase()) &&
+      !['intern', 'instructor', 'admin', 'full-time', 'full-time staff', 'administrator'].includes(user.position.toLowerCase());
+
     if (isAdminAccount) {
       el.adminEditRoleSelect.value = 'admin';
       el.adminEditRoleSelect.disabled = true;
       el.adminEditProgSelect.disabled = true;
+      if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
+      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'none';
       if (el.adminEditProgNote) el.adminEditProgNote.style.display = 'block';
       if (el.adminDeleteModalUserBtn) el.adminDeleteModalUserBtn.style.display = 'none';
     } else {
       let matchedVal = 'intern';
       const userRole = (user.role || '').trim().toLowerCase();
-      if (userRole === 'instructor') {
+      if (isCustomPosition) {
+        matchedVal = 'custom';
+        if (el.adminEditCustomRole) el.adminEditCustomRole.value = user.position;
+        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'block';
+      } else if (userRole === 'instructor') {
         matchedVal = 'instructor';
+        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
       } else if (userRole === 'admin') {
         matchedVal = 'admin';
+        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
+      } else {
+        matchedVal = 'intern';
+        if (el.adminEditCustomRoleWrap) el.adminEditCustomRoleWrap.style.display = 'none';
       }
       el.adminEditRoleSelect.value = matchedVal;
       el.adminEditRoleSelect.disabled = false;
@@ -9955,7 +9998,7 @@
 
     // Preselect Programme Assignment in el.adminEditProgSelect
     let matchedProgOption = null;
-    if (user.position) {
+    if (user.position && !isCustomPosition) {
       const normPos = user.position.toLowerCase().trim();
       matchedProgOption = Array.from(el.adminEditProgSelect.options).find(o =>
         o.value.toLowerCase() === normPos ||
@@ -9968,8 +10011,14 @@
     }
     if (matchedProgOption) {
       el.adminEditProgSelect.value = matchedProgOption.value;
+      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'none';
+    } else if (isCustomPosition) {
+      el.adminEditProgSelect.value = 'custom';
+      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'block';
+      if (el.adminEditCustomProg) el.adminEditCustomProg.value = user.position;
     } else if (el.adminEditProgSelect.options.length > 0) {
       el.adminEditProgSelect.selectedIndex = 0;
+      if (el.adminEditCustomProgWrap) el.adminEditCustomProgWrap.style.display = 'none';
     }
 
     if (isApproving) {
@@ -10027,7 +10076,13 @@
     // Single Invite Role toggle & JD Programme auto-mapping
     if (el.adminInviteRole) {
       el.adminInviteRole.addEventListener('change', () => {
-        const details = resolveRoleDetails(el.adminInviteRole.value);
+        const val = el.adminInviteRole.value;
+        const isCustom = val === 'custom';
+        if (el.adminInviteCustomRoleWrap) {
+          el.adminInviteCustomRoleWrap.style.display = isCustom ? 'block' : 'none';
+          if (isCustom && el.adminInviteCustomRole) el.adminInviteCustomRole.focus();
+        }
+        const details = resolveRoleDetails(val);
         const isAdmin = details.baseRole === 'admin';
         if (el.adminInviteProgramme) {
           el.adminInviteProgramme.disabled = isAdmin;
@@ -10038,17 +10093,52 @@
       });
     }
 
+    if (el.adminInviteProgramme) {
+      el.adminInviteProgramme.addEventListener('change', () => {
+        const isCustom = el.adminInviteProgramme.value === 'custom';
+        if (el.adminInviteCustomProgWrap) {
+          el.adminInviteCustomProgWrap.style.display = isCustom ? 'block' : 'none';
+          if (isCustom && el.adminInviteCustomProg) el.adminInviteCustomProg.focus();
+        }
+      });
+    }
+
     // Single Invite Form Submit
     if (el.adminSingleInviteForm) {
       el.adminSingleInviteForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = el.adminInviteEmail.value.trim().toLowerCase();
         const rawRole = el.adminInviteRole ? el.adminInviteRole.value : 'intern';
-        const roleDetails = resolveRoleDetails(rawRole);
+        const isCustomRole = rawRole === 'custom';
+        const customRoleVal = (el.adminInviteCustomRole && isCustomRole) ? el.adminInviteCustomRole.value.trim() : '';
+
+        const rawProg = el.adminInviteProgramme ? el.adminInviteProgramme.value : null;
+        const isCustomProg = rawProg === 'custom';
+        const customProgVal = (el.adminInviteCustomProg && isCustomProg) ? el.adminInviteCustomProg.value.trim() : '';
+
+        if (isCustomRole && !customRoleVal && !customProgVal) {
+          alert('Please enter a custom role title.');
+          if (el.adminInviteCustomRole) el.adminInviteCustomRole.focus();
+          return;
+        }
+        if (isCustomProg && !customProgVal && !customRoleVal) {
+          alert('Please enter a custom position / role title.');
+          if (el.adminInviteCustomProg) el.adminInviteCustomProg.focus();
+          return;
+        }
+
+        let roleDetails = resolveRoleDetails(rawRole);
+        if (isCustomRole) {
+          roleDetails = { baseRole: 'instructor', position: customRoleVal || customProgVal, progId: null, progName: null };
+        }
         const isAdmin = roleDetails.baseRole === 'admin';
-        const progAssignment = resolveProgrammeAssignment(el.adminInviteProgramme ? el.adminInviteProgramme.value : null);
-        const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId);
-        const position = isAdmin ? 'Administrator' : (progAssignment.position || roleDetails.position);
+
+        const progAssignment = isCustomProg
+          ? { progId: CANONICAL_PROGRAMMES[0].id, position: customProgVal || customRoleVal, progName: null }
+          : resolveProgrammeAssignment(rawProg);
+
+        const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId || CANONICAL_PROGRAMMES[0].id);
+        const position = isAdmin ? 'Administrator' : (customRoleVal || customProgVal || progAssignment.position || roleDetails.position);
 
         if (!email) {
           alert('Please enter a valid email address.');
@@ -10067,6 +10157,11 @@
           });
           showToast(`Access approved/invited for ${email} (${position || roleDetails.baseRole})`);
           el.adminInviteEmail.value = '';
+          if (el.adminInviteCustomRole) el.adminInviteCustomRole.value = '';
+          if (el.adminInviteCustomProg) el.adminInviteCustomProg.value = '';
+          if (el.adminInviteCustomRoleWrap) el.adminInviteCustomRoleWrap.style.display = 'none';
+          if (el.adminInviteCustomProgWrap) el.adminInviteCustomProgWrap.style.display = 'none';
+          if (el.adminInviteRole) el.adminInviteRole.value = 'intern';
           await renderAdminPortal();
         } catch (err) {
           alert('Failed to send invite: ' + err.message);
@@ -10151,7 +10246,13 @@
     // Edit User Modal events
     if (el.adminEditRoleSelect) {
       el.adminEditRoleSelect.addEventListener('change', () => {
-        const details = resolveRoleDetails(el.adminEditRoleSelect.value);
+        const val = el.adminEditRoleSelect.value;
+        const isCustom = val === 'custom';
+        if (el.adminEditCustomRoleWrap) {
+          el.adminEditCustomRoleWrap.style.display = isCustom ? 'block' : 'none';
+          if (isCustom && el.adminEditCustomRole) el.adminEditCustomRole.focus();
+        }
+        const details = resolveRoleDetails(val);
         const isAdmin = details.baseRole === 'admin';
         if (el.adminEditProgSelect) {
           el.adminEditProgSelect.disabled = isAdmin;
@@ -10162,17 +10263,51 @@
       });
     }
 
+    if (el.adminEditProgSelect) {
+      el.adminEditProgSelect.addEventListener('change', () => {
+        const isCustom = el.adminEditProgSelect.value === 'custom';
+        if (el.adminEditCustomProgWrap) {
+          el.adminEditCustomProgWrap.style.display = isCustom ? 'block' : 'none';
+          if (isCustom && el.adminEditCustomProg) el.adminEditCustomProg.focus();
+        }
+      });
+    }
+
     if (el.adminSaveEditUserBtn) {
       el.adminSaveEditUserBtn.addEventListener('click', async () => {
         const userId = el.adminEditUserId.value;
         const rawRole = el.adminEditRoleSelect.value;
-        const roleDetails = resolveRoleDetails(rawRole);
+        const isCustomRole = rawRole === 'custom';
+        const customRoleVal = (el.adminEditCustomRole && isCustomRole) ? el.adminEditCustomRole.value.trim() : '';
+
+        const rawProg = el.adminEditProgSelect ? el.adminEditProgSelect.value : null;
+        const isCustomProg = rawProg === 'custom';
+        const customProgVal = (el.adminEditCustomProg && isCustomProg) ? el.adminEditCustomProg.value.trim() : '';
+
+        if (isCustomRole && !customRoleVal && !customProgVal) {
+          alert('Please enter a custom role title.');
+          if (el.adminEditCustomRole) el.adminEditCustomRole.focus();
+          return;
+        }
+        if (isCustomProg && !customProgVal && !customRoleVal) {
+          alert('Please enter a custom position / role title.');
+          if (el.adminEditCustomProg) el.adminEditCustomProg.focus();
+          return;
+        }
+
+        let roleDetails = resolveRoleDetails(rawRole);
+        if (isCustomRole) {
+          roleDetails = { baseRole: 'instructor', position: customRoleVal || customProgVal, progId: null, progName: null };
+        }
         const role = roleDetails.baseRole;
         const isAdmin = role === 'admin';
 
-        const progAssignment = resolveProgrammeAssignment(el.adminEditProgSelect ? el.adminEditProgSelect.value : null);
-        const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId);
-        const position = isAdmin ? 'Administrator' : (progAssignment.position || roleDetails.position);
+        const progAssignment = isCustomProg
+          ? { progId: CANONICAL_PROGRAMMES[0].id, position: customProgVal || customRoleVal, progName: null }
+          : resolveProgrammeAssignment(rawProg);
+
+        const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId || CANONICAL_PROGRAMMES[0].id);
+        const position = isAdmin ? 'Administrator' : (customRoleVal || customProgVal || progAssignment.position || roleDetails.position);
 
         el.adminSaveEditUserBtn.disabled = true;
         el.adminSaveEditUserBtn.textContent = 'Saving...';

@@ -1077,6 +1077,11 @@
 
       function normalizeAdminRecord(r) {
         if (!r) return null;
+        let customPosMap = {};
+        try {
+          customPosMap = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
+        } catch (e) {}
+
         const resolvedId = r.profile_id || r.id || r.user_id || r.invite_id;
         const resolvedName = r.profile_name || r.full_name || r.display_name || '';
         const isRegistered = Boolean(r.profile_id || r.user_id || r.is_registered);
@@ -1092,6 +1097,8 @@
           status = 'active';
         }
 
+        const resolvedPos = r.position || customPosMap[email] || null;
+
         return {
           ...r,
           id: resolvedId,
@@ -1100,6 +1107,7 @@
           invite_id: r.invite_id || (isRegistered ? null : resolvedId),
           full_name: resolvedName,
           display_name: resolvedName,
+          position: resolvedPos,
           is_registered: isRegistered,
           role: role,
           status: status,
@@ -1189,9 +1197,17 @@
 
       const cleanEmail = (email || '').trim().toLowerCase();
       const cleanRole = (role || '').trim().toLowerCase();
-      const cleanProg = cleanRole === 'admin' ? null : (programmeId || null);
+      const cleanProg = cleanRole === 'admin' ? null : (programmeId || '10000000-0000-0000-0000-000000000001');
 
       if (!cleanEmail) throw new Error('Please enter a valid email address.');
+
+      if (position) {
+        try {
+          const map = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
+          map[cleanEmail] = position;
+          localStorage.setItem('ikaai_custom_positions', JSON.stringify(map));
+        } catch (e) {}
+      }
 
       // Un-delete from local registry if previously marked deleted
       try {
@@ -1210,7 +1226,21 @@
           p_programme_id: cleanProg
         });
 
-        if (!error) return data;
+        if (!error) {
+          if (position) {
+            try {
+              const { data: p } = await client
+                .from('profiles')
+                .select('id')
+                .ilike('email', cleanEmail)
+                .maybeSingle();
+              if (p && p.id) {
+                await client.from('profiles').update({ position: position }).eq('id', p.id);
+              }
+            } catch (e) {}
+          }
+          return data;
+        }
         console.warn('[DataLayer] invite_user rpc note, executing resilient upsert fallback:', error);
       } catch (rpcErr) {
         console.warn('[DataLayer] invite_user rpc exception, executing resilient upsert fallback:', rpcErr);
@@ -1287,7 +1317,7 @@
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
       const cleanRole = (role || '').trim().toLowerCase();
-      const cleanProg = cleanRole === 'admin' ? null : (programmeId || null);
+      const cleanProg = cleanRole === 'admin' ? null : (programmeId || '10000000-0000-0000-0000-000000000001');
 
       // Attempt official RPC first
       try {
@@ -1296,7 +1326,14 @@
           p_role: cleanRole,
           p_programme_id: cleanProg
         });
-        if (!error) return data;
+        if (!error) {
+          if (position) {
+            try {
+              await client.from('profiles').update({ position: position }).eq('id', userId);
+            } catch (e) {}
+          }
+          return data;
+        }
         console.warn('[DataLayer] update_user_access rpc note, falling back to direct update:', error);
       } catch (rpcErr) {
         console.warn('[DataLayer] update_user_access rpc exception:', rpcErr);
@@ -1322,6 +1359,13 @@
 
         if (!profErr && profData) {
           profileUpdated = true;
+          if (profData.email && position) {
+            try {
+              const map = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
+              map[profData.email.toLowerCase()] = position;
+              localStorage.setItem('ikaai_custom_positions', JSON.stringify(map));
+            } catch (e) {}
+          }
           if (profData.email) {
             await client
               .from('access_invites')
