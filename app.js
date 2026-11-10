@@ -13507,285 +13507,26 @@
       typingUsers: {},   // convId -> { [userName]: timeoutId }
       supabaseChannel: null,
 
-      // Directory of programme members
-      members: [
-        { id: 'u-inst-1', name: 'Devashish Chauhan', role: 'instructor', email: 'devashish@ikaaiindia.in', avatar: 'DC', online: true, lastSeen: 'Online now' },
-        { id: 'u-inst-2', name: 'Neha Singhal', role: 'instructor', email: 'neha@ikaaiindia.in', avatar: 'NS', online: true, lastSeen: 'Online now' },
-        { id: 'u-inst-3', name: 'Gehna Sahni', role: 'instructor', email: 'gehna@ikaaiindia.in', avatar: 'GS', online: false, lastSeen: 'Last seen 2h ago' },
-        { id: 'u-admin-1', name: 'Ikaai Admin', role: 'admin', email: 'admin@ikaaiindia.in', avatar: 'IA', online: true, lastSeen: 'Online now' },
-        { id: 'u-intern-1', name: 'Akshay Tiwari', role: 'learner', email: 'akshay@ikaaiindia.in', avatar: 'AT', online: true, lastSeen: 'Online now' },
-        { id: 'u-intern-2', name: 'Priya Sharma', role: 'learner', email: 'priya@ikaaiindia.in', avatar: 'PS', online: false, lastSeen: 'Last seen yesterday' },
-        { id: 'u-intern-3', name: 'Rohan Verma', role: 'learner', email: 'rohan@ikaaiindia.in', avatar: 'RV', online: false, lastSeen: 'Last seen 3d ago' }
-      ],
+      // Directory of programme members (synced dynamically from Supabase profiles)
+      members: [],
 
-      // Conversations List
+      // Conversations List (Only real community channels and real direct messages)
       conversations: [
         {
           id: 'all-members',
           type: 'all_members',
           name: 'All Members',
           slug: 'all-members',
-          description: 'Programme-wide community for all learners, mentors, and staff.',
+          description: 'Programme-wide community for all registered learners and mentors.',
           isAnnouncementOnly: false,
-          memberCount: 24,
-          members: ['u-inst-1', 'u-inst-2', 'u-inst-3', 'u-admin-1', 'u-intern-1', 'u-intern-2', 'u-intern-3'],
           unread: 0,
           hasMention: false,
-          lastMessage: 'Welcome everyone to the HR & Operations Programme!'
-        },
-
-        {
-          id: 'dm-devashish',
-          type: 'direct',
-          name: 'Devashish Chauhan',
-          recipientId: 'u-inst-1',
-          description: 'Lead HR & Operations Instructor',
-          unread: 0,
-          hasMention: false,
-          lastMessage: 'Let me know if you need any clarification on your assignment.'
-        },
-        {
-          id: 'dm-neha',
-          type: 'direct',
-          name: 'Neha Singhal',
-          recipientId: 'u-inst-2',
-          description: 'Talent Acquisition & People Mentor',
-          unread: 0,
-          hasMention: false,
-          lastMessage: 'Great work on the recruitment matrix review!'
-        },
-        {
-          id: 'dm-gehna',
-          type: 'direct',
-          name: 'Gehna Sahni',
-          recipientId: 'u-inst-3',
-          description: 'Research Associate',
-          unread: 0,
-          hasMention: false,
-          lastMessage: 'The case study materials for Module 1 are ready.'
-        },
-        {
-          id: 'group-hr-interns',
-          type: 'group',
-          name: 'HR Interns Project Group',
-          topic: 'Collaborative study group for cohort assignments',
-          description: 'Collaborative group created by cohort members.',
-          memberCount: 4,
-          members: ['u-intern-1', 'u-intern-2', 'u-intern-3', 'u-inst-1'],
-          creatorId: 'u-intern-1',
-          unread: 0,
-          hasMention: false,
-          lastMessage: 'Let us coordinate on the joint presentation slides.'
+          lastMessage: 'All members community chat'
         }
       ],
 
-      // Messages dictionary: convId -> Array of message objects
-      messages: {
-        'all-members': [
-          {
-            id: 'msg-am-1',
-            conversationId: 'all-members',
-            senderId: 'u-inst-1',
-            senderName: 'Devashish Chauhan',
-            senderRole: 'instructor',
-            senderAvatar: 'DC',
-            content: 'Welcome everyone to the **Ikaai India Foundation HR & Operations Programme**! 🚀\n\nPlease check your learning modules in the sidebar and make sure to review the Onboarding Guide. If you run into any blockers, do not hesitate to reach out here or in `#help-and-doubts`.',
-            isPinned: true,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-            receipt: 'Seen',
-            reactions: [
-              { emoji: '👋', count: 5, users: ['Akshay Tiwari', 'Priya Sharma', 'Rohan Verma', 'Neha Singhal', 'Gehna Sahni'] },
-              { emoji: '🎉', count: 4, users: ['Akshay Tiwari', 'Priya Sharma', 'Rohan Verma', 'Neha Singhal'] }
-            ]
-          },
-          {
-            id: 'msg-am-2',
-            conversationId: 'all-members',
-            senderId: 'u-inst-2',
-            senderName: 'Neha Singhal',
-            senderRole: 'instructor',
-            senderAvatar: 'NS',
-            content: 'Hi everyone! Looking forward to working with all of you. Remember to check out the **Job Descriptions** tab for career pathways after programme completion.',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-            receipt: 'Seen',
-            reactions: [
-              { emoji: '❤️', count: 3, users: ['Akshay Tiwari', 'Devashish Chauhan', 'Gehna Sahni'] }
-            ]
-          },
-          {
-            id: 'msg-am-3',
-            conversationId: 'all-members',
-            senderId: 'u-intern-1',
-            senderName: 'Akshay Tiwari',
-            senderRole: 'learner',
-            senderAvatar: 'AT',
-            content: 'Thank you @Devashish Chauhan and @Neha Singhal! Excited to get started on Module 0 and Module 1 today.',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 3600000 * 4).toISOString(),
-            receipt: 'Seen',
-            reactions: [
-              { emoji: '👍', count: 2, users: ['Devashish Chauhan', 'Neha Singhal'] }
-            ]
-          }
-        ],
-        'channel-general': [
-          {
-            id: 'msg-gen-1',
-            conversationId: 'channel-general',
-            senderId: 'u-inst-1',
-            senderName: 'Devashish Chauhan',
-            senderRole: 'instructor',
-            senderAvatar: 'DC',
-            content: 'Reminder for everyone: Today at 4:00 PM IST is our weekly open office hours. Drop in if you want to discuss your project proposals or case study questions.',
-            isPinned: true,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 3600000 * 6).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '✅', count: 4, users: ['Akshay Tiwari', 'Priya Sharma', 'Rohan Verma', 'Neha Singhal'] }]
-          }
-        ],
-        'channel-help': [
-          {
-            id: 'msg-help-1',
-            conversationId: 'channel-help',
-            senderId: 'u-intern-2',
-            senderName: 'Priya Sharma',
-            senderRole: 'learner',
-            senderAvatar: 'PS',
-            content: 'Hi team, is anyone working on the Module 2 exercise regarding RFP scoring matrix calculations?',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 3600000 * 8).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '👀', count: 2, users: ['Akshay Tiwari', 'Devashish Chauhan'] }]
-          },
-          {
-            id: 'msg-help-2',
-            conversationId: 'channel-help',
-            senderId: 'u-inst-3',
-            senderName: 'Gehna Sahni',
-            senderRole: 'instructor',
-            senderAvatar: 'GS',
-            content: 'Hi Priya, yes! Slide 14 in Module 2 provides the exact formula weighting for the technical proposal score versus commercial weight. Let me know if you want me to share the reference sheet.',
-            parentMessageId: 'msg-help-1',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 3600000 * 7).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '🙏', count: 1, users: ['Priya Sharma'] }]
-          }
-        ],
-        'channel-intro': [
-          {
-            id: 'msg-intro-1',
-            conversationId: 'channel-intro',
-            senderId: 'u-inst-3',
-            senderName: 'Gehna Sahni',
-            senderRole: 'instructor',
-            senderAvatar: 'GS',
-            content: 'Hello everyone! Please say hello and tell us what you hope to learn during your internship journey at Ikaai India Foundation.',
-            isPinned: true,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '🌟', count: 3, users: ['Akshay Tiwari', 'Neha Singhal', 'Devashish Chauhan'] }]
-          }
-        ],
-        'dm-devashish': [
-          {
-            id: 'msg-dmd-1',
-            conversationId: 'dm-devashish',
-            senderId: 'u-inst-1',
-            senderName: 'Devashish Chauhan',
-            senderRole: 'instructor',
-            senderAvatar: 'DC',
-            content: 'Hi Akshay, welcome to the programme! Feel free to message me anytime if you have questions regarding your assignments or need academic guidance.',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '🤝', count: 1, users: ['Akshay Tiwari'] }]
-          },
-          {
-            id: 'msg-dmd-2',
-            conversationId: 'dm-devashish',
-            senderId: 'u-intern-1',
-            senderName: 'Akshay Tiwari',
-            senderRole: 'learner',
-            senderAvatar: 'AT',
-            content: 'Thanks Devashish Sir! I am reviewing the Technical Proposal Writing module now.',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-            receipt: 'Seen',
-            reactions: []
-          }
-        ],
-        'dm-neha': [
-          {
-            id: 'msg-dmn-1',
-            conversationId: 'dm-neha',
-            senderId: 'u-inst-2',
-            senderName: 'Neha Singhal',
-            senderRole: 'instructor',
-            senderAvatar: 'NS',
-            content: 'Hi Akshay! Great work completing the initial profile onboarding steps.',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '✨', count: 1, users: ['Akshay Tiwari'] }]
-          }
-        ],
-        'dm-gehna': [
-          {
-            id: 'msg-dmg-1',
-            conversationId: 'dm-gehna',
-            senderId: 'u-inst-3',
-            senderName: 'Gehna Sahni',
-            senderRole: 'instructor',
-            senderAvatar: 'GS',
-            content: 'Hi Akshay, the case study materials and references for Module 1 have been updated in the portal repository.',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '👍', count: 1, users: ['Akshay Tiwari'] }]
-          }
-        ],
-        'group-hr-interns': [
-          {
-            id: 'msg-grp-1',
-            conversationId: 'group-hr-interns',
-            senderId: 'u-intern-2',
-            senderName: 'Priya Sharma',
-            senderRole: 'learner',
-            senderAvatar: 'PS',
-            content: 'Hey everyone, created this group so we can coordinate on the cohort group project and share research notes!',
-            isPinned: false,
-            isEdited: false,
-            isDeleted: false,
-            createdAt: new Date(Date.now() - 86400000 * 1).toISOString(),
-            receipt: 'Seen',
-            reactions: [{ emoji: '🎉', count: 3, users: ['Akshay Tiwari', 'Rohan Verma', 'Devashish Chauhan'] }]
-          }
-        ]
-      }
+      // Messages dictionary: convId -> Array of message objects (loaded dynamically from database)
+      messages: {}
     };
 
     // Helper: Get Current User details (Dynamically resolved from active session)
@@ -13822,7 +13563,7 @@
       return { id, name, email, role, avatar: initials };
     }
 
-    // Dynamic loader: fetch real registered users from Supabase and build direct conversations
+    // Dynamic loader: fetch real registered users and real groups from Supabase
     async function loadRealDirectoryMembers() {
       const client = window.supabaseClient;
       if (!client) return;
@@ -13841,7 +13582,7 @@
         if (profiles && profiles.length > 0) {
           const currentUser = getCurrentUser();
 
-          // Transform DB profiles into state.members
+          // Transform DB profiles into state.members (strictly real registered persons only!)
           state.members = profiles.map(p => {
             const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
             const initials = displayName.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -13857,7 +13598,51 @@
             };
           });
 
-          // Create or update canonical Direct Message conversations for all members
+          // 1. Fetch real groups and channels from Supabase chat_conversations table
+          try {
+            const { data: dbConvs } = await client
+              .from('chat_conversations')
+              .select('*')
+              .in('type', ['channel', 'group']);
+
+            if (dbConvs && dbConvs.length > 0) {
+              dbConvs.forEach(dc => {
+                if (dc.id === 'group-hr-interns') return; // ignore legacy dummy group
+                const existing = state.conversations.find(c => c.id === dc.id);
+                if (!existing) {
+                  state.conversations.push({
+                    id: dc.id,
+                    type: dc.type || 'group',
+                    name: dc.name,
+                    description: dc.description || '',
+                    unread: 0,
+                    hasMention: false,
+                    lastMessage: dc.last_message_preview || 'Group conversation'
+                  });
+                } else {
+                  existing.name = dc.name;
+                  existing.description = dc.description || existing.description;
+                }
+              });
+            }
+          } catch (e) {
+            console.warn('[TeamChat] load dbConvs note:', e);
+          }
+
+          // 2. Strict Filter: Retain ONLY 'all-members', real channels/groups, and valid real DMs
+          const validUserIds = new Set(profiles.map(p => p.id));
+          state.conversations = state.conversations.filter(c => {
+            if (c.id === 'all-members') return true;
+            if (c.type === 'channel' || c.type === 'group') {
+              return c.id !== 'group-hr-interns'; // filter dummy
+            }
+            if (c.type === 'direct') {
+              return c.recipientId && validUserIds.has(c.recipientId) && c.recipientId !== currentUser.id;
+            }
+            return false;
+          });
+
+          // 3. Create or update canonical Direct Message conversations ONLY for real registered members
           profiles.forEach(p => {
             if (p.id === currentUser.id) return; // Don't DM yourself
             const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
@@ -13880,8 +13665,14 @@
               existing.id = dmConvId;
               existing.name = displayName;
               existing.recipientId = p.id;
+              existing.description = `${p.role || 'Intern'} · ${p.email || ''}`;
             }
           });
+
+          // If active conversation was pointing to a removed dummy one, reset to 'all-members'
+          if (!state.conversations.some(c => c.id === state.activeConvId)) {
+            state.activeConvId = 'all-members';
+          }
 
           renderSidebarLists();
         }
@@ -14022,10 +13813,17 @@
           allMembersGroup.appendChild(el);
         } else if (conv.type === 'direct') {
           directGroup.appendChild(el);
-        } else if (conv.type === 'group') {
+        } else if (conv.type === 'group' || conv.type === 'channel') {
           groupsGroup.appendChild(el);
         }
       });
+
+      if (directGroup.children.length === 0) {
+        directGroup.innerHTML = '<div style="font-size: 11px; color: var(--chat-text-muted); padding: 8px 12px; font-style: italic;">No other members online.</div>';
+      }
+      if (groupsGroup.children.length === 0) {
+        groupsGroup.innerHTML = '<div style="font-size: 11px; color: var(--chat-text-muted); padding: 8px 12px; font-style: italic;">No groups created yet. Click + New to create one.</div>';
+      }
 
       // Update navChat unread badge in main sidebar
       updateNavChatBadge();
@@ -16069,6 +15867,17 @@
         lastMessage: 'Group created'
       });
 
+      // Persist real group to database
+      if (window.supabaseClient) {
+        window.supabaseClient.from('chat_conversations').insert({
+          id: groupId,
+          name: name,
+          type: 'group',
+          description: 'Group conversation',
+          created_by: currentUser.id !== 'u-anon' ? currentUser.id : null
+        }).then(() => {}).catch(e => console.warn('[TeamChat] group persist:', e));
+      }
+
       state.messages[groupId] = [{
         id: 'msg-' + Date.now(),
         conversationId: groupId,
@@ -16128,6 +15937,19 @@
         hasMention: false,
         lastMessage: 'Channel created'
       });
+
+      // Persist real channel to database
+      if (window.supabaseClient) {
+        window.supabaseClient.from('chat_conversations').insert({
+          id: channelId,
+          name: rawName,
+          type: 'channel',
+          slug: slug,
+          description: descInput ? descInput.value.trim() : 'Public channel',
+          is_announcement_only: isAnnounce,
+          created_by: currentUser.id !== 'u-anon' ? currentUser.id : null
+        }).then(() => {}).catch(e => console.warn('[TeamChat] channel persist:', e));
+      }
 
       state.messages[channelId] = [{
         id: 'msg-' + Date.now(),
