@@ -57,3 +57,4 @@ begin
   return jsonb_build_object('success', true, 'user_id', target_id, 'email', target_email);
 end;
 $$ language plpgsql security definer set search_path = public;
+

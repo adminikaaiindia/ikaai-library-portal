@@ -9391,8 +9391,14 @@
     const progFilter = el.adminFilterProg ? el.adminFilterProg.value : '';
     const statusFilter = el.adminFilterStatus ? el.adminFilterStatus.value : '';
 
-    // Count pending users across all records
-    const pendingRecords = adminPortalCachedUsers.filter(u => u.status === 'pending' || u.is_pending_approval);
+    // Filter out removed test admin emails from all directory views
+    const activeRecords = adminPortalCachedUsers.filter(u => {
+      const em = (u.email || '').toLowerCase().trim();
+      return em !== 'akshaytiwarigaming@gmail.com' && em !== 'akshaytiwari8527@gmail.com';
+    });
+
+    // Count pending users across records
+    const pendingRecords = activeRecords.filter(u => u.status === 'pending' || u.is_pending_approval);
     if (el.adminPendingAlert) {
       if (pendingRecords.length > 0) {
         el.adminPendingAlert.style.display = 'flex';
@@ -9408,7 +9414,7 @@
     }
 
     // Apply active filters
-    const filtered = adminPortalCachedUsers.filter(u => {
+    const filtered = activeRecords.filter(u => {
       if (query) {
         const nameMatch = (u.full_name || '').toLowerCase().includes(query);
         const emailMatch = (u.email || '').toLowerCase().includes(query);
@@ -9431,7 +9437,7 @@
     });
 
     if (el.adminUsersCountChip) {
-      el.adminUsersCountChip.textContent = `Showing ${filtered.length} of ${adminPortalCachedUsers.length} entries`;
+      el.adminUsersCountChip.textContent = `Showing ${filtered.length} of ${activeRecords.length} entries`;
     }
 
     if (filtered.length === 0) {
@@ -9488,8 +9494,6 @@
       const userEmail = (u.email || '').trim().toLowerCase();
       const isAdminAccount = u.role === 'admin' ||
         userEmail === 'admin.ikaaiindia@gmail.com' ||
-        userEmail === 'akshaytiwarigaming@gmail.com' ||
-        userEmail === 'akshaytiwari8527@gmail.com' ||
         userEmail.includes('admin');
 
       // Actions buttons
@@ -9631,8 +9635,6 @@
     const userEmail = (user.email || '').trim().toLowerCase();
     const isAdminAccount = user.role === 'admin' ||
       userEmail === 'admin.ikaaiindia@gmail.com' ||
-      userEmail === 'akshaytiwarigaming@gmail.com' ||
-      userEmail === 'akshaytiwari8527@gmail.com' ||
       userEmail.includes('admin');
 
     el.adminEditUserId.value = user.id || user.profile_id || user.invite_id;
@@ -9869,8 +9871,6 @@
         const targetEmail = (currentModalUser.email || '').trim().toLowerCase();
         const isAdminAccount = currentModalUser.role === 'admin' ||
           targetEmail === 'admin.ikaaiindia@gmail.com' ||
-          targetEmail === 'akshaytiwarigaming@gmail.com' ||
-          targetEmail === 'akshaytiwari8527@gmail.com' ||
           targetEmail.includes('admin');
 
         if (isAdminAccount) {
@@ -10000,8 +10000,6 @@
     const email = (profile?.email || '').trim().toLowerCase();
     const isAdmin = profile?.role === 'admin' ||
       email === 'admin.ikaaiindia@gmail.com' ||
-      email === 'akshaytiwarigaming@gmail.com' ||
-      email === 'akshaytiwari8527@gmail.com' ||
       email.includes('admin');
 
     if (isAdmin && profile) {
@@ -13078,8 +13076,6 @@
           const userEmail = (profile.email || userData.email || '').trim().toLowerCase();
           const isExplicitAdmin = profile.role === 'admin' ||
             userEmail === 'admin.ikaaiindia@gmail.com' ||
-            userEmail === 'akshaytiwarigaming@gmail.com' ||
-            userEmail === 'akshaytiwari8527@gmail.com' ||
             userEmail.includes('admin');
 
           if (isExplicitAdmin) {
@@ -13759,8 +13755,16 @@
         if (profiles && profiles.length > 0) {
           const currentUser = getCurrentUser();
 
+          // Exclude removed accounts from team chat directory
+          const realProfiles = profiles.filter(p => {
+            const em = (p.email || '').toLowerCase().trim();
+            if (em === 'akshaytiwarigaming@gmail.com' || em === 'akshaytiwari8527@gmail.com') return false;
+            if (em.startsWith('deleted_') || em.includes('@deleted.local') || p.full_name === '[Deleted User]') return false;
+            return true;
+          });
+
           // Transform DB profiles into state.members (strictly real registered persons only!)
-          state.members = profiles.map(p => {
+          state.members = realProfiles.map(p => {
             const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
             const initials = displayName.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
             return {
@@ -13829,7 +13833,7 @@
           }
 
           // 2. Strict Filter: Retain ONLY 'all-members', real custom channels/groups, and valid real DMs
-          const validUserIds = new Set(profiles.map(p => p.id));
+          const validUserIds = new Set(realProfiles.map(p => p.id));
           state.conversations = state.conversations.filter(c => {
             if (c.id === 'all-members') return true;
             if (c.type === 'channel' || c.type === 'group') {
@@ -13847,7 +13851,7 @@
           });
 
           // 3. Create or update canonical Direct Message conversations ONLY for real registered members
-          profiles.forEach(p => {
+          realProfiles.forEach(p => {
             if (p.id === currentUser.id) return; // Don't DM yourself
             const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
             // Canonical DM room ID so both participants share the exact same room ID

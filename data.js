@@ -1066,6 +1066,7 @@
         if (!item) return true;
         const em = (item.email || '').toLowerCase().trim();
         if (!em) return true;
+        if (em === 'akshaytiwarigaming@gmail.com' || em === 'akshaytiwari8527@gmail.com') return true;
         if (em.startsWith('deleted_') || em.includes('@deleted.local') || item.full_name === '[Deleted User]') return true;
         if (deletedSet.has(em)) return true;
         if (item.id && deletedSet.has(String(item.id).toLowerCase())) return true;
@@ -1082,8 +1083,6 @@
         const email = (r.email || '').trim().toLowerCase();
         const isAdmin = r.role === 'admin' ||
           email === 'admin.ikaaiindia@gmail.com' ||
-          email === 'akshaytiwarigaming@gmail.com' ||
-          email === 'akshaytiwari8527@gmail.com' ||
           email.includes('admin');
 
         // Admin accounts must always be active and hold admin role
@@ -1286,9 +1285,7 @@
 
         const targetEmail = (targetProfile?.email || '').trim().toLowerCase();
         const protectedAdmins = [
-          'admin.ikaaiindia@gmail.com',
-          'akshaytiwarigaming@gmail.com',
-          'akshaytiwari8527@gmail.com'
+          'admin.ikaaiindia@gmail.com'
         ];
 
         if (targetProfile?.role === 'admin' || protectedAdmins.includes(targetEmail)) {
@@ -1339,9 +1336,7 @@
 
       const cleanEmail = (userEmail || '').trim().toLowerCase();
       const protectedAdmins = [
-        'admin.ikaaiindia@gmail.com',
-        'akshaytiwarigaming@gmail.com',
-        'akshaytiwari8527@gmail.com'
+        'admin.ikaaiindia@gmail.com'
       ];
 
       if (cleanEmail && protectedAdmins.includes(cleanEmail)) {
