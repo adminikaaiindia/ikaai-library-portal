@@ -9363,6 +9363,49 @@
     { id: '10000000-0000-0000-0000-000000000005', slug: 'business-development', name: 'Business Development' }
   ];
 
+  // Official Role Map according to all 11 Job Descriptions (JDs)
+  const JD_ROLE_MAP = {
+    'data analyst intern': { baseRole: 'intern', position: 'Data Analyst Intern', progId: '10000000-0000-0000-0000-000000000002', progName: 'Data Analyst' },
+    'hr intern': { baseRole: 'intern', position: 'HR Intern', progId: '10000000-0000-0000-0000-000000000001', progName: 'Human Resources' },
+    'hr and admin': { baseRole: 'instructor', position: 'HR and Admin Associate', progId: '10000000-0000-0000-0000-000000000001', progName: 'Human Resources' },
+    'hr and admin associate': { baseRole: 'instructor', position: 'HR and Admin Associate', progId: '10000000-0000-0000-0000-000000000001', progName: 'Human Resources' },
+    'associate – partnerships and business development': { baseRole: 'instructor', position: 'Associate – Partnerships and Business Development', progId: '10000000-0000-0000-0000-000000000005', progName: 'Business Development' },
+    'associate - partnerships and business development': { baseRole: 'instructor', position: 'Associate – Partnerships and Business Development', progId: '10000000-0000-0000-0000-000000000005', progName: 'Business Development' },
+    'business development associate': { baseRole: 'instructor', position: 'Associate – Partnerships and Business Development', progId: '10000000-0000-0000-0000-000000000005', progName: 'Business Development' },
+    'research intern': { baseRole: 'intern', position: 'Research Intern', progId: '10000000-0000-0000-0000-000000000003', progName: 'Social Research & Policy' },
+    'research trainee': { baseRole: 'instructor', position: 'Research Trainee', progId: '10000000-0000-0000-0000-000000000003', progName: 'Social Research & Policy' },
+    'research assistant': { baseRole: 'instructor', position: 'Research Assistant', progId: '10000000-0000-0000-0000-000000000003', progName: 'Social Research & Policy' },
+    'research associate': { baseRole: 'instructor', position: 'Research Associate', progId: '10000000-0000-0000-0000-000000000003', progName: 'Social Research & Policy' },
+    'research executive': { baseRole: 'instructor', position: 'Research Executive', progId: '10000000-0000-0000-0000-000000000003', progName: 'Social Research & Policy' },
+    'sr. research associate': { baseRole: 'instructor', position: 'Sr. Research Associate', progId: '10000000-0000-0000-0000-000000000003', progName: 'Social Research & Policy' },
+    'sr research associate': { baseRole: 'instructor', position: 'Sr. Research Associate', progId: '10000000-0000-0000-0000-000000000003', progName: 'Social Research & Policy' },
+    'social media cum graphic design intern': { baseRole: 'intern', position: 'Social Media cum Graphic Design Intern', progId: '10000000-0000-0000-0000-000000000004', progName: 'Design & Social Media' },
+    'graphic design intern': { baseRole: 'intern', position: 'Social Media cum Graphic Design Intern', progId: '10000000-0000-0000-0000-000000000004', progName: 'Design & Social Media' }
+  };
+
+  function resolveRoleDetails(roleInput) {
+    if (!roleInput) return { baseRole: 'intern', position: 'Intern', progId: null, progName: null };
+    const norm = roleInput.trim().toLowerCase();
+    if (norm === 'admin') {
+      return { baseRole: 'admin', position: 'Administrator', progId: null, progName: 'All Programmes' };
+    }
+    if (norm === 'instructor' || norm === 'full-time' || norm === 'fulltime' || norm === 'full time') {
+      return { baseRole: 'instructor', position: 'Full-Time Staff', progId: null, progName: null };
+    }
+    if (norm === 'intern' || norm === 'learner') {
+      return { baseRole: 'intern', position: 'Intern', progId: null, progName: null };
+    }
+    if (JD_ROLE_MAP[norm]) {
+      return JD_ROLE_MAP[norm];
+    }
+    for (const [key, details] of Object.entries(JD_ROLE_MAP)) {
+      if (norm.includes(key) || key.includes(norm)) {
+        return details;
+      }
+    }
+    return { baseRole: 'intern', position: roleInput, progId: null, progName: null };
+  }
+
   var adminPortalCachedUsers = [];
   var adminPortalEventsWired = false;
   var bulkParsedEntries = [];
@@ -9420,8 +9463,21 @@
         const emailMatch = (u.email || '').toLowerCase().includes(query);
         if (!nameMatch && !emailMatch) return false;
       }
-      if (roleFilter && u.role !== roleFilter) {
-        return false;
+      if (roleFilter) {
+        if (roleFilter === 'admin') {
+          if (u.role !== 'admin') return false;
+        } else if (roleFilter === 'instructor') {
+          if (u.role !== 'instructor') return false;
+        } else if (roleFilter === 'intern') {
+          if (u.role !== 'intern' && u.role !== 'learner') return false;
+        } else {
+          const filterNorm = roleFilter.toLowerCase();
+          const posNorm = (u.position || '').toLowerCase();
+          const roleNorm = (u.role || '').toLowerCase();
+          if (!posNorm.includes(filterNorm) && !roleNorm.includes(filterNorm)) {
+            return false;
+          }
+        }
       }
       if (progFilter) {
         if (u.role === 'admin') {
@@ -9457,13 +9513,15 @@
         : `<div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(0,165,68,0.15); color: var(--accent-light); display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 700;">${initials}</div>`;
 
       // Role badge
-      let roleBadge = `<span style="text-transform: capitalize; font-weight: 600;">${u.role || 'intern'}</span>`;
+      let roleBadge = '';
       if (u.role === 'admin') {
         roleBadge = `<span style="background: rgba(168,85,247,0.15); border: 1px solid rgba(168,85,247,0.3); color: #c084fc; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Admin</span>`;
       } else if (u.role === 'instructor') {
-        roleBadge = `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;">Full-Time</span>`;
+        const titleText = (u.position && u.position !== 'Full-Time Staff') ? u.position : 'Full-Time';
+        roleBadge = `<span style="background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 700;" title="Full-Time Staff">${escapeHtml(titleText)}</span>`;
       } else {
-        roleBadge = `<span style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;">Intern</span>`;
+        const titleText = (u.position && u.position !== 'Intern') ? u.position : 'Intern';
+        roleBadge = `<span style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle); color: var(--text-secondary); padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600;" title="Intern">${escapeHtml(titleText)}</span>`;
       }
 
       // Programme assignment name
@@ -9648,9 +9706,19 @@
       if (el.adminEditProgNote) el.adminEditProgNote.style.display = 'block';
       if (el.adminDeleteModalUserBtn) el.adminDeleteModalUserBtn.style.display = 'none';
     } else {
-      el.adminEditRoleSelect.value = user.role || 'intern';
+      let matchedVal = 'intern';
+      const pos = (user.position || '').trim();
+      const userRole = (user.role || '').trim().toLowerCase();
+      if (pos && Array.from(el.adminEditRoleSelect.options).some(o => o.value.toLowerCase() === pos.toLowerCase())) {
+        matchedVal = Array.from(el.adminEditRoleSelect.options).find(o => o.value.toLowerCase() === pos.toLowerCase()).value;
+      } else if (userRole === 'instructor') {
+        matchedVal = 'instructor';
+      } else if (userRole === 'admin') {
+        matchedVal = 'admin';
+      }
+      el.adminEditRoleSelect.value = matchedVal;
       el.adminEditRoleSelect.disabled = false;
-      const roleIsAdmin = el.adminEditRoleSelect.value === 'admin';
+      const roleIsAdmin = matchedVal === 'admin';
       el.adminEditProgSelect.disabled = roleIsAdmin;
       if (el.adminEditProgNote) el.adminEditProgNote.style.display = roleIsAdmin ? 'block' : 'none';
       if (el.adminDeleteModalUserBtn) {
@@ -9716,12 +9784,16 @@
       });
     }
 
-    // Single Invite Role toggle
+    // Single Invite Role toggle & JD Programme auto-mapping
     if (el.adminInviteRole) {
       el.adminInviteRole.addEventListener('change', () => {
-        const isAdmin = el.adminInviteRole.value === 'admin';
+        const details = resolveRoleDetails(el.adminInviteRole.value);
+        const isAdmin = details.baseRole === 'admin';
         if (el.adminInviteProgramme) {
           el.adminInviteProgramme.disabled = isAdmin;
+          if (details.progId && !isAdmin) {
+            el.adminInviteProgramme.value = details.progId;
+          }
         }
         if (el.adminInviteProgNote) {
           el.adminInviteProgNote.style.display = isAdmin ? 'block' : 'none';
@@ -9734,8 +9806,9 @@
       el.adminSingleInviteForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = el.adminInviteEmail.value.trim().toLowerCase();
-        const role = el.adminInviteRole.value;
-        const programmeId = role === 'admin' ? null : el.adminInviteProgramme.value;
+        const rawRole = el.adminInviteRole ? el.adminInviteRole.value : 'intern';
+        const roleDetails = resolveRoleDetails(rawRole);
+        const programmeId = roleDetails.baseRole === 'admin' ? null : (el.adminInviteProgramme.value || roleDetails.progId);
 
         if (!email) {
           alert('Please enter a valid email address.');
@@ -9746,8 +9819,13 @@
         el.adminSubmitInviteBtn.textContent = 'Sending...';
 
         try {
-          await window.DataLayer.adminInviteUser({ email, role, programmeId });
-          showToast(`Access approved/invited for ${email}`);
+          await window.DataLayer.adminInviteUser({
+            email,
+            role: roleDetails.baseRole,
+            position: roleDetails.position,
+            programmeId
+          });
+          showToast(`Access approved/invited for ${email} (${roleDetails.position})`);
           el.adminInviteEmail.value = '';
           await renderAdminPortal();
         } catch (err) {
@@ -9810,6 +9888,7 @@
             await window.DataLayer.adminInviteUser({
               email: entry.email,
               role: entry.role,
+              position: entry.position,
               programmeId: entry.programmeId
             });
             successCount++;
@@ -9832,9 +9911,13 @@
     // Edit User Modal events
     if (el.adminEditRoleSelect) {
       el.adminEditRoleSelect.addEventListener('change', () => {
-        const isAdmin = el.adminEditRoleSelect.value === 'admin';
+        const details = resolveRoleDetails(el.adminEditRoleSelect.value);
+        const isAdmin = details.baseRole === 'admin';
         if (el.adminEditProgSelect) {
           el.adminEditProgSelect.disabled = isAdmin;
+          if (details.progId && !isAdmin) {
+            el.adminEditProgSelect.value = details.progId;
+          }
         }
         if (el.adminEditProgNote) {
           el.adminEditProgNote.style.display = isAdmin ? 'block' : 'none';
@@ -9845,15 +9928,21 @@
     if (el.adminSaveEditUserBtn) {
       el.adminSaveEditUserBtn.addEventListener('click', async () => {
         const userId = el.adminEditUserId.value;
-        const role = el.adminEditRoleSelect.value;
-        const programmeId = role === 'admin' ? null : el.adminEditProgSelect.value;
+        const rawRole = el.adminEditRoleSelect.value;
+        const roleDetails = resolveRoleDetails(rawRole);
+        const role = roleDetails.baseRole;
+        const programmeId = role === 'admin' ? null : (el.adminEditProgSelect.value || roleDetails.progId);
 
         el.adminSaveEditUserBtn.disabled = true;
         el.adminSaveEditUserBtn.textContent = 'Saving...';
 
         try {
-          await window.DataLayer.adminUpdateUserAccess(userId, { role, programmeId });
-          showToast('Updated user permissions successfully.');
+          await window.DataLayer.adminUpdateUserAccess(userId, {
+            role,
+            position: roleDetails.position,
+            programmeId
+          });
+          showToast(`Updated user permissions successfully (${roleDetails.position}).`);
           if (el.adminEditUserModal) el.adminEditUserModal.style.display = 'none';
           await renderAdminPortal();
         } catch (err) {
@@ -9932,12 +10021,12 @@
       // Split by comma or semicolon
       const parts = line.split(/[,;]/).map(p => p.trim());
       const email = (parts[0] || '').toLowerCase();
-      const roleRaw = (parts[1] || 'intern').toLowerCase();
+      const roleRaw = (parts[1] || 'intern');
       const progRaw = (parts[2] || '').toLowerCase();
 
-      let role = 'intern';
-      if (roleRaw.includes('admin')) role = 'admin';
-      else if (roleRaw.includes('instruct') || roleRaw.includes('full-time') || roleRaw.includes('fulltime') || roleRaw.includes('full time')) role = 'instructor';
+      const roleDetails = resolveRoleDetails(roleRaw);
+      const role = roleDetails.baseRole;
+      const position = roleDetails.position;
 
       const emailValid = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email);
       let programmeId = null;
@@ -9955,14 +10044,14 @@
         if (matchProg) {
           programmeId = matchProg.id;
           programmeName = matchProg.name;
+        } else if (!progRaw && roleDetails.progId) {
+          programmeId = roleDetails.progId;
+          programmeName = roleDetails.progName;
+        } else if (!progRaw) {
+          programmeId = CANONICAL_PROGRAMMES[0].id;
+          programmeName = CANONICAL_PROGRAMMES[0].name;
         } else {
-          // Default to first if omitted or specify error
-          if (!progRaw) {
-            programmeId = CANONICAL_PROGRAMMES[0].id;
-            programmeName = CANONICAL_PROGRAMMES[0].name;
-          } else {
-            error = `Unknown programme "${parts[2]}"`;
-          }
+          error = `Unknown programme "${parts[2]}"`;
         }
       }
 
@@ -9970,6 +10059,7 @@
         lineNum: idx + 1,
         email,
         role,
+        position,
         programmeId,
         programmeName,
         isValid: !error,

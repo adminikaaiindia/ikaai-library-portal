@@ -1141,6 +1141,7 @@
                 invite_id: inv.id,
                 email: inv.email,
                 role: inv.role,
+                position: matchProfile?.position || null,
                 programme_id: inv.programme_id,
                 programme_name: inv.programmes?.name || (inv.role === 'admin' ? 'All Programmes' : 'Unassigned'),
                 status: matchProfile?.access_status || inv.status,
@@ -1159,6 +1160,7 @@
                   invite_id: null,
                   email: p.email,
                   role: p.role,
+                  position: p.position || null,
                   programme_id: p.programme_id,
                   programme_name: p.programmes?.name || (p.role === 'admin' ? 'All Programmes' : 'Unassigned'),
                   status: p.access_status || 'pending',
@@ -1181,7 +1183,7 @@
       return [];
     },
 
-    async adminInviteUser({ email, role, programmeId }) {
+    async adminInviteUser({ email, role, programmeId, position }) {
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
@@ -1251,7 +1253,7 @@
           }
         }
 
-        // If matching registered profile exists, update role and activate
+        // If matching registered profile exists, update role, position, and activate
         const { data: prof } = await client
           .from('profiles')
           .select('id')
@@ -1259,14 +1261,17 @@
           .maybeSingle();
 
         if (prof && prof.id) {
+          const profPayload = {
+            role: cleanRole === 'intern' ? 'learner' : cleanRole,
+            programme_id: cleanProg,
+            access_status: 'active',
+            updated_at: new Date().toISOString()
+          };
+          if (position) profPayload.position = position;
+
           await client
             .from('profiles')
-            .update({
-              role: cleanRole === 'intern' ? 'learner' : cleanRole,
-              programme_id: cleanProg,
-              access_status: 'active',
-              updated_at: new Date().toISOString()
-            })
+            .update(profPayload)
             .eq('id', prof.id);
         }
 
@@ -1277,7 +1282,7 @@
       }
     },
 
-    async adminUpdateUserAccess(userId, { role, programmeId }) {
+    async adminUpdateUserAccess(userId, { role, programmeId, position }) {
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
@@ -1300,14 +1305,17 @@
       // Fallback: direct update to profiles table
       let profileUpdated = false;
       try {
+        const profUpdatePayload = {
+          role: cleanRole === 'intern' ? 'learner' : cleanRole,
+          programme_id: cleanProg,
+          access_status: 'active',
+          updated_at: new Date().toISOString()
+        };
+        if (position) profUpdatePayload.position = position;
+
         const { data: profData, error: profErr } = await client
           .from('profiles')
-          .update({
-            role: cleanRole === 'intern' ? 'learner' : cleanRole,
-            programme_id: cleanProg,
-            access_status: 'active',
-            updated_at: new Date().toISOString()
-          })
+          .update(profUpdatePayload)
           .eq('id', userId)
           .select('email')
           .maybeSingle();
