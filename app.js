@@ -13756,10 +13756,16 @@
           const currentUser = getCurrentUser();
 
           // Exclude removed accounts from team chat directory
+          let deletedUsersList = [];
+          try {
+            deletedUsersList = JSON.parse(localStorage.getItem('ikaai_admin_deleted_users') || '[]');
+          } catch (e) {}
+
           const realProfiles = profiles.filter(p => {
             const em = (p.email || '').toLowerCase().trim();
             if (em === 'akshaytiwarigaming@gmail.com' || em === 'akshaytiwari8527@gmail.com') return false;
             if (em.startsWith('deleted_') || em.includes('@deleted.local') || p.full_name === '[Deleted User]') return false;
+            if (deletedUsersList.includes(em)) return false;
             return true;
           });
 
@@ -13856,6 +13862,7 @@
             const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
             // Canonical DM room ID so both participants share the exact same room ID
             const dmConvId = 'dm_' + [currentUser.id, p.id].sort().join('_');
+            const roleDesc = p.role === 'instructor' ? 'Full-Time' : (p.role === 'admin' ? 'Admin' : 'Intern');
 
             const existing = state.conversations.find(c => c.id === dmConvId || c.recipientId === p.id);
             if (!existing) {
@@ -13864,7 +13871,7 @@
                 type: 'direct',
                 name: displayName,
                 recipientId: p.id,
-                description: `${p.role || 'Intern'} · ${p.email || ''}`,
+                description: `${roleDesc} · ${p.email || ''}`,
                 unread: 0,
                 hasMention: false,
                 lastMessage: 'Direct conversation'
@@ -13873,7 +13880,7 @@
               existing.id = dmConvId;
               existing.name = displayName;
               existing.recipientId = p.id;
-              existing.description = `${p.role || 'Intern'} · ${p.email || ''}`;
+              existing.description = `${roleDesc} · ${p.email || ''}`;
             }
           });
 
@@ -15446,7 +15453,8 @@
           profileCard.style.display = 'block';
           document.getElementById('detailsProfileAvatar').textContent = member.avatar;
           document.getElementById('detailsProfileName').textContent = member.name;
-          document.getElementById('detailsProfileRole').textContent = member.role.toUpperCase();
+          const memberRoleLabel = member.role === 'instructor' ? 'Full-Time' : member.role;
+          document.getElementById('detailsProfileRole').textContent = memberRoleLabel.toUpperCase();
           document.getElementById('detailsProfileRole').className = `details-profile-role-badge ${member.role}`;
           document.getElementById('detailsProfileEmail').textContent = member.email;
           document.getElementById('detailsProfileStatus').textContent = member.lastSeen;
