@@ -3533,10 +3533,11 @@
       try {
         const sessionUser = await window.DataLayer.getCurrentUser();
         if (sessionUser && sessionUser.id) {
-          const profile = await window.DataLayer.getProfile(sessionUser.id);
-          if (profile && profile.access_status === 'active') {
+          const userEmail = (sessionUser.email || '').trim().toLowerCase();
+          const accessCheck = await window.DataLayer.resolveUserAccess(sessionUser.id, userEmail);
+          if (accessCheck.accessStatus === 'active') {
             showToast('Access approved! Welcome to Ikaai Academy.');
-            await handleSuccessfulAuth({ id: sessionUser.id, email: sessionUser.email, name: profile.full_name });
+            await handleSuccessfulAuth({ id: sessionUser.id, email: sessionUser.email, name: sessionUser.name });
             return;
           }
         }
@@ -10367,6 +10368,8 @@
               cached.role = role;
               cached.position = position || null;
               cached.programme_id = programmeId;
+              cached.status = 'active';
+              cached.is_pending_approval = false;
               if (role === 'admin') {
                 cached.programme_name = 'All Programmes';
               } else if (position) {
@@ -13608,59 +13611,59 @@
       state.profile.initials = parts[0].substring(0, 2).toUpperCase();
     }
 
-    // Load profile from DataLayer if authenticated & check access gating
-    if (window.DataLayer && userData.id) {
+    // Check access gating via DataLayer
+    if (window.DataLayer && (userData.id || userData.email)) {
       try {
+        const userEmail = (userData.email || state.profile.email || '').trim().toLowerCase();
+        const accessCheck = await window.DataLayer.resolveUserAccess(userData.id, userEmail);
+        let accessStatus = accessCheck.accessStatus;
+
+        const isExplicitAdmin = (accessCheck.role === 'admin') ||
+          userEmail === 'admin.ikaaiindia@gmail.com' ||
+          userEmail.includes('admin');
+
+        if (isExplicitAdmin) {
+          accessStatus = 'active';
+        }
+
+        // 1. Access Pending: Gating screen active until approved by Admin
+        if (accessStatus === 'pending') {
+          if (el.pendingUserEmail) el.pendingUserEmail.textContent = userEmail || '--';
+          if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'flex';
+          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
+          if (el.authScreen) el.authScreen.style.display = 'none';
+          if (el.appShell) el.appShell.style.display = 'none';
+          return;
+        }
+
+        // 2. Access Revoked: User account has been deactivated by Admin
+        if (accessStatus === 'revoked') {
+          if (el.revokedUserEmail) el.revokedUserEmail.textContent = userEmail || '--';
+          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'flex';
+          if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
+          if (el.authScreen) el.authScreen.style.display = 'none';
+          if (el.appShell) el.appShell.style.display = 'none';
+          // CRITICAL: Block all portal data loading
+          return;
+        }
+
+        // 3. Active User: Hide gating screens and configure portal
+        if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
+        if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
+
         const profile = await window.DataLayer.getProfile(userData.id);
         if (profile) {
-          // Determine access status safely (admins are always active)
-          let accessStatus = profile.access_status;
-          const userEmail = (profile.email || userData.email || '').trim().toLowerCase();
-          const isExplicitAdmin = profile.role === 'admin' ||
-            userEmail === 'admin.ikaaiindia@gmail.com' ||
-            userEmail.includes('admin');
-
-          if (isExplicitAdmin) {
-            profile.role = 'admin';
-            accessStatus = 'active';
-          } else if (!accessStatus) {
-            accessStatus = 'pending';
-          }
-
-          // 1. Access Pending: Gating screen active until approved by Admin
-          if (accessStatus === 'pending') {
-            if (el.pendingUserEmail) el.pendingUserEmail.textContent = profile.email || userData.email || '--';
-            if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'flex';
-            if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
-            if (el.authScreen) el.authScreen.style.display = 'none';
-            if (el.appShell) el.appShell.style.display = 'none';
-            return;
-          }
-
-          // 2. Access Revoked: User account has been deactivated by Admin
-          if (accessStatus === 'revoked') {
-            if (el.revokedUserEmail) el.revokedUserEmail.textContent = profile.email || userData.email || '--';
-            if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'flex';
-            if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
-            if (el.authScreen) el.authScreen.style.display = 'none';
-            if (el.appShell) el.appShell.style.display = 'none';
-            // CRITICAL: Block all portal data loading
-            return;
-          }
-
-          // 3. Active User: Hide gating screens and configure portal
-          if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
-          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
-          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
-
-          state.profile.role = profile.role || 'Intern';
+          state.profile.role = profile.role || accessCheck.role || 'Intern';
           state.profile.name = profile.full_name || profile.display_name || state.profile.name;
           state.profile.branch = profile.branch || state.profile.branch;
-          state.profile.position = profile.position || state.profile.position;
+          state.profile.position = profile.position || accessCheck.position || state.profile.position;
           state.profile.phone = profile.phone || state.profile.phone;
           state.profile.avatar_url = profile.avatar_url || state.profile.avatar_url;
           if (profile.programme) state.profile.programmeName = profile.programme.name;
           applyRolePermissions(profile);
+        } else if (accessCheck.role) {
+          state.profile.role = accessCheck.role;
+          applyRolePermissions({ role: accessCheck.role });
         }
       } catch (err) {
         console.warn('[DataLayer] Auth profile load error:', err);

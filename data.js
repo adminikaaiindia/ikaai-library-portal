@@ -829,6 +829,108 @@
       return await DataLayer.getProfile(user.id);
     },
 
+    async resolveUserAccess(userId, email) {
+      const client = getClient();
+      const cleanEmail = (email || '').trim().toLowerCase();
+      if (!cleanEmail) return { accessStatus: 'pending' };
+
+      // Root Admin is unconditionally active
+      if (cleanEmail === 'admin.ikaaiindia@gmail.com' || cleanEmail.includes('admin')) {
+        return { accessStatus: 'active', role: 'admin' };
+      }
+
+      if (!isLive() || !client) {
+        return { accessStatus: 'active' };
+      }
+
+      // 1. Try secure claim_user_invite RPC first (handles atomic server-side activation)
+      try {
+        const { data: rpcRes, error: rpcErr } = await client.rpc('claim_user_invite');
+        if (!rpcErr && rpcRes && rpcRes.success) {
+          return {
+            accessStatus: rpcRes.status || 'active',
+            role: rpcRes.role,
+            programmeId: rpcRes.programme_id,
+            preInvited: Boolean(rpcRes.pre_invited)
+          };
+        }
+      } catch (e) {
+        // RPC not deployed or encountered notice; proceed to fallback checks
+      }
+
+      // 2. Check access_invites table by email
+      try {
+        const { data: inv, error: invErr } = await client
+          .from('access_invites')
+          .select('*, programmes:programme_id(id, name, slug)')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+
+        if (inv && !invErr) {
+          if (inv.status === 'revoked') {
+            return { accessStatus: 'revoked', invite: inv };
+          }
+          if (inv.status === 'invited' || inv.status === 'active') {
+            // User was pre-added by Admin! Activate immediately!
+            if (userId) {
+              try {
+                await client.from('profiles').update({
+                  access_status: 'active',
+                  role: inv.role === 'intern' ? 'learner' : inv.role,
+                  programme_id: inv.programme_id,
+                  updated_at: new Date().toISOString()
+                }).eq('id', userId);
+              } catch (updErr) {}
+
+              try {
+                await client.from('access_invites').update({
+                  status: 'active',
+                  activated_at: new Date().toISOString()
+                }).eq('id', inv.id);
+              } catch (invUpdErr) {}
+            }
+
+            return {
+              accessStatus: 'active',
+              role: inv.role,
+              programmeId: inv.programme_id,
+              position: inv.position,
+              invite: inv,
+              preInvited: true
+            };
+          }
+        }
+      } catch (invFetchErr) {
+        console.warn('[DataLayer] Error checking access_invites for user:', invFetchErr);
+      }
+
+      // 3. Check profiles table for pre-existing active status
+      if (userId) {
+        try {
+          const { data: prof } = await client
+            .from('profiles')
+            .select('access_status, role, programme_id, position')
+            .eq('id', userId)
+            .maybeSingle();
+
+          if (prof && prof.access_status === 'active') {
+            return {
+              accessStatus: 'active',
+              role: prof.role,
+              programmeId: prof.programme_id,
+              position: prof.position
+            };
+          }
+          if (prof && prof.access_status === 'revoked') {
+            return { accessStatus: 'revoked' };
+          }
+        } catch (profErr) {}
+      }
+
+      // 4. User was NOT pre-added by admin and has not been approved -> Pending Approval
+      return { accessStatus: 'pending', preInvited: false };
+    },
+
     async getProfile(userId) {
       const client = getClient();
       if (isLive()) {
@@ -842,6 +944,44 @@
               .maybeSingle();
 
             if (!error && data) {
+              // If profile is in pending or missing access_status, check if they were pre-invited by admin
+              if ((!data.access_status || data.access_status === 'pending') && data.email) {
+                try {
+                  const cleanEm = data.email.trim().toLowerCase();
+                  if (cleanEm === 'admin.ikaaiindia@gmail.com' || cleanEm.includes('admin')) {
+                    data.access_status = 'active';
+                    data.role = 'admin';
+                  } else {
+                    const { data: inv } = await client
+                      .from('access_invites')
+                      .select('*')
+                      .ilike('email', cleanEm)
+                      .maybeSingle();
+
+                    if (inv && (inv.status === 'invited' || inv.status === 'active')) {
+                      data.access_status = 'active';
+                      data.role = inv.role || data.role || 'intern';
+                      data.programme_id = inv.programme_id || data.programme_id;
+
+                      // Synchronize asynchronously
+                      client.from('profiles').update({
+                        access_status: 'active',
+                        role: data.role === 'intern' ? 'learner' : data.role,
+                        programme_id: data.programme_id,
+                        updated_at: new Date().toISOString()
+                      }).eq('id', uid).then(() => {}).catch(() => {});
+
+                      client.from('access_invites').update({
+                        status: 'active',
+                        activated_at: new Date().toISOString()
+                      }).eq('id', inv.id).then(() => {}).catch(() => {});
+                    }
+                  }
+                } catch (invErr) {
+                  console.warn('[DataLayer] Error checking invite in getProfile:', invErr);
+                }
+              }
+
               // Resolve programme details if programme_id exists
               if (data.programme_id) {
                 try {
@@ -1143,8 +1283,21 @@
             const seenEmails = new Set();
 
             (invites || []).forEach(inv => {
-              seenEmails.add(inv.email.toLowerCase());
-              const matchProfile = (profiles || []).find(p => p.email && p.email.toLowerCase() === inv.email.toLowerCase());
+              const invEmail = (inv.email || '').trim().toLowerCase();
+              if (invEmail) seenEmails.add(invEmail);
+              const matchProfile = (profiles || []).find(p => p.email && p.email.trim().toLowerCase() === invEmail);
+
+              // If invited by admin and not revoked:
+              // Once registered, they are automatically ACTIVE, never pending approval!
+              let resolvedStatus = inv.status;
+              if (inv.status === 'revoked') {
+                resolvedStatus = 'revoked';
+              } else if (matchProfile) {
+                resolvedStatus = 'active';
+              } else {
+                resolvedStatus = 'invited';
+              }
+
               combined.push(normalizeAdminRecord({
                 invite_id: inv.id,
                 email: inv.email,
@@ -1152,18 +1305,20 @@
                 position: matchProfile?.position || null,
                 programme_id: inv.programme_id,
                 programme_name: inv.programmes?.name || (inv.role === 'admin' ? 'All Programmes' : 'Unassigned'),
-                status: matchProfile?.access_status || inv.status,
+                status: resolvedStatus,
                 created_at: inv.created_at,
                 activated_at: inv.activated_at,
                 profile_id: matchProfile?.id || null,
                 profile_name: matchProfile?.full_name || matchProfile?.display_name || null,
                 last_seen: matchProfile?.last_seen || null,
-                is_pending_approval: (matchProfile?.access_status === 'pending')
+                is_pending_approval: false
               }));
             });
 
             (profiles || []).forEach(p => {
-              if (p.email && !seenEmails.has(p.email.toLowerCase())) {
+              const profEmail = (p.email || '').trim().toLowerCase();
+              if (profEmail && !seenEmails.has(profEmail)) {
+                const isUserActive = p.access_status === 'active' || p.role === 'admin' || profEmail === 'admin.ikaaiindia@gmail.com' || profEmail.includes('admin');
                 combined.push(normalizeAdminRecord({
                   invite_id: null,
                   email: p.email,
@@ -1171,13 +1326,13 @@
                   position: p.position || null,
                   programme_id: p.programme_id,
                   programme_name: p.programmes?.name || (p.role === 'admin' ? 'All Programmes' : 'Unassigned'),
-                  status: p.access_status || 'pending',
+                  status: isUserActive ? 'active' : 'pending',
                   created_at: p.created_at,
                   activated_at: null,
                   profile_id: p.id,
                   profile_name: p.full_name || p.display_name || null,
                   last_seen: p.last_seen || null,
-                  is_pending_approval: (p.access_status === 'pending')
+                  is_pending_approval: !isUserActive
                 }));
               }
             });
@@ -1390,15 +1545,36 @@
             } catch (e) {}
           }
           if (userEm) {
-            await client
-              .from('access_invites')
-              .update({
-                role: cleanRole,
-                programme_id: cleanProg,
-                status: 'active',
-                activated_at: new Date().toISOString()
-              })
-              .ilike('email', userEm);
+            try {
+              await client
+                .from('access_invites')
+                .update({
+                  role: cleanRole,
+                  programme_id: cleanProg,
+                  status: 'active',
+                  activated_at: new Date().toISOString()
+                })
+                .ilike('email', userEm);
+
+              const { data: existingInv } = await client
+                .from('access_invites')
+                .select('id')
+                .ilike('email', userEm)
+                .maybeSingle();
+
+              if (!existingInv) {
+                await client.from('access_invites').insert({
+                  email: userEm,
+                  role: cleanRole,
+                  programme_id: cleanProg,
+                  status: 'active',
+                  created_at: new Date().toISOString(),
+                  activated_at: new Date().toISOString()
+                });
+              }
+            } catch (invSyncErr) {
+              console.warn('[DataLayer] access_invites sync note:', invSyncErr);
+            }
           }
         }
       } catch (profE) {
