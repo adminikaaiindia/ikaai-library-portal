@@ -3492,7 +3492,9 @@
       renderAdminPortal();
     }
 
-    // Scroll to top
+    // Scroll to top of both main scroll container and window
+    const scrollElem = el.mainContentScroll || document.getElementById('mainContentScroll');
+    if (scrollElem) scrollElem.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -11267,9 +11269,16 @@
         el.downloadJdBtn.setAttribute('download', jd.fileName);
       }
       if (el.jdDetailHtmlContent) el.jdDetailHtmlContent.innerHTML = (jd.htmlContent || jd.html);
+
+      const backText = document.getElementById('backToJdsText');
+      if (backText) {
+        backText.textContent = isCurrentUserAdmin() ? 'Back to all Job Descriptions' : 'Back to Programme Modules';
+      }
     }
 
     switchScreen('jobDescriptions');
+    const scrollElem = el.mainContentScroll || document.getElementById('mainContentScroll');
+    if (scrollElem) scrollElem.scrollTo({ top: 0, behavior: 'smooth' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -11317,7 +11326,14 @@
 
   // JD detail back, print, and search events
   if (el.backToJdsBtn) {
-    el.backToJdsBtn.addEventListener('click', resetJdViewToGallery);
+    el.backToJdsBtn.addEventListener('click', () => {
+      const isAdm = isCurrentUserAdmin();
+      if (!isAdm) {
+        switchScreen('module');
+      } else {
+        resetJdViewToGallery();
+      }
+    });
   }
 
   if (el.printJdBtn) {

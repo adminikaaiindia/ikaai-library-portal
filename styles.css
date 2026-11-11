@@ -67,11 +67,12 @@ html, body {
 /* Portal Root */
 .portal-root {
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   position: relative;
   background-color: var(--bg-app);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ==========================================================================
@@ -472,10 +473,11 @@ html, body {
    ========================================================================== */
 .app-shell {
   width: 100%;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   position: relative;
   background-color: var(--bg-app);
+  overflow: hidden;
 }
 
 .main-wrapper {
@@ -483,8 +485,9 @@ html, body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100vh;
   position: relative;
+  overflow: hidden;
 }
 
 /* Typography */
@@ -3205,82 +3208,169 @@ button {
   color: #ffffff;
 }
 
-/* JD Detail View */
-.jd-detail-view {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-}
-
-.jd-detail-actions {
+/* JD Detail View & Header Navigation */
+.jd-detail-top-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 12px;
-  border-bottom: 1px solid var(--border-subtle);
-  padding-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 4px 0;
 }
 
-.jd-back-btn {
+.jd-back-btn,
+.back-link-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
   background: none;
   border: none;
-  transition: color 0.15s ease;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  transition: all 0.18s ease;
+  user-select: none;
 }
 
-.jd-back-btn:hover {
-  color: var(--accent-light);
+.jd-back-btn:hover,
+.back-link-btn:hover {
+  color: var(--accent-primary);
+  background: rgba(0, 135, 54, 0.08);
+  transform: translateX(-2px);
 }
 
-.jd-action-buttons {
-  display: flex;
+.jd-detail-action-buttons {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.jd-action-btn {
+.jd-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: var(--radius-sm);
-  font-size: 12.5px;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  box-sizing: border-box;
+  padding: 0 20px;
+  border-radius: var(--radius-full);
+  font-size: 13px;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s ease;
+  line-height: 1;
+  white-space: nowrap;
   text-decoration: none;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  vertical-align: middle;
 }
 
-.jd-action-btn.download {
-  background: var(--accent-primary);
-  border: 1px solid var(--accent-primary);
-  color: #ffffff;
+.jd-btn svg {
+  flex-shrink: 0;
 }
 
-.jd-action-btn.download:hover {
-  background: var(--accent-primary-hover);
-}
-
-.jd-action-btn.print {
-  background: #171b26;
+.jd-btn-print {
+  background: var(--bg-card);
   border: 1px solid var(--border-strong);
   color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-.jd-action-btn.print:hover {
-  background: #202636;
+.jd-btn-print:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.jd-btn-download {
+  background: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.jd-btn-download:hover {
+  background: var(--accent-primary-hover);
+  border-color: var(--accent-primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+[data-theme="light"] .jd-btn-print {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+[data-theme="light"] .jd-btn-print:hover {
+  border-color: #008736;
+  color: #008736;
+  background: #f8fafc;
+}
+
+[data-theme="light"] .jd-btn-download {
+  background: #008736;
+  border-color: #008736;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .jd-btn-download:hover {
+  background: #00702c;
+  border-color: #00702c;
+}
+
+.jd-detail-card {
+  padding: 32px 36px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  margin-bottom: 40px;
+}
+
+.jd-detail-header {
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 22px;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.jd-detail-header .role-badge {
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 135, 54, 0.12);
+  color: var(--accent-primary);
+}
+
+.jd-detail-main-title {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.jd-detail-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
 }
 
 .jd-document-body {
@@ -3507,16 +3597,21 @@ button {
 @media (min-width: 1024px) {
   /* Permanent Left Sidebar */
   .sidebar {
-    position: sticky;
+    position: relative;
     top: 0;
     left: 0;
     width: 300px;
     min-width: 300px;
+    max-width: 300px;
     height: 100vh;
     transform: none !important;
     border-right: 1px solid var(--border-subtle);
     background-color: var(--bg-sidebar);
-    z-index: 40;
+    z-index: 100;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   .sidebar-overlay {
@@ -3527,9 +3622,22 @@ button {
     display: none !important;
   }
 
+  .main-wrapper {
+    flex: 1;
+    min-width: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
   .top-bar {
     height: 64px;
     padding: 0 32px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 50;
   }
 
   .top-bar-brand .brand-text {
@@ -3540,6 +3648,15 @@ button {
     display: flex;
   }
 
+  .main-content-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .main-content-container,
   .main-content {
     width: 100%;
@@ -3547,6 +3664,7 @@ button {
     padding: 24px 32px 80px;
     gap: 24px;
     box-sizing: border-box;
+    min-height: 100%;
   }
 
   /* Split Auth Screen */
@@ -11989,18 +12107,24 @@ button.timer-locked,
 
 /* Global Mobile Viewport Hygiene */
 html, body {
-  max-width: 100vw;
-  overflow-x: hidden;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
   -webkit-text-size-adjust: 100%;
 }
 
 .portal-root,
-.app-shell,
-.main-wrapper,
+.app-shell {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
 .main-content-container,
 .main-content {
-  max-width: 100vw;
-  overflow-x: hidden;
   box-sizing: border-box;
 }
 
@@ -12009,6 +12133,14 @@ html, body {
   .top-bar {
     height: 58px;
     padding: 0 16px;
+    flex-shrink: 0;
+  }
+
+  .main-content-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .main-content-container,
@@ -12018,8 +12150,13 @@ html, body {
   }
 
   .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
     width: 280px;
     max-width: 85vw;
+    height: 100vh;
     z-index: 1000;
   }
 
