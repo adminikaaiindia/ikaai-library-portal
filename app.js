@@ -14107,28 +14107,65 @@
   }
 
   function handleSignOutCleanup() {
+    try {
+      document.documentElement.classList.remove('has-portal-session');
+    } catch (e) { }
+
     if (typeof cleanupSupportInbox === 'function') cleanupSupportInbox();
-    localStorage.removeItem('ikaai_portal_session');
+
+    try {
+      localStorage.removeItem('ikaai_portal_session');
+      // Clear Supabase session auth tokens from localStorage
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('sb-') || k === 'supabase.auth.token')) {
+          try { localStorage.removeItem(k); } catch (err) { }
+        }
+      }
+    } catch (e) { }
+
+    if (state && state.profile) {
+      state.profile.name = '';
+      state.profile.email = '';
+      state.profile.id = 'u-anon';
+      state.profile.role = 'Intern';
+      state.profile.avatar_url = null;
+    }
+
     if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
     if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
-    if (el.authScreen) el.authScreen.style.display = 'flex';
-    if (el.appShell) el.appShell.style.display = 'none';
     if (el.userDropdownCard) el.userDropdownCard.style.display = 'none';
+
+    // Strictly enforce hiding appShell and showing authScreen with !important
+    if (el.appShell) {
+      el.appShell.style.setProperty('display', 'none', 'important');
+    }
+    if (el.authScreen) {
+      el.authScreen.style.setProperty('display', 'flex', 'important');
+    }
   }
 
   async function signOutUser() {
     if (typeof GlobalPresence !== 'undefined' && GlobalPresence.cleanup) {
       try { await GlobalPresence.cleanup(); } catch (e) { }
     }
-    if (!isDemoAuth && window.supabaseClient) {
+    if (window.DataLayer && typeof window.DataLayer.signOut === 'function') {
+      try { await window.DataLayer.signOut(); } catch (e) { }
+    } else if (!isDemoAuth && window.supabaseClient) {
       try {
         await window.supabaseClient.auth.signOut();
       } catch (err) {
         console.warn('Supabase sign out error:', err);
       }
     }
+
     handleSignOutCleanup();
     showToast('Signed out successfully');
+
+    // Force immediate clean reload back to login page
+    setTimeout(() => {
+      window.location.href = window.location.pathname;
+    }, 300);
   }
 
   async function initAuthentication() {
@@ -14777,6 +14814,15 @@
             };
           });
 
+          // Keep All Members conversation strictly synchronized with exact real members count
+          const allMembersConv = state.conversations.find(c => c.id === 'all-members');
+          if (allMembersConv) {
+            allMembersConv.type = 'all_members';
+            allMembersConv.name = 'All Members';
+            allMembersConv.memberCount = state.members.length;
+            allMembersConv.members = state.members.map(m => m.id);
+          }
+
           const DUMMY_CHANNELS = new Set([
             'general', '#general',
             'announcements', '#announcements',
@@ -14798,6 +14844,14 @@
                 const normSlug = (dc.slug || '').toLowerCase().trim();
                 // Filter out all dummy # groups
                 if (DUMMY_CHANNELS.has(normName) || DUMMY_CHANNELS.has(normSlug) || DUMMY_CHANNELS.has(dc.id)) {
+                  return;
+                }
+                if (normName === 'all members' || normSlug === 'all-members' || dc.id === 'all-members') {
+                  if (allMembersConv) {
+                    allMembersConv.type = 'all_members';
+                    allMembersConv.memberCount = state.members.length;
+                    allMembersConv.members = state.members.map(m => m.id);
+                  }
                   return;
                 }
 
@@ -15130,7 +15184,12 @@
             subEl.textContent = 'Direct Message';
           }
         } else {
-          subEl.textContent = `${conv.type === 'all_members' ? 'Programme-wide' : 'Channel'} • ${conv.memberCount || conv.members?.length || 24} members`;
+          const isAllMembers = conv.id === 'all-members' || conv.type === 'all_members' || (conv.name && conv.name.toLowerCase() === 'all members');
+          const realMemberCount = isAllMembers
+            ? (state.members && state.members.length > 0 ? state.members.length : 10)
+            : (conv.memberCount || (conv.members && conv.members.length > 0 ? conv.members.length : state.members.length) || 1);
+          const channelLabel = isAllMembers ? 'Programme-wide' : (conv.type === 'group' ? 'Group' : 'Channel');
+          subEl.textContent = `${channelLabel} • ${realMemberCount} member${realMemberCount === 1 ? '' : 's'}`;
         }
       }
 
@@ -15143,6 +15202,9 @@
             pipEl.style.display = 'block';
             pipEl.className = `chat-conv-online-pip ${isOnline ? 'online' : 'offline'}`;
           }
+        } else if (conv.id === 'all-members' || conv.type === 'all_members' || (conv.name && conv.name.toLowerCase() === 'all members')) {
+          avatarEl.textContent = '👥';
+          if (pipEl) pipEl.style.display = 'none';
         } else if (conv.type === 'channel') {
           avatarEl.textContent = '#';
           if (pipEl) pipEl.style.display = 'none';

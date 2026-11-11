@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261111_1025_presence">
+  <link rel="stylesheet" href="styles.css?v=20261111_1035">
   
   <!-- Supabase JS Client v2 (Local bundle with CDN fallback) -->
   <script src="supabase.js"></script>
@@ -25,6 +25,8 @@
   <style>
     html.has-portal-session #authScreen { display: none !important; }
     html.has-portal-session #appShell { display: flex !important; }
+    html:not(.has-portal-session) #authScreen { display: flex !important; }
+    html:not(.has-portal-session) #appShell { display: none !important; }
   </style>
 </head>
 <body>
@@ -1651,7 +1653,7 @@
                   <h3 class="chat-conv-name" id="chatActiveTitle">All Members</h3>
                   <span class="chat-announcement-tag" id="chatAnnouncementTag" style="display: none;">Announcements only</span>
                 </div>
-                <div class="chat-conv-subtitle" id="chatActiveSubtitle">Programme-wide • 24 members</div>
+                <div class="chat-conv-subtitle" id="chatActiveSubtitle">Programme-wide</div>
               </div>
             </div>
 
@@ -3880,7 +3882,7 @@
   <script src="supabase-config.js"></script>
   <script src="supabase-client.js?v=20261111_0955"></script>
   <script src="jd-data.js?v=20261111_0955"></script>
-  <script src="data.js?v=20261111_1025_presence"></script>
-  <script src="app.js?v=20261111_1025_presence"></script>
+  <script src="data.js?v=20261111_1035"></script>
+  <script src="app.js?v=20261111_1035"></script>
 </body>
 </html>
