@@ -88,23 +88,18 @@
             .order('sort_order', { ascending: true });
 
           if (!error && data) {
-            // Also fetch user module progress & completions
+            // Also fetch user module progress & completions in parallel
             const user = await window.SupabaseClient.getUser();
             if (user) {
-              const { data: progressData } = await client
-                .from('module_progress')
-                .select('*')
-                .eq('user_id', user.id);
-
-              const { data: resCompData } = await client
-                .from('resource_completions')
-                .select('resource_id')
-                .eq('user_id', user.id);
-
-              const { data: faqReadsData } = await client
-                .from('faq_reads')
-                .select('faq_id')
-                .eq('user_id', user.id);
+              const [
+                { data: progressData },
+                { data: resCompData },
+                { data: faqReadsData }
+              ] = await Promise.all([
+                client.from('module_progress').select('*').eq('user_id', user.id),
+                client.from('resource_completions').select('resource_id').eq('user_id', user.id),
+                client.from('faq_reads').select('faq_id').eq('user_id', user.id)
+              ]);
 
               const completedResSet = new Set((resCompData || []).map(r => r.resource_id));
               const readFaqSet = new Set((faqReadsData || []).map(f => f.faq_id));
@@ -839,20 +834,39 @@
         return { accessStatus: 'active', role: 'admin' };
       }
 
+      // Check session cache first to eliminate repeated network roundtrips
+      const cacheKey = `ikaai_acc_${cleanEmail}`;
+      try {
+        const cached = sessionStorage.getItem(cacheKey);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.ts && (Date.now() - parsed.ts < 300000)) {
+            return parsed.data;
+          }
+        }
+      } catch (e) {}
+
+      const cacheAndReturn = (res) => {
+        try {
+          sessionStorage.setItem(cacheKey, JSON.stringify({ data: res, ts: Date.now() }));
+        } catch (e) {}
+        return res;
+      };
+
       if (!isLive() || !client) {
-        return { accessStatus: 'active' };
+        return cacheAndReturn({ accessStatus: 'active' });
       }
 
       // 1. Try secure claim_user_invite RPC first (handles atomic server-side activation)
       try {
         const { data: rpcRes, error: rpcErr } = await client.rpc('claim_user_invite');
         if (!rpcErr && rpcRes && rpcRes.success) {
-          return {
+          return cacheAndReturn({
             accessStatus: rpcRes.status || 'active',
             role: rpcRes.role,
             programmeId: rpcRes.programme_id,
             preInvited: Boolean(rpcRes.pre_invited)
-          };
+          });
         }
       } catch (e) {
         // RPC not deployed or encountered notice; proceed to fallback checks
@@ -868,7 +882,7 @@
 
         if (inv && !invErr) {
           if (inv.status === 'revoked') {
-            return { accessStatus: 'revoked', invite: inv };
+            return cacheAndReturn({ accessStatus: 'revoked', invite: inv });
           }
           if (inv.status === 'invited' || inv.status === 'active') {
             // User was pre-added by Admin! Activate immediately!
@@ -890,14 +904,14 @@
               } catch (invUpdErr) {}
             }
 
-            return {
+            return cacheAndReturn({
               accessStatus: 'active',
               role: inv.role,
               programmeId: inv.programme_id,
               position: inv.position,
               invite: inv,
               preInvited: true
-            };
+            });
           }
         }
       } catch (invFetchErr) {
@@ -914,21 +928,21 @@
             .maybeSingle();
 
           if (prof && prof.access_status === 'active') {
-            return {
+            return cacheAndReturn({
               accessStatus: 'active',
               role: prof.role,
               programmeId: prof.programme_id,
               position: prof.position
-            };
+            });
           }
           if (prof && prof.access_status === 'revoked') {
-            return { accessStatus: 'revoked' };
+            return cacheAndReturn({ accessStatus: 'revoked' });
           }
         } catch (profErr) {}
       }
 
       // 4. User was NOT pre-added by admin and has not been approved -> Pending Approval
-      return { accessStatus: 'pending', preInvited: false };
+      return cacheAndReturn({ accessStatus: 'pending', preInvited: false });
     },
 
     async getProfile(userId) {

@@ -13,6 +13,19 @@
   <!-- Supabase JS Client v2 (Local bundle with CDN fallback) -->
   <script src="supabase.js"></script>
   <script>if (!window.supabase) { document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>'); }</script>
+
+  <!-- Instant session pre-paint styling to eliminate layout flash / slow blank screen -->
+  <script>
+    try {
+      if (localStorage.getItem('ikaai_portal_session')) {
+        document.documentElement.classList.add('has-portal-session');
+      }
+    } catch (e) {}
+  </script>
+  <style>
+    html.has-portal-session #authScreen { display: none !important; }
+    html.has-portal-session #appShell { display: flex !important; }
+  </style>
 </head>
 <body>
 
@@ -668,10 +681,10 @@
                   <!-- Programme Relevant JDs Quick-Access Card -->
                   <section class="card programme-jds-card" id="programmeJdsCard">
                     <div class="section-header-row">
-                      <h3 class="section-title">Programme Roles & JDs</h3>
+                      <h3 class="section-title" id="programmeJdsCardTitle">Programme Roles & JDs</h3>
                       <button class="view-all-jds-link" id="viewAllJdsFromModBtn">View all 11 JDs →</button>
                     </div>
-                    <p class="section-desc">Official role specifications across all programme tracks (11 JDs).</p>
+                    <p class="section-desc" id="programmeJdsCardDesc">Official role specifications across all programme tracks (11 JDs).</p>
                     <div class="programme-jds-chips-list" id="programmeJdsChipsList">
                       <!-- Populated dynamically -->
                     </div>
@@ -759,7 +772,7 @@
                     <p class="view-subtitle">Official roles and position descriptions at Ikaai India Foundation.</p>
                   </div>
                   <div class="jd-count-indicator">
-                    <span id="jdVisibleCount">11</span> roles available
+                    <span id="jdVisibleCount">11 role specifications available</span>
                   </div>
                 </div>
 
@@ -3865,9 +3878,9 @@
   <script src="jspdf.umd.min.js"></script>
   <script>if (!window.jspdf) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'); }</script>
   <script src="supabase-config.js"></script>
-  <script src="supabase-client.js?v=20261111_0915"></script>
-  <script src="jd-data.js?v=20261111_0915"></script>
-  <script src="data.js?v=20261111_0915"></script>
-  <script src="app.js?v=20261111_0915"></script>
+  <script src="supabase-client.js?v=20261111_0930"></script>
+  <script src="jd-data.js?v=20261111_0930"></script>
+  <script src="data.js?v=20261111_0930"></script>
+  <script src="app.js?v=20261111_0930"></script>
 </body>
 </html>

@@ -10532,13 +10532,17 @@
   }
 
   function applyRolePermissions(profile) {
-    const email = (profile?.email || '').trim().toLowerCase();
+    const email = (profile?.email || state.profile?.email || '').trim().toLowerCase();
     const isAdmin = profile?.role === 'admin' ||
-      email === 'admin.ikaaiindia@gmail.com' ||
-      email.includes('admin');
+      state.profile?.role === 'admin' ||
+      email === 'admin.ikaaiindia@gmail.com';
 
-    if (isAdmin && profile) {
-      profile.role = 'admin';
+    if (isAdmin) {
+      if (profile) profile.role = 'admin';
+      state.profile.role = 'admin';
+    } else {
+      if (profile && profile.role !== 'instructor') profile.role = 'intern';
+      if (state.profile.role !== 'instructor') state.profile.role = 'Intern';
     }
 
     if (el.navAdmin) {
@@ -10554,7 +10558,7 @@
         el.programmeSelect.disabled = true;
         el.programmeSelect.title = 'Assigned cohort programme (managed by Admin)';
         let matchedKey = null;
-        if (profile?.position) {
+        if (profile?.position && profile.position.toLowerCase() !== 'intern') {
           const normPos = profile.position.toLowerCase().trim();
           matchedKey = Object.keys(JD_PROGRAMME_MAP).find(k =>
             JD_PROGRAMME_MAP[k].title.toLowerCase() === normPos ||
@@ -10565,20 +10569,32 @@
         if (!matchedKey && profile?.programme_id) {
           matchedKey = getProgrammeKey(profile.programme_id);
         }
+        if (!matchedKey && profile?.programme) {
+          matchedKey = getProgrammeKey(profile.programme);
+        }
+        if (!matchedKey && state.profile?.programmeName) {
+          matchedKey = getProgrammeKey(state.profile.programmeName);
+        }
         if (matchedKey) {
           currentProgrammeId = matchedKey;
           el.programmeSelect.value = matchedKey;
+          localStorage.setItem('ikaai_active_programme', matchedKey);
         }
       }
     }
     renderJobDescriptionsScreen();
+    renderProgrammeJds(currentProgrammeId);
   }
 
   async function syncCurriculumFromBackend() {
     if (typeof window.DataLayer === 'undefined') return;
     const dbProgId = getProgrammeDbId(currentProgrammeId);
     try {
-      const modules = await window.DataLayer.getModules(dbProgId);
+      const [modules, comp] = await Promise.all([
+        window.DataLayer.getModules(dbProgId),
+        window.DataLayer.getProgrammeCompletion(dbProgId)
+      ]);
+
       if (modules && modules.length > 0) {
         const prog = getCurrentProgramme();
         modules.forEach((m, idx) => {
@@ -10618,7 +10634,6 @@
       }
 
       // Update completion percentage from view
-      const comp = await window.DataLayer.getProgrammeCompletion(dbProgId);
       if (comp && comp.completion_percentage !== undefined) {
         if (el.sidebarProgressPercent) el.sidebarProgressPercent.textContent = `${comp.completion_percentage}%`;
         if (el.sidebarProgressBar) el.sidebarProgressBar.style.width = `${comp.completion_percentage}%`;
@@ -11073,73 +11088,75 @@
     if (el.jdGalleryView) el.jdGalleryView.style.display = 'block';
   }
 
-  function getUserAssignedJds() {
-    const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
+  function isCurrentUserAdmin() {
     const role = (state.profile?.role || '').toLowerCase();
     const email = (state.profile?.email || '').toLowerCase().trim();
-    const isAdmin = role === 'admin' || email === 'admin.ikaaiindia@gmail.com' || email.includes('admin');
+    return role === 'admin' || email === 'admin.ikaaiindia@gmail.com';
+  }
 
-    // Administrators have full access to view and manage all 11 Job Descriptions
-    if (isAdmin) {
+  function getUserAssignedJds() {
+    const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
+    if (isCurrentUserAdmin()) {
       return allJds;
     }
 
-    // For non-admin roles (Interns, Full-Time staff, Learners), filter to their strictly assigned role specification
-    const userPos = (state.profile?.position || '').toLowerCase().trim();
     const currentProg = (currentProgrammeId || '').toLowerCase().trim();
+    const userPos = (state.profile?.position || '').toLowerCase().trim();
+    const progName = (state.profile?.programmeName || '').toLowerCase().trim();
 
-    // 1. Direct match by jd.id with currentProgrammeId
-    let matched = allJds.filter(jd => jd.id.toLowerCase() === currentProg);
+    // 1. Direct match by jd.id with currentProgrammeId (e.g. 'data-analyst-intern', 'hr-intern', etc.)
+    let target = allJds.find(jd => jd.id.toLowerCase() === currentProg);
 
-    // 2. Direct match by jd.title or jd.id with user position
-    if (matched.length === 0 && userPos) {
-      matched = allJds.filter(jd => {
-        const titleNorm = jd.title.toLowerCase().trim();
-        const idNorm = jd.id.toLowerCase().trim();
-        return titleNorm === userPos ||
-               idNorm === userPos ||
-               userPos.includes(titleNorm) ||
-               titleNorm.includes(userPos);
-      });
+    // 2. Exact or specific match by position (avoid generic 'intern')
+    if (!target && userPos && userPos !== 'intern') {
+      target = allJds.find(jd => jd.id.toLowerCase() === userPos || jd.title.toLowerCase() === userPos);
+      if (!target) {
+        if (userPos.includes('data analyst')) target = allJds.find(j => j.id === 'data-analyst-intern');
+        else if (userPos.includes('hr and admin') || userPos.includes('hr & admin')) target = allJds.find(j => j.id === 'hr-and-admin');
+        else if (userPos.includes('hr intern') || userPos.includes('human resources')) target = allJds.find(j => j.id === 'hr-intern');
+        else if (userPos.includes('sr') && userPos.includes('research')) target = allJds.find(j => j.id === 'sr-research-associate');
+        else if (userPos.includes('executive')) target = allJds.find(j => j.id === 'research-executive');
+        else if (userPos.includes('assistant')) target = allJds.find(j => j.id === 'research-assistant');
+        else if (userPos.includes('trainee')) target = allJds.find(j => j.id === 'research-trainee');
+        else if (userPos.includes('associate') && userPos.includes('research')) target = allJds.find(j => j.id === 'research-associate');
+        else if (userPos.includes('research intern')) target = allJds.find(j => j.id === 'research-intern');
+        else if (userPos.includes('graphic') || userPos.includes('social media') || userPos.includes('design')) target = allJds.find(j => j.id === 'social-media-design-intern');
+        else if (userPos.includes('partnership') || userPos.includes('business development') || userPos.includes('bd')) target = allJds.find(j => j.id === 'associate-partnerships-bd');
+      }
     }
 
     // 3. Match using JD_PROGRAMME_MAP
-    if (matched.length === 0 && typeof JD_PROGRAMME_MAP !== 'undefined') {
-      const jdMeta = JD_PROGRAMME_MAP[currentProg];
-      if (jdMeta) {
-        matched = allJds.filter(jd =>
-          jd.id.toLowerCase() === currentProg ||
-          jd.title.toLowerCase() === jdMeta.title.toLowerCase()
-        );
+    if (!target && typeof JD_PROGRAMME_MAP !== 'undefined' && JD_PROGRAMME_MAP[currentProg]) {
+      const meta = JD_PROGRAMME_MAP[currentProg];
+      target = allJds.find(jd => jd.id.toLowerCase() === currentProg || jd.title.toLowerCase() === meta.title.toLowerCase());
+    }
+
+    // 4. Match using track prefix or programmeName
+    if (!target) {
+      if (currentProg.includes('data') || progName.includes('data')) {
+        target = allJds.find(j => j.id === 'data-analyst-intern');
+      } else if (currentProg.includes('research') || progName.includes('research') || progName.includes('policy')) {
+        target = allJds.find(j => j.id === 'research-intern');
+      } else if (currentProg.includes('design') || progName.includes('design') || progName.includes('media')) {
+        target = allJds.find(j => j.id === 'social-media-design-intern');
+      } else if (currentProg.includes('bd') || progName.includes('business') || progName.includes('partnership')) {
+        target = allJds.find(j => j.id === 'associate-partnerships-bd');
+      } else {
+        target = allJds.find(j => j.id === 'hr-intern');
       }
     }
 
-    // 4. Match using canonical track mapping
-    if (matched.length === 0 && typeof TRACK_TO_DEFAULT_JD !== 'undefined') {
-      const defaultJdId = TRACK_TO_DEFAULT_JD[currentProg] ||
-        (currentProg.includes('data') ? 'data-analyst-intern' :
-         currentProg.includes('hr') ? 'hr-intern' :
-         currentProg.includes('research') ? 'research-intern' :
-         currentProg.includes('design') ? 'social-media-design-intern' :
-         currentProg.includes('bd') ? 'associate-partnerships-bd' : null);
-
-      if (defaultJdId) {
-        matched = allJds.filter(jd => jd.id.toLowerCase() === defaultJdId);
-      }
-    }
-
-    return matched.length > 0 ? matched : allJds;
+    return target ? [target] : (allJds.length > 0 ? [allJds[0]] : []);
   }
 
   function renderJobDescriptionsScreen() {
     if (!el.jdsCardsGrid) return;
     const availableJds = getUserAssignedJds();
-    const role = (state.profile?.role || '').toLowerCase();
-    const email = (state.profile?.email || '').toLowerCase().trim();
-    const isAdmin = role === 'admin' || email === 'admin.ikaaiindia@gmail.com' || email.includes('admin');
+    const isAdmin = isCurrentUserAdmin();
 
-    // Filter by category and search keyword
+    // Filter by category and search keyword (interns see their assigned JD directly)
     const filtered = availableJds.filter(jd => {
+      if (!isAdmin) return true;
       const matchCat = (activeJdCategory === 'All') || (jd.category === activeJdCategory);
       if (!matchCat) return false;
       if (!jdSearchQuery) return true;
@@ -11155,7 +11172,7 @@
       if (isAdmin) {
         el.jdVisibleCount.textContent = `Showing ${filtered.length} of ${availableJds.length} role specifications`;
       } else {
-        el.jdVisibleCount.textContent = `Showing your assigned role specification`;
+        el.jdVisibleCount.textContent = `Your assigned role specification (${availableJds.length})`;
       }
     }
 
@@ -11259,12 +11276,28 @@
   function renderProgrammeJds(progId) {
     if (!el.programmeJdsChipsList) return;
     el.programmeJdsChipsList.innerHTML = '';
-    const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
-    if (allJds.length === 0) {
-      el.programmeJdsChipsList.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No JDs available</span>';
+    const jdsToRender = getUserAssignedJds();
+    const isAdmin = isCurrentUserAdmin();
+
+    const titleEl = document.getElementById('programmeJdsCardTitle');
+    const descEl = document.getElementById('programmeJdsCardDesc');
+    if (titleEl) {
+      titleEl.textContent = isAdmin ? 'Programme Roles & JDs' : 'Your Role Specification';
+    }
+    if (descEl) {
+      descEl.textContent = isAdmin
+        ? 'Official role specifications across all programme tracks (11 JDs).'
+        : 'Official role specification for your assigned track.';
+    }
+    if (el.viewAllJdsFromModBtn) {
+      el.viewAllJdsFromModBtn.textContent = isAdmin ? 'View all 11 JDs →' : 'View Role Spec →';
+    }
+
+    if (jdsToRender.length === 0) {
+      el.programmeJdsChipsList.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">No role specification available</span>';
       return;
     }
-    allJds.forEach(jd => {
+    jdsToRender.forEach(jd => {
       const pill = document.createElement('button');
       pill.className = 'prog-jd-pill';
       pill.type = 'button';
@@ -11293,8 +11326,13 @@
 
   if (el.viewAllJdsFromModBtn) {
     el.viewAllJdsFromModBtn.addEventListener('click', () => {
-      resetJdViewToGallery();
-      switchScreen('jobDescriptions');
+      const assigned = getUserAssignedJds();
+      if (!isCurrentUserAdmin() && assigned.length === 1) {
+        openJdDetailById(assigned[0].id);
+      } else {
+        resetJdViewToGallery();
+        switchScreen('jobDescriptions');
+      }
     });
   }
 
@@ -13678,6 +13716,14 @@
     if (userData.name) state.profile.name = userData.name;
     if (userData.email) state.profile.email = userData.email;
 
+    const userEmail = (userData.email || state.profile.email || '').trim().toLowerCase();
+    const isRootAdmin = (userEmail === 'admin.ikaaiindia@gmail.com');
+
+    // Prevent inheriting 'admin' role from a previous session on the same device
+    if (!isRootAdmin && state.profile.role === 'admin') {
+      state.profile.role = 'Intern';
+    }
+
     const parts = (state.profile.name || 'User').trim().split(/\s+/);
     if (parts.length >= 2) {
       state.profile.initials = (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -13685,82 +13731,93 @@
       state.profile.initials = parts[0].substring(0, 2).toUpperCase();
     }
 
-    // Check access gating via DataLayer
-    if (window.DataLayer && (userData.id || userData.email)) {
-      try {
-        const userEmail = (userData.email || state.profile.email || '').trim().toLowerCase();
-        const accessCheck = await window.DataLayer.resolveUserAccess(userData.id, userEmail);
-        let accessStatus = accessCheck.accessStatus;
-
-        const isExplicitAdmin = (accessCheck.role === 'admin') ||
-          userEmail === 'admin.ikaaiindia@gmail.com' ||
-          userEmail.includes('admin');
-
-        if (isExplicitAdmin) {
-          accessStatus = 'active';
-        }
-
-        // 1. Access Pending: Gating screen active until approved by Admin
-        if (accessStatus === 'pending') {
-          if (el.pendingUserEmail) el.pendingUserEmail.textContent = userEmail || '--';
-          if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'flex';
-          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
-          if (el.authScreen) el.authScreen.style.display = 'none';
-          if (el.appShell) el.appShell.style.display = 'none';
-          return;
-        }
-
-        // 2. Access Revoked: User account has been deactivated by Admin
-        if (accessStatus === 'revoked') {
-          if (el.revokedUserEmail) el.revokedUserEmail.textContent = userEmail || '--';
-          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'flex';
-          if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
-          if (el.authScreen) el.authScreen.style.display = 'none';
-          if (el.appShell) el.appShell.style.display = 'none';
-          // CRITICAL: Block all portal data loading
-          return;
-        }
-
-        // 3. Active User: Hide gating screens and configure portal
-        if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
-        if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
-
-        const profile = await window.DataLayer.getProfile(userData.id);
-        if (profile) {
-          state.profile.role = profile.role || accessCheck.role || 'Intern';
-          state.profile.name = profile.full_name || profile.display_name || state.profile.name;
-          state.profile.branch = profile.branch || state.profile.branch;
-          state.profile.position = profile.position || accessCheck.position || state.profile.position;
-          state.profile.phone = profile.phone || state.profile.phone;
-          state.profile.avatar_url = profile.avatar_url || state.profile.avatar_url;
-          if (profile.programme) state.profile.programmeName = profile.programme.name;
-          applyRolePermissions(profile);
-        } else if (accessCheck.role) {
-          state.profile.role = accessCheck.role;
-          applyRolePermissions({ role: accessCheck.role });
-        }
-      } catch (err) {
-        console.warn('[DataLayer] Auth profile load error:', err);
-      }
-    }
-
-    saveState();
-    updateUserAvatarUI();
-
+    // INSTANT UI RENDERING: Show appShell immediately, hide authScreen (< 5ms)
     if (el.authScreen) el.authScreen.style.display = 'none';
     if (el.appShell) el.appShell.style.display = 'flex';
-
-    // Initialize background Realtime chat sync immediately upon sign-in
-    if (window.TeamChat && typeof window.TeamChat.initRealtime === 'function') {
-      try {
-        window.TeamChat.initRealtime();
-      } catch (chatErr) {
-        console.warn('[TeamChat] Background realtime sync startup note:', chatErr);
-      }
+    updateUserAvatarUI();
+    renderSidebar();
+    if (activeScreen === 'module') {
+      renderModulePage();
+    } else if (activeScreen === 'jobDescriptions') {
+      renderJobDescriptionsScreen();
     }
 
-    // Sync curriculum live from database
-    await syncCurriculumFromBackend();
+    // Background verification and curriculum synchronization (non-blocking)
+    (async () => {
+      // Check access gating via DataLayer
+      if (window.DataLayer && (userData.id || userData.email)) {
+        try {
+          const accessCheck = await window.DataLayer.resolveUserAccess(userData.id, userEmail);
+          let accessStatus = accessCheck.accessStatus;
+
+          const isExplicitAdmin = (accessCheck.role === 'admin') || userEmail === 'admin.ikaaiindia@gmail.com';
+          if (isExplicitAdmin) {
+            accessStatus = 'active';
+            state.profile.role = 'admin';
+          }
+
+          // 1. Access Pending: Gating screen active until approved by Admin
+          if (accessStatus === 'pending') {
+            if (el.pendingUserEmail) el.pendingUserEmail.textContent = userEmail || '--';
+            if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'flex';
+            if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
+            if (el.authScreen) el.authScreen.style.display = 'none';
+            if (el.appShell) el.appShell.style.display = 'none';
+            return;
+          }
+
+          // 2. Access Revoked: User account has been deactivated by Admin
+          if (accessStatus === 'revoked') {
+            if (el.revokedUserEmail) el.revokedUserEmail.textContent = userEmail || '--';
+            if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'flex';
+            if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
+            if (el.authScreen) el.authScreen.style.display = 'none';
+            if (el.appShell) el.appShell.style.display = 'none';
+            return;
+          }
+
+          // 3. Active User: Hide gating screens and configure portal
+          if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
+          if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
+
+          const profile = await window.DataLayer.getProfile(userData.id);
+          if (profile) {
+            state.profile.role = profile.role === 'learner' ? 'Intern' : (profile.role || accessCheck.role || 'Intern');
+            state.profile.name = profile.full_name || profile.display_name || state.profile.name;
+            state.profile.branch = profile.branch || state.profile.branch;
+            state.profile.position = profile.position || accessCheck.position || state.profile.position;
+            state.profile.phone = profile.phone || state.profile.phone;
+            state.profile.avatar_url = profile.avatar_url || state.profile.avatar_url;
+            if (profile.programme) state.profile.programmeName = profile.programme.name;
+            applyRolePermissions(profile);
+          } else if (accessCheck.role) {
+            state.profile.role = accessCheck.role === 'learner' ? 'Intern' : accessCheck.role;
+            if (accessCheck.position) state.profile.position = accessCheck.position;
+            applyRolePermissions({ role: accessCheck.role, position: accessCheck.position });
+          }
+
+          saveState();
+          updateUserAvatarUI();
+          renderSidebar();
+          if (activeScreen === 'module') renderModulePage();
+          if (activeScreen === 'jobDescriptions') renderJobDescriptionsScreen();
+        } catch (err) {
+          console.warn('[DataLayer] Auth profile background load error:', err);
+        }
+      }
+
+      // Initialize background Realtime chat sync immediately upon sign-in
+      if (window.TeamChat && typeof window.TeamChat.initRealtime === 'function') {
+        try {
+          window.TeamChat.initRealtime();
+        } catch (chatErr) {
+          console.warn('[TeamChat] Background realtime sync startup note:', chatErr);
+        }
+      }
+
+      // Sync curriculum live from database
+      syncCurriculumFromBackend();
+    })();
   }
 
   function handleSignOutCleanup() {
@@ -13786,6 +13843,29 @@
   }
 
   async function initAuthentication() {
+    // 1. INSTANT LOCAL SESSION HYDRATION (< 5ms): Read cached session immediately to avoid blank screen
+    const savedSessionRaw = localStorage.getItem('ikaai_portal_session');
+    if (savedSessionRaw) {
+      try {
+        const cachedUser = JSON.parse(savedSessionRaw);
+        if (cachedUser && (cachedUser.email || cachedUser.id)) {
+          if (cachedUser.name) state.profile.name = cachedUser.name;
+          if (cachedUser.email) state.profile.email = cachedUser.email;
+          if (cachedUser.id) state.profile.id = cachedUser.id;
+          const userEmail = (cachedUser.email || '').trim().toLowerCase();
+          if (userEmail !== 'admin.ikaaiindia@gmail.com' && state.profile.role === 'admin') {
+            state.profile.role = 'Intern';
+          }
+          if (el.authScreen) el.authScreen.style.display = 'none';
+          if (el.appShell) el.appShell.style.display = 'flex';
+          updateUserAvatarUI();
+          renderSidebar();
+          if (activeScreen === 'module') renderModulePage();
+          if (activeScreen === 'jobDescriptions') renderJobDescriptionsScreen();
+        }
+      } catch (e) {}
+    }
+
     const isConfigured = (typeof window.isSupabaseConfigured === 'function') && window.isSupabaseConfigured();
     isDemoAuth = !isConfigured;
 
