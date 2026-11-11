@@ -3506,14 +3506,14 @@
     });
   }
 
-  
+
   if (el.navCompanyResources) {
     el.navCompanyResources.addEventListener('click', () => {
       switchScreen('companyResources');
     });
   }
 
-  
+
   el.navWrittenExam.addEventListener('click', () => switchScreen('exam'));
   el.navMessageInstructor.addEventListener('click', () => switchScreen('messages'));
   el.navChat.addEventListener('click', () => switchScreen('chat'));
@@ -3554,7 +3554,7 @@
     });
   }
 
-  
+
   if (el.pendingSignOutBtn) {
     el.pendingSignOutBtn.addEventListener('click', signOutUser);
   }
@@ -3821,7 +3821,7 @@
     });
   }
 
-  
+
 
   function calculateModuleCompletion(mod) {
     if (!mod) return 0;
@@ -4462,7 +4462,7 @@
     });
   }
 
-  
+
 
   function getSlidePoints(s, defaultTitle) {
     if (!s) return [];
@@ -5073,7 +5073,7 @@
     });
   }
 
-  
+
 
   if (el.quizNextBtn) el.quizNextBtn.addEventListener('click', () => {
     const qState = activeQuizState;
@@ -5213,7 +5213,7 @@
     });
   }
 
-  
+
 
   // ==========================================
   // 11. FULLSCREEN DOCUMENT VIEWER MODAL
@@ -5426,7 +5426,7 @@
     });
   }
 
-  
+
 
   const closeDocBtn = el.closeDocViewerModal || document.getElementById('closeDocViewerModal');
   if (closeDocBtn) {
@@ -5436,7 +5436,7 @@
     });
   }
 
-  
+
 
   const downloadDocBtn = el.docViewerDownloadBtn || document.getElementById('docViewerDownloadBtn');
   if (downloadDocBtn) {
@@ -5447,7 +5447,7 @@
     });
   }
 
-  
+
 
   // ==========================================
   // 12. WRITTEN EXAM SCREEN CONTROLLER
@@ -5621,7 +5621,7 @@
     });
   }
 
-  
+
 
   // Start / Resume Exam Button
   if (el.startExamBtn) {
@@ -5636,7 +5636,7 @@
     });
   }
 
-  
+
 
   // Cancel Exam / Back to Overview
   if (el.cancelExamBtn) {
@@ -5645,7 +5645,7 @@
     });
   }
 
-  
+
 
   // Save Draft Exam
   if (el.saveDraftExamBtn) {
@@ -5679,7 +5679,7 @@
     });
   }
 
-  
+
 
   // Submit Exam Form
   if (el.examForm) {
@@ -5737,7 +5737,7 @@
     });
   }
 
-  
+
 
   // Review Your Responses Button
   if (el.reviewExamBtn) {
@@ -5789,7 +5789,7 @@
     });
   }
 
-  
+
 
   // Start Retake Button (Learner)
   if (el.retakeExamBtn) {
@@ -5799,7 +5799,7 @@
     });
   }
 
-  
+
 
   // -------------------------------------------------------------------------
   // INSTRUCTOR / ADMIN EXAM REVIEW CONTROLLER
@@ -5893,7 +5893,7 @@
     });
   }
 
-  
+
 
   // Filter tab events
   if (el.filterExamSubAll) {
@@ -5906,7 +5906,7 @@
     });
   }
 
-  
+
   if (el.filterExamSubPending) {
     el.filterExamSubPending.addEventListener('click', () => {
       instructorExamFilter = 'pending';
@@ -5917,7 +5917,7 @@
     });
   }
 
-  
+
   if (el.filterExamSubGraded) {
     el.filterExamSubGraded.addEventListener('click', () => {
       instructorExamFilter = 'graded';
@@ -5928,7 +5928,7 @@
     });
   }
 
-  
+
   if (el.instructorExamProgFilter) {
     el.instructorExamProgFilter.addEventListener('change', () => {
       instructorExamProgSelected = el.instructorExamProgFilter.value;
@@ -5936,7 +5936,7 @@
     });
   }
 
-  
+
 
   // Open Grade Exam Modal
   let activeGradingSub = null;
@@ -6059,7 +6059,7 @@
     });
   }
 
-  
+
 
   // Allow Exam Retake (Instructor / Admin action)
   if (el.allowRetakeBtn) {
@@ -6086,7 +6086,7 @@
     });
   }
 
-  
+
 
   // ==========================================
   // 13. MESSAGES SCREEN (PROFESSIONAL SUPPORT INBOX)
@@ -6706,7 +6706,7 @@
     });
   }
 
-  
+
 
   // Render left panel threads list
   function renderSupportThreadsList() {
@@ -6782,7 +6782,7 @@
     });
   }
 
-  
+
 
   // Select a thread and display conversation in right panel
   function selectSupportThread(threadId) {
@@ -7102,7 +7102,7 @@
     });
   }
 
-  
+
 
   // Format file size
   function formatFileSize(bytes) {
@@ -7142,7 +7142,7 @@
     });
   }
 
-  
+
 
   // Toggle Internal Note Mode (Staff Only)
   function updateInternalNoteUI() {
@@ -7282,7 +7282,7 @@
     });
   }
 
-  
+
 
   // Open & Close New Message Modal
   function openNewThreadModal() {
@@ -7349,7 +7349,7 @@
     });
   }
 
-  
+
 
   function validateAndAddFiles(files, targetArray, maxLimit = 3) {
     const allowedExts = ['png', 'jpg', 'jpeg', 'pdf', 'docx'];
@@ -7518,7 +7518,7 @@
     });
   }
 
-  
+
 
   // Canned Replies Modal & Handling
   function openCannedRepliesModal() {
@@ -8288,7 +8288,7 @@
     });
   }
 
-  
+
 
   // B. Render Announcements Manage View (Staff)
   async function renderAnnouncementsManageView() {
@@ -8418,7 +8418,7 @@
     });
   }
 
-  
+
 
   // C. Update Unread Badge on Sidebar
   async function updateAnnouncementsUnreadBadge() {
@@ -8553,13 +8553,13 @@
           <td style="padding: 8px 10px; color: var(--text-secondary);">${row.programme_name || 'Unassigned'}</td>
           <td style="padding: 8px 10px;">
             ${row.has_read
-              ? `<span style="color: var(--accent-light); font-weight: 600;">Read ✓</span> <span style="font-size: 10.5px; color: var(--text-muted);">${new Date(row.read_at).toLocaleDateString()}</span>`
-              : '<span style="color: var(--text-muted);">Unread</span>'}
+            ? `<span style="color: var(--accent-light); font-weight: 600;">Read ✓</span> <span style="font-size: 10.5px; color: var(--text-muted);">${new Date(row.read_at).toLocaleDateString()}</span>`
+            : '<span style="color: var(--text-muted);">Unread</span>'}
           </td>
           <td style="padding: 8px 10px;">
             ${row.has_acknowledged
-              ? `<span style="color: var(--accent-light); font-weight: 600;">Acknowledged ✓</span>`
-              : '<span style="color: var(--text-muted);">Pending</span>'}
+            ? `<span style="color: var(--accent-light); font-weight: 600;">Acknowledged ✓</span>`
+            : '<span style="color: var(--text-muted);">Pending</span>'}
           </td>
         `;
         el.announcementAuditTableBody.appendChild(tr);
@@ -8596,7 +8596,7 @@
     });
   }
 
-  
+
   if (el.announcementsManageTabBtn) {
     el.announcementsManageTabBtn.addEventListener('click', () => {
       announcementActiveTab = 'manage';
@@ -8604,7 +8604,7 @@
     });
   }
 
-  
+
   if (el.openNewAnnouncementBtn) {
     el.openNewAnnouncementBtn.addEventListener('click', () => openAnnouncementFormModal(null));
   }
@@ -8620,7 +8620,7 @@
     });
   }
 
-  
+
 
   // Category filter chips
   if (el.announcementCategoryChips) {
@@ -8634,7 +8634,7 @@
     });
   }
 
-  
+
 
   // Search input
   if (el.announcementsSearchInput) {
@@ -8644,7 +8644,7 @@
     });
   }
 
-  
+
 
   // Mark all read
   if (el.markAllAnnouncementsReadBtn) {
@@ -8660,7 +8660,7 @@
     });
   }
 
-  
+
 
   // Audience select change in form
   if (el.announcementAudienceSelect) {
@@ -8671,7 +8671,7 @@
     });
   }
 
-  
+
 
   // Manage tab status filters
   if (el.filterAnnStatusPublished) {
@@ -8684,7 +8684,7 @@
     });
   }
 
-  
+
   if (el.filterAnnStatusDraft) {
     el.filterAnnStatusDraft.addEventListener('click', () => {
       announcementManageStatus = 'draft';
@@ -8695,7 +8695,7 @@
     });
   }
 
-  
+
   if (el.filterAnnStatusArchived) {
     el.filterAnnStatusArchived.addEventListener('click', () => {
       announcementManageStatus = 'archived';
@@ -8706,7 +8706,7 @@
     });
   }
 
-  
+
 
   // Save Announcement Form Submit (Publish)
   if (el.announcementForm) {
@@ -8716,7 +8716,7 @@
     });
   }
 
-  
+
 
   // Save Announcement as Draft
   if (el.saveAnnouncementDraftBtn) {
@@ -8725,7 +8725,7 @@
     });
   }
 
-  
+
 
   async function handleSaveAnnouncement(status) {
     const title = el.announcementTitleInput?.value?.trim();
@@ -8827,7 +8827,7 @@
     });
   }
 
-  
+
 
   // ==========================================
   // ==========================================
@@ -8941,7 +8941,7 @@
     });
   }
 
-  
+
 
   // Live Char Counter on Feedback Message
   if (el.feedbackText && el.feedbackCharCount) {
@@ -8958,7 +8958,7 @@
     });
   }
 
-  
+
 
   // Feedback Form Submit
   if (el.feedbackForm) {
@@ -9014,7 +9014,7 @@
     });
   }
 
-  
+
 
   // Instructor / Admin Feedback Inbox
   async function renderInstructorFeedbackInbox() {
@@ -9139,7 +9139,7 @@
     });
   }
 
-  
+
 
   // Feedback filter tab events
   if (el.filterFeedbackAll) {
@@ -9152,7 +9152,7 @@
     });
   }
 
-  
+
   if (el.filterFeedbackNew) {
     el.filterFeedbackNew.addEventListener('click', () => {
       instructorFeedbackFilter = 'new';
@@ -9163,7 +9163,7 @@
     });
   }
 
-  
+
   if (el.filterFeedbackReviewed) {
     el.filterFeedbackReviewed.addEventListener('click', () => {
       instructorFeedbackFilter = 'reviewed';
@@ -9174,7 +9174,7 @@
     });
   }
 
-  
+
   if (el.instructorFeedbackProgFilter) {
     el.instructorFeedbackProgFilter.addEventListener('change', () => {
       instructorFeedbackProgSelected = el.instructorFeedbackProgFilter.value;
@@ -9182,7 +9182,7 @@
     });
   }
 
-  
+
 
 
   // ==========================================
@@ -9416,7 +9416,7 @@
     });
   }
 
-  
+
 
   // Filter change on Cohort Roster
   if (el.cohortRosterProgFilter) {
@@ -9426,7 +9426,7 @@
     });
   }
 
-  
+
 
   // Export CSV Action
   if (el.exportCohortCsvBtn) {
@@ -9467,7 +9467,7 @@
     });
   }
 
-  
+
 
   // ==========================================
   // 17. ACCOUNT SETTINGS SCREEN
@@ -9958,7 +9958,7 @@
     });
   }
 
-  
+
 
   function openAdminEditModal(user, isApproving = false) {
     const modal = el.adminEditUserModal || document.getElementById('adminEditUserModal');
@@ -11322,7 +11322,7 @@
     });
   }
 
-  
+
 
   // JD detail back, print, and search events
   if (el.backToJdsBtn) {
@@ -11352,7 +11352,7 @@
     });
   }
 
-  
+
 
   if (el.jdSearchInput) {
     el.jdSearchInput.addEventListener('input', (e) => {
@@ -11361,7 +11361,7 @@
     });
   }
 
-  
+
 
   // Global search in Topbar
   if (el.globalSearchInput) {
@@ -11378,7 +11378,7 @@
     });
   }
 
-  
+
 
 
   // ==========================================
@@ -11770,7 +11770,7 @@
     });
   }
 
-  
+
 
   function switchCompResMainTab(tabKey) {
     const isAdmin = isCompResAdmin();
@@ -11818,7 +11818,7 @@
     });
   }
 
-  
+
 
   async function renderCompanyResourcesScreen() {
     initCompanyResourcesEvents();
@@ -12259,7 +12259,7 @@
     });
   }
 
-  
+
 
   async function handlePreviewCompanyDoc(doc) {
     const modal = document.getElementById('compDocPreviewModal');
@@ -12977,7 +12977,7 @@
     });
   }
 
-  
+
 
   async function handleViewPersonalDoc(doc) {
     // 1. Mark as opened (updates badge and audit log)
@@ -13379,7 +13379,7 @@
     });
   }
 
-  
+
 
   async function renderManageUsersDossier() {
     const dossierWrap = document.getElementById('compResUserDossierContent');
@@ -13879,7 +13879,7 @@
           if (activeScreen === 'module') renderModulePage();
           if (activeScreen === 'jobDescriptions') renderJobDescriptionsScreen();
         }
-      } catch (e) {}
+      } catch (e) { }
     }
 
     const isConfigured = (typeof window.isSupabaseConfigured === 'function') && window.isSupabaseConfigured();
@@ -13982,7 +13982,7 @@
     });
   }
 
-  
+
 
   setupPasswordToggle(el.toggleLoginPasswordBtn, el.loginPassword);
   setupPasswordToggle(el.toggleSignupPasswordBtn, el.signupPassword);
@@ -14006,7 +14006,7 @@
     });
   }
 
-  
+
 
   // Form Validation & Submission
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -14080,7 +14080,7 @@
     });
   }
 
-  
+
 
   if (el.signupForm) {
     el.signupForm.addEventListener('submit', async (e) => {
@@ -14168,7 +14168,7 @@
     });
   }
 
-  
+
 
   // Google Sign-In
   if (el.googleAuthBtn) {
@@ -14294,7 +14294,7 @@
     });
   }
 
-  
+
 
   if (el.dropdownSettingsBtn) {
     el.dropdownSettingsBtn.addEventListener('click', () => {
@@ -14303,7 +14303,7 @@
     });
   }
 
-  
+
 
   if (el.dropdownJdBtn) {
     el.dropdownJdBtn.addEventListener('click', () => {
@@ -14313,7 +14313,7 @@
     });
   }
 
-  
+
 
   if (el.dropdownLogoutBtn) {
     el.dropdownLogoutBtn.addEventListener('click', signOutUser);
@@ -14424,7 +14424,7 @@
                   if (val.user.user_metadata?.full_name) name = val.user.user_metadata.full_name;
                   break;
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
           }
         }
@@ -14474,7 +14474,7 @@
           let deletedUsersList = [];
           try {
             deletedUsersList = JSON.parse(localStorage.getItem('ikaai_admin_deleted_users') || '[]');
-          } catch (e) {}
+          } catch (e) { }
 
           const realProfiles = profiles.filter(p => {
             const em = (p.email || '').toLowerCase().trim();
@@ -14844,7 +14844,11 @@
       if (subEl) {
         if (conv.type === 'direct') {
           const member = state.members.find(m => m.id === conv.recipientId);
-          subEl.textContent = member ? `${member.role.toUpperCase()} • ${member.lastSeen}` : 'Direct Message';
+          if (member) {
+            subEl.textContent = member.online ? 'Active now' : (member.lastSeen || 'Offline');
+          } else {
+            subEl.textContent = 'Direct Message';
+          }
         } else {
           subEl.textContent = `${conv.type === 'all_members' ? 'Programme-wide' : 'Channel'} • ${conv.memberCount || conv.members?.length || 24} members`;
         }
@@ -15108,9 +15112,11 @@
           reactionsHtml += '</div>';
         }
 
-        // Role badge
-        const roleStr = msg.senderRole ? msg.senderRole.toLowerCase() : 'learner';
-        const roleBadgeHtml = `<span class="chat-role-badge ${roleStr}">${roleStr === 'instructor' ? 'Full-Time' : (roleStr === 'admin' ? 'Admin' : 'Learner')}</span>`;
+        // Role badge (Admin or Full-Time only; no Learner tag)
+        const roleStr = msg.senderRole ? msg.senderRole.toLowerCase() : 'intern';
+        const roleBadgeHtml = (roleStr === 'admin' || roleStr === 'instructor')
+          ? `<span class="chat-role-badge ${roleStr}">${roleStr === 'instructor' ? 'Full-Time' : 'Admin'}</span>`
+          : '';
 
         // Bubble content
         const bodyContent = msg.isDeleted
@@ -15145,9 +15151,9 @@
                   <span style="font-size: 11px; opacity: 0.85; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">(${escapeHtml(msg.errorMessage || 'Unknown error')})</span>
                 </div>`
               : (msg.receipt === 'Sending'
-                  ? `<div class="chat-receipt-status" style="color: var(--chat-text-dim); display: inline-flex; align-items: center; gap: 4px;"><span>⏳</span> Sending...</div>`
-                  : `<div class="chat-receipt-status"><span>✓✓</span> ${escapeHtml(msg.receipt || 'Sent')}</div>`
-                )
+                ? `<div class="chat-receipt-status" style="color: var(--chat-text-dim); display: inline-flex; align-items: center; gap: 4px;"><span>⏳</span> Sending...</div>`
+                : `<div class="chat-receipt-status"><span>✓✓</span> ${escapeHtml(msg.receipt || 'Sent')}</div>`
+              )
           ) : ''}
         </div>
       `;
@@ -16168,7 +16174,7 @@
           profileCard.style.display = 'block';
           document.getElementById('detailsProfileAvatar').textContent = member.avatar;
           document.getElementById('detailsProfileName').textContent = member.name;
-          const memberRoleLabel = member.role === 'instructor' ? 'Full-Time' : member.role;
+          const memberRoleLabel = member.role === 'instructor' ? 'Full-Time' : (member.role === 'admin' ? 'Admin' : 'Intern');
           document.getElementById('detailsProfileRole').textContent = memberRoleLabel.toUpperCase();
           document.getElementById('detailsProfileRole').className = `details-profile-role-badge ${member.role}`;
           document.getElementById('detailsProfileEmail').textContent = member.email;
@@ -16282,6 +16288,10 @@
         if (membersListEl) {
           membersListEl.innerHTML = '';
           sortedMembers.forEach(mem => {
+            const memRole = (mem.role || '').toLowerCase();
+            const memBadge = (memRole === 'admin' || memRole === 'instructor')
+              ? `<span class="chat-role-badge ${memRole}" style="font-size: 9px;">${memRole === 'instructor' ? 'Full-Time' : 'Admin'}</span>`
+              : '';
             const row = document.createElement('div');
             row.className = 'details-member-row';
             row.innerHTML = `
@@ -16293,7 +16303,7 @@
               <div class="details-member-name">${escapeHtml(mem.name)}</div>
               <div class="details-member-lastseen">${mem.online ? 'Active now' : mem.lastSeen}</div>
             </div>
-            <span class="chat-role-badge ${mem.role}" style="font-size: 9px;">${mem.role}</span>
+            ${memBadge}
           `;
             membersListEl.appendChild(row);
           });
@@ -16328,10 +16338,15 @@
       const stream = document.getElementById('chatThreadStream');
       if (!drawer || !parentBox || !stream) return;
 
+      const parentRole = (parentMsg.senderRole || '').toLowerCase();
+      const parentBadge = (parentRole === 'admin' || parentRole === 'instructor')
+        ? `<span class="chat-role-badge ${parentRole}" style="margin-left: 6px;">${parentRole === 'instructor' ? 'Full-Time' : 'Admin'}</span>`
+        : '';
+
       parentBox.innerHTML = `
       <div style="font-weight: 700; font-size: 13px; color: var(--chat-text); margin-bottom: 4px;">
         ${escapeHtml(parentMsg.senderName)}
-        <span class="chat-role-badge ${parentMsg.senderRole}" style="margin-left: 6px;">${parentMsg.senderRole}</span>
+        ${parentBadge}
       </div>
       <div style="font-size: 13px; color: var(--chat-text); line-height: 1.5;">${parseMarkdown(parentMsg.content)}</div>
     `;
@@ -17043,7 +17058,7 @@
           type: 'group',
           description: 'Group conversation',
           created_by: currentUser.id !== 'u-anon' ? currentUser.id : null
-        }).then(() => {}).catch(e => console.warn('[TeamChat] group persist:', e));
+        }).then(() => { }).catch(e => console.warn('[TeamChat] group persist:', e));
       }
 
       state.messages[groupId] = [{
@@ -17116,7 +17131,7 @@
           description: descInput ? descInput.value.trim() : 'Public channel',
           is_announcement_only: isAnnounce,
           created_by: currentUser.id !== 'u-anon' ? currentUser.id : null
-        }).then(() => {}).catch(e => console.warn('[TeamChat] channel persist:', e));
+        }).then(() => { }).catch(e => console.warn('[TeamChat] channel persist:', e));
       }
 
       state.messages[channelId] = [{
@@ -17537,7 +17552,7 @@
                       } else {
                         previewUrl = await window.DataLayer.getChatAttachmentDownloadUrl(a.storage_path, a.file_name);
                       }
-                    } catch (e) {}
+                    } catch (e) { }
                   }
                   formattedMsg.attachments.push({
                     id: a.id,
@@ -17600,7 +17615,7 @@
                       };
                       state.conversations.push(targetConv);
                     }
-                  } catch (e) {}
+                  } catch (e) { }
                 }
               }
               if (targetConv) {
@@ -17625,7 +17640,7 @@
                 } else {
                   previewUrl = await window.DataLayer.getChatAttachmentDownloadUrl(attRow.storage_path, attRow.file_name);
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
 
             const formattedAtt = {
@@ -17699,7 +17714,7 @@
                     await loadConversationMessages(state.activeConvId);
                   }
                 }
-              } catch (e) {}
+              } catch (e) { }
             }
           }, 3500);
         }
