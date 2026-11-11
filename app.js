@@ -3674,7 +3674,8 @@
       itemDiv.className = `sidebar-module-item ${isExpanded ? 'expanded' : ''}`;
       itemDiv.dataset.moduleIndex = idx;
 
-      const isSequentialUnlocked = (idx === 0) || Boolean(prog.modules[idx - 1] && calculateModuleCompletion(prog.modules[idx - 1]) >= 80);
+      const isAdmin = isCurrentUserAdmin();
+      const isSequentialUnlocked = isAdmin || (idx === 0) || Boolean(prog.modules[idx - 1] && calculateModuleCompletion(prog.modules[idx - 1]) >= 80);
       const isTimerUnlocked = isModuleTimerUnlocked(mod);
       const isFullyUnlocked = isSequentialUnlocked && isTimerUnlocked;
 
@@ -3878,6 +3879,8 @@
 
   function isModuleTimerUnlocked(mod) {
     if (!mod) return false;
+    // Admins bypass all module timers and countdowns
+    if (isCurrentUserAdmin()) return true;
     const key = getModuleTimerStorageKey(mod.id);
     const stored = localStorage.getItem(key);
     if (stored === 'unlocked' || stored === 'completed') return true;
@@ -3887,6 +3890,8 @@
 
   function isResourceTimerUnlocked(res) {
     if (!res) return false;
+    // Admins bypass all resource review timers
+    if (isCurrentUserAdmin()) return true;
     if (res.completed) return true;
     const key = getResourceTimerStorageKey(res.id);
     const stored = localStorage.getItem(key);
@@ -4060,6 +4065,21 @@
     const modules = prog.modules || [];
     const mod = modules.find(m => m.id === moduleId) || modules[currentModuleIndex];
     if (!mod) return;
+
+    const timerCard = document.getElementById('moduleTimerCard');
+    const isAdmin = isCurrentUserAdmin();
+
+    // Hide timer card and grant unrestricted access for admins
+    if (isAdmin) {
+      if (timerCard) timerCard.style.display = 'none';
+      const isLastModule = (currentModuleIndex === modules.length - 1);
+      const nextBtnLabel = isLastModule ? 'Written Exam ›' : 'Next module ›';
+      setModuleControlsLockState(false, mod, nextBtnLabel);
+      renderSidebar();
+      return;
+    }
+
+    if (timerCard) timerCard.style.display = '';
 
     // Trigger server-side open timestamp
     if (window.DataLayer) {
@@ -4359,7 +4379,7 @@
         <!-- Inline Preview Accordion Drawer -->
         <div class="inline-doc-preview">
           <!-- Resource Review Timer Bar -->
-          <div class="resource-timer-bar-wrap ${isResourceTimerUnlocked(res) ? 'completed' : ''}" id="resTimer_${res.id}">
+          <div class="resource-timer-bar-wrap ${isResourceTimerUnlocked(res) ? 'completed' : ''}" id="resTimer_${res.id}" style="${isCurrentUserAdmin() ? 'display: none !important;' : ''}">
             <div class="res-timer-header">
               <span class="res-timer-title">${isResourceTimerUnlocked(res) ? 'Resource unlocked and verified' : 'Active resource review'}</span>
               <span class="res-timer-badge">
@@ -10809,7 +10829,9 @@
     if (isAdmin) {
       if (profile) profile.role = 'admin';
       state.profile.role = 'admin';
+      try { document.body.classList.add('is-admin'); } catch (e) { }
     } else {
+      try { document.body.classList.remove('is-admin'); } catch (e) { }
       if (profile && profile.role !== 'instructor') profile.role = 'intern';
       if (state.profile.role !== 'instructor') state.profile.role = 'Intern';
     }
@@ -11358,9 +11380,19 @@
   }
 
   function isCurrentUserAdmin() {
-    const role = (state.profile?.role || '').toLowerCase();
-    const email = (state.profile?.email || '').toLowerCase().trim();
-    return role === 'admin' || email === 'admin.ikaaiindia@gmail.com';
+    const role = (state && state.profile && state.profile.role ? state.profile.role : '').toLowerCase();
+    const email = (state && state.profile && state.profile.email ? state.profile.email : '').toLowerCase().trim();
+    if (role === 'admin' || email === 'admin.ikaaiindia@gmail.com') return true;
+    try {
+      const sessionRaw = localStorage.getItem('ikaai_portal_session');
+      if (sessionRaw) {
+        const u = JSON.parse(sessionRaw);
+        if ((u.role && u.role.toLowerCase() === 'admin') || (u.email && u.email.toLowerCase().trim() === 'admin.ikaaiindia@gmail.com')) {
+          return true;
+        }
+      }
+    } catch (e) { }
+    return false;
   }
 
   function getUserAssignedJds() {
@@ -14109,6 +14141,7 @@
   function handleSignOutCleanup() {
     try {
       document.documentElement.classList.remove('has-portal-session');
+      document.body.classList.remove('is-admin');
     } catch (e) { }
 
     if (typeof cleanupSupportInbox === 'function') cleanupSupportInbox();
