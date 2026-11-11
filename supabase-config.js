@@ -22,7 +22,8 @@ if (typeof window !== 'undefined' && window.supabase && typeof window.supabase.c
       auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        flowType: 'pkce'
       }
     });
   } catch (e) {

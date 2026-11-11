@@ -14233,7 +14233,8 @@
             auth: {
               persistSession: true,
               autoRefreshToken: true,
-              detectSessionInUrl: true
+              detectSessionInUrl: true,
+              flowType: 'pkce'
             }
           });
         } catch (e) {
@@ -14252,7 +14253,67 @@
             const cleanErr = decodeURIComponent(urlError.replace(/\+/g, ' '));
             console.error('[Auth] Detected OAuth callback error:', cleanErr);
             showAuthError('Google sign-in error: ' + cleanErr);
-            window.history.replaceState({}, document.title, window.location.pathname);
+            window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+          }
+
+          // Check for OAuth authorization code (PKCE flow return)
+          const oauthCode = urlParams.get('code');
+          if (oauthCode) {
+            console.log('[Auth] Detected OAuth code in URL, completing exchange...');
+            hideAuthError();
+            if (el.googleAuthBtn) {
+              el.googleAuthBtn.style.pointerEvents = 'none';
+              el.googleAuthBtn.style.opacity = '0.7';
+              const btnSpan = el.googleAuthBtn.querySelector('span');
+              if (btnSpan) btnSpan.textContent = 'Completing Google sign-in...';
+            }
+            try {
+              const { data: exData, error: exErr } = await window.supabaseClient.auth.exchangeCodeForSession(oauthCode);
+              if (exErr) {
+                console.warn('[Auth] Explicit exchangeCodeForSession notice:', exErr);
+              } else if (exData?.session?.user) {
+                const u = exData.session.user;
+                const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
+                handleSuccessfulAuth({
+                  name,
+                  email: u.email,
+                  id: u.id
+                }, true);
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                return;
+              }
+            } catch (exException) {
+              console.warn('[Auth] Exception during code exchange:', exException);
+            }
+          }
+
+          // Check for OAuth hash tokens (implicit flow fallback)
+          const hashAccessToken = hashParams.get('access_token');
+          if (hashAccessToken) {
+            console.log('[Auth] Detected OAuth access_token in hash, setting session...');
+            hideAuthError();
+            try {
+              const hashRefreshToken = hashParams.get('refresh_token') || '';
+              const { data: setData, error: setErr } = await window.supabaseClient.auth.setSession({
+                access_token: hashAccessToken,
+                refresh_token: hashRefreshToken
+              });
+              if (!setErr && setData?.session?.user) {
+                const u = setData.session.user;
+                const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
+                handleSuccessfulAuth({
+                  name,
+                  email: u.email,
+                  id: u.id
+                }, true);
+                const cleanUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                return;
+              }
+            } catch (setException) {
+              console.warn('[Auth] Exception during hash setSession:', setException);
+            }
           }
 
           window.supabaseClient.auth.onAuthStateChange((event, session) => {
@@ -14264,7 +14325,7 @@
                 name,
                 email: u.email,
                 id: u.id
-              });
+              }, true);
             } else if (event === 'SIGNED_OUT') {
               handleSignOutCleanup();
             }
@@ -14281,7 +14342,10 @@
               name,
               email: u.email,
               id: u.id
-            }, false);
+            }, true);
+            if (window.location.search.includes('code=') || window.location.hash.includes('access_token=')) {
+              window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+            }
             return;
           }
         } catch (err) {
@@ -14507,9 +14571,22 @@
 
 
 
+  function getOAuthRedirectUrl() {
+    const origin = window.location.origin;
+    let path = window.location.pathname || '/';
+    // Remove filename like index.html if present
+    path = path.replace(/\/index\.html$/i, '/');
+    if (!path.endsWith('/')) {
+      path += '/';
+    }
+    return origin + path;
+  }
+
   // Google Sign-In
+  let isGoogleAuthInProgress = false;
   if (el.googleAuthBtn) {
     el.googleAuthBtn.addEventListener('click', async () => {
+      if (isGoogleAuthInProgress) return;
       hideAuthError();
       if (isDemoAuth) {
         handleSuccessfulAuth({
@@ -14524,16 +14601,31 @@
             showAuthError('Authentication service is initializing. Please try again in a moment.');
             return;
           }
-          const redirectUrl = window.location.origin + window.location.pathname;
+          isGoogleAuthInProgress = true;
+          el.googleAuthBtn.style.pointerEvents = 'none';
+          el.googleAuthBtn.style.opacity = '0.7';
+          const btnSpan = el.googleAuthBtn.querySelector('span');
+          const originalText = btnSpan ? btnSpan.textContent : 'Continue with Google';
+          if (btnSpan) btnSpan.textContent = 'Redirecting to Google...';
+
+          const redirectUrl = getOAuthRedirectUrl();
           console.log('[Auth] Initiating Google Sign-In with redirect URL:', redirectUrl);
           const { data, error } = await client.auth.signInWithOAuth({
             provider: 'google',
             options: {
-              redirectTo: redirectUrl
+              redirectTo: redirectUrl,
+              queryParams: {
+                prompt: 'select_account',
+                access_type: 'offline'
+              }
             }
           });
           if (error) {
             console.error('[Auth] Google sign-in error:', error);
+            isGoogleAuthInProgress = false;
+            el.googleAuthBtn.style.pointerEvents = '';
+            el.googleAuthBtn.style.opacity = '';
+            if (btnSpan) btnSpan.textContent = originalText;
             showAuthError(error.message || 'Google sign-in was cancelled or failed.');
           } else if (data && data.url) {
             // Explicit navigation guarantee across all modern browsers
@@ -14541,6 +14633,11 @@
           }
         } catch (err) {
           console.error('[Auth] Google sign-in exception:', err);
+          isGoogleAuthInProgress = false;
+          el.googleAuthBtn.style.pointerEvents = '';
+          el.googleAuthBtn.style.opacity = '';
+          const btnSpan = el.googleAuthBtn.querySelector('span');
+          if (btnSpan) btnSpan.textContent = 'Continue with Google';
           showAuthError(err.message || 'Google sign-in was cancelled or failed.');
         }
       }

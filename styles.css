@@ -12547,8 +12547,18 @@ html, body {
     font-weight: 700;
   }
 
+  .top-bar-brand .brand-text {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 4px !important;
+    white-space: nowrap !important;
+  }
+
   .top-bar-brand .brand-sub {
-    display: none !important;
+    display: inline-block !important;
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: var(--text-secondary) !important;
   }
 
   .top-bar-brand img {

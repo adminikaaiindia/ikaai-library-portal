@@ -888,12 +888,14 @@
             // User was pre-added by Admin! Activate immediately!
             if (userId) {
               try {
-                await client.from('profiles').update({
+                await client.from('profiles').upsert({
+                  id: userId,
+                  email: cleanEmail,
                   access_status: 'active',
                   role: inv.role === 'intern' ? 'learner' : inv.role,
                   programme_id: inv.programme_id,
                   updated_at: new Date().toISOString()
-                }).eq('id', userId);
+                }, { onConflict: 'id' });
               } catch (updErr) {}
 
               try {
@@ -942,6 +944,17 @@
       }
 
       // 4. User was NOT pre-added by admin and has not been approved -> Pending Approval
+      if (userId) {
+        try {
+          await client.from('profiles').upsert({
+            id: userId,
+            email: cleanEmail,
+            access_status: 'pending',
+            role: 'learner',
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        } catch (e) {}
+      }
       return cacheAndReturn({ accessStatus: 'pending', preInvited: false });
     },
 
