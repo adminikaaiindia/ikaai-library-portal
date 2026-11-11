@@ -10571,6 +10571,7 @@
         }
       }
     }
+    renderJobDescriptionsScreen();
   }
 
   async function syncCurriculumFromBackend() {
@@ -11065,16 +11066,80 @@
   let jdSearchQuery = '';
 
   function resetJdViewToGallery() {
+    activeJdCategory = 'All';
+    jdSearchQuery = '';
+    if (el.jdSearchInput) el.jdSearchInput.value = '';
     if (el.jdDetailView) el.jdDetailView.style.display = 'none';
     if (el.jdGalleryView) el.jdGalleryView.style.display = 'block';
   }
 
+  function getUserAssignedJds() {
+    const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
+    const role = (state.profile?.role || '').toLowerCase();
+    const email = (state.profile?.email || '').toLowerCase().trim();
+    const isAdmin = role === 'admin' || email === 'admin.ikaaiindia@gmail.com' || email.includes('admin');
+
+    // Administrators have full access to view and manage all 11 Job Descriptions
+    if (isAdmin) {
+      return allJds;
+    }
+
+    // For non-admin roles (Interns, Full-Time staff, Learners), filter to their strictly assigned role specification
+    const userPos = (state.profile?.position || '').toLowerCase().trim();
+    const currentProg = (currentProgrammeId || '').toLowerCase().trim();
+
+    // 1. Direct match by jd.id with currentProgrammeId
+    let matched = allJds.filter(jd => jd.id.toLowerCase() === currentProg);
+
+    // 2. Direct match by jd.title or jd.id with user position
+    if (matched.length === 0 && userPos) {
+      matched = allJds.filter(jd => {
+        const titleNorm = jd.title.toLowerCase().trim();
+        const idNorm = jd.id.toLowerCase().trim();
+        return titleNorm === userPos ||
+               idNorm === userPos ||
+               userPos.includes(titleNorm) ||
+               titleNorm.includes(userPos);
+      });
+    }
+
+    // 3. Match using JD_PROGRAMME_MAP
+    if (matched.length === 0 && typeof JD_PROGRAMME_MAP !== 'undefined') {
+      const jdMeta = JD_PROGRAMME_MAP[currentProg];
+      if (jdMeta) {
+        matched = allJds.filter(jd =>
+          jd.id.toLowerCase() === currentProg ||
+          jd.title.toLowerCase() === jdMeta.title.toLowerCase()
+        );
+      }
+    }
+
+    // 4. Match using canonical track mapping
+    if (matched.length === 0 && typeof TRACK_TO_DEFAULT_JD !== 'undefined') {
+      const defaultJdId = TRACK_TO_DEFAULT_JD[currentProg] ||
+        (currentProg.includes('data') ? 'data-analyst-intern' :
+         currentProg.includes('hr') ? 'hr-intern' :
+         currentProg.includes('research') ? 'research-intern' :
+         currentProg.includes('design') ? 'social-media-design-intern' :
+         currentProg.includes('bd') ? 'associate-partnerships-bd' : null);
+
+      if (defaultJdId) {
+        matched = allJds.filter(jd => jd.id.toLowerCase() === defaultJdId);
+      }
+    }
+
+    return matched.length > 0 ? matched : allJds;
+  }
+
   function renderJobDescriptionsScreen() {
     if (!el.jdsCardsGrid) return;
-    const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
+    const availableJds = getUserAssignedJds();
+    const role = (state.profile?.role || '').toLowerCase();
+    const email = (state.profile?.email || '').toLowerCase().trim();
+    const isAdmin = role === 'admin' || email === 'admin.ikaaiindia@gmail.com' || email.includes('admin');
 
     // Filter by category and search keyword
-    const filtered = allJds.filter(jd => {
+    const filtered = availableJds.filter(jd => {
       const matchCat = (activeJdCategory === 'All') || (jd.category === activeJdCategory);
       if (!matchCat) return false;
       if (!jdSearchQuery) return true;
@@ -11087,29 +11152,38 @@
     });
 
     if (el.jdVisibleCount) {
-      el.jdVisibleCount.textContent = `Showing ${filtered.length} of ${allJds.length} role specifications`;
+      if (isAdmin) {
+        el.jdVisibleCount.textContent = `Showing ${filtered.length} of ${availableJds.length} role specifications`;
+      } else {
+        el.jdVisibleCount.textContent = `Showing your assigned role specification`;
+      }
     }
 
     if (el.sidebarJdCountBadge) {
-      el.sidebarJdCountBadge.textContent = allJds.length;
+      el.sidebarJdCountBadge.textContent = availableJds.length;
     }
 
     // Render filter chips
     if (el.jdFilterChips) {
-      const categories = ['All', 'Research', 'HR & Admin', 'Data Analyst', 'Business Development', 'Social Media & Design'];
-      el.jdFilterChips.innerHTML = '';
-      categories.forEach(cat => {
-        const count = cat === 'All' ? allJds.length : allJds.filter(j => j.category === cat).length;
-        const chip = document.createElement('button');
-        chip.className = `filter-chip ${activeJdCategory === cat ? 'active' : ''}`;
-        chip.type = 'button';
-        chip.textContent = `${cat} (${count})`;
-        chip.onclick = () => {
-          activeJdCategory = cat;
-          renderJobDescriptionsScreen();
-        };
-        el.jdFilterChips.appendChild(chip);
-      });
+      if (!isAdmin || availableJds.length <= 1) {
+        el.jdFilterChips.style.display = 'none';
+      } else {
+        el.jdFilterChips.style.display = 'flex';
+        const categories = ['All', 'Research', 'HR & Admin', 'Data Analyst', 'Business Development', 'Social Media & Design'];
+        el.jdFilterChips.innerHTML = '';
+        categories.forEach(cat => {
+          const count = cat === 'All' ? availableJds.length : availableJds.filter(j => j.category === cat).length;
+          const chip = document.createElement('button');
+          chip.className = `filter-chip ${activeJdCategory === cat ? 'active' : ''}`;
+          chip.type = 'button';
+          chip.textContent = `${cat} (${count})`;
+          chip.onclick = () => {
+            activeJdCategory = cat;
+            renderJobDescriptionsScreen();
+          };
+          el.jdFilterChips.appendChild(chip);
+        });
+      }
     }
 
     // Render cards
