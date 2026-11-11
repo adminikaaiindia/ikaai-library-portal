@@ -11114,14 +11114,8 @@
           return;
         }
 
-        if (!newPhone) {
-          showAccountBanner(el.profileDetailsFeedback, 'Phone number is mandatory. Please enter your contact number.', 'error');
-          if (el.userPhoneInput) el.userPhoneInput.focus();
-          return;
-        }
-
-        if (!/^\+?[\d\s\-()]{7,20}$/.test(newPhone)) {
-          showAccountBanner(el.profileDetailsFeedback, 'Please enter a valid phone number (e.g. +91 98765 43210).', 'error');
+        if (newPhone && !/^\+?[\d\s\-()]{7,20}$/.test(newPhone)) {
+          showAccountBanner(el.profileDetailsFeedback, 'Please enter a valid phone number (e.g. +91 98765 43210) or leave it empty.', 'error');
           if (el.userPhoneInput) el.userPhoneInput.focus();
           return;
         }

@@ -1034,13 +1034,10 @@
 
         if (phone !== undefined) {
           const trimmedPhone = phone ? phone.trim() : '';
-          if (!trimmedPhone) {
-            throw new Error('Phone number is mandatory.');
-          }
-          if (!/^\+?[\d\s\-()]{7,20}$/.test(trimmedPhone)) {
+          if (trimmedPhone && !/^\+?[\d\s\-()]{7,20}$/.test(trimmedPhone)) {
             throw new Error('Please enter a valid phone number (e.g. +91 98765 43210).');
           }
-          updates.phone = trimmedPhone;
+          updates.phone = trimmedPhone || null;
         }
 
         if (avatarUrl !== undefined) {
