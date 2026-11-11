@@ -3054,6 +3054,20 @@
         return [];
       }
       return data || [];
+    },
+
+    async updateUserPresence(userId, status = 'online') {
+      const client = getClient();
+      if (!isLive() || !client || !userId || userId === 'usr-admin' || userId === 'u-anon') return false;
+      try {
+        const { error } = await client.from('profiles').update({
+          last_seen: new Date().toISOString(),
+          chat_status: status
+        }).eq('id', userId);
+        return !error;
+      } catch (e) {
+        return false;
+      }
     }
   };
 

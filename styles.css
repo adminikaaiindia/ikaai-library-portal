@@ -8094,10 +8094,17 @@ button.timer-locked,
   border-radius: 50%;
   background-color: #10b981;
   border: 2px solid var(--chat-bg-sidebar);
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.chat-online-dot.online {
+  background-color: #10b981;
+  opacity: 1;
 }
 
 .chat-online-dot.offline {
-  background-color: var(--chat-text-dim);
+  background-color: var(--chat-text-dim, #94a3b8);
+  opacity: 0.55;
 }
 
 .chat-conv-item-info {
@@ -8243,6 +8250,17 @@ button.timer-locked,
   border-radius: 50%;
   background-color: #10b981;
   border: 2px solid var(--chat-bg-card);
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.chat-conv-online-pip.online {
+  background-color: #10b981;
+  opacity: 1;
+}
+
+.chat-conv-online-pip.offline {
+  background-color: var(--chat-text-dim, #94a3b8);
+  opacity: 0.65;
 }
 
 .chat-conv-titles {
@@ -9482,10 +9500,18 @@ button.timer-locked,
   height: 12px;
   border-radius: 50%;
   border: 2px solid var(--chat-bg-card);
+  background-color: #10b981;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
 }
 
 .details-profile-pip.online {
   background-color: #10b981;
+  opacity: 1;
+}
+
+.details-profile-pip.offline {
+  background-color: var(--chat-text-dim, #94a3b8);
+  opacity: 0.65;
 }
 
 .details-profile-name {
@@ -9512,10 +9538,21 @@ button.timer-locked,
 }
 
 .details-profile-status {
-  font-size: 11px;
-  color: #10b981;
+  font-size: 11.5px;
   text-align: center;
   margin-top: 4px;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.details-profile-status.online {
+  color: #10b981 !important;
+  font-weight: 600;
+}
+
+.details-profile-status.offline {
+  color: var(--chat-text-muted, #94a3b8) !important;
+  font-weight: 400;
 }
 
 .details-channel-desc {
