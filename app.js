@@ -5893,8 +5893,8 @@
             <span style="font-size: 12px; color: var(--accent-light); font-weight: 700;">${awardedMarks}</span>
           </div>
           <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 8px;">${q.prompt}</p>
-          <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px; font-size: 13px; color: #e2e8f0; white-space: pre-wrap; line-height: 1.5;">${answersMap[q.id] || '(No response recorded)'}</div>
-          ${questionComment ? `<div style="margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); background: rgba(0, 165, 68, 0.08); border-left: 3px solid var(--accent-light); font-size: 12px; color: var(--accent-light);"><strong>Instructor Note:</strong> ${questionComment}</div>` : ''}
+          <div class="exam-answer-box" style="background: var(--bg-card-alt, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; color: var(--text-primary, #0f172a); white-space: pre-wrap; line-height: 1.6; font-weight: 450;">${escapeHtml(answersMap[q.id]) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
+          ${questionComment ? `<div style="margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); background: rgba(0, 165, 68, 0.08); border-left: 3px solid var(--accent-light); font-size: 12px; color: var(--accent-light);"><strong>Instructor Note:</strong> ${escapeHtml(questionComment)}</div>` : ''}
         `;
         el.examQuestionsContainer.appendChild(qDiv);
       });
@@ -6274,7 +6274,8 @@
                 <span style="font-size: 12px; color: var(--accent-light); font-weight: 600;">Max Marks: ${maxM}</span>
               </div>
               ${q.prompt ? `<p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">${escapeHtml(q.prompt)}</p>` : ''}
-              <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; color: #f1f5f9; margin-bottom: 10px;">${escapeHtml(q.answer_text) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Learner's Submitted Response:</div>
+              <div class="exam-answer-box" style="background: var(--bg-card-alt, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: var(--text-primary, #0f172a); margin-bottom: 12px; font-weight: 450;">${escapeHtml(q.answer_text) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
               <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
                 <div class="modal-form-group">
                   <label class="modal-field-label" style="font-size: 11.5px;">Awarded Marks (0–${maxM})</label>
