@@ -417,3 +417,118 @@ select count(*) as active_admins from public.profiles where role = 'admin' and a
 - Session tokens or API secrets (kept out of database tables).
 - Duplicate copies of user profile metadata.
 - Keystrokes, navigation clicks, or browser fingerprinting data.
+
+---
+
+## 📝 Written Exam Evaluation Inbox & Grading Pipeline
+
+The Written Exam screen connects end-of-programme examinations submitted by learners (interns and non-admin participants assigned to any of the 5 programmes) directly to an **Evaluation Inbox** accessible exclusively to administrators and instructors.
+
+### 1. Root Cause of the Empty Inbox (In Plain Words)
+1. **Silent Fallback to LocalStorage**: Previously, when an intern clicked "Submit Exam", `data.js` caught any database error or permission rejection, quietly saved a copy into the browser's `localStorage.getItem('ikaai_exam_submissions')`, and faked a success response (`{ status: 'submitted' }`). The responses never reached PostgreSQL.
+2. **Device Isolation**: When the administrator logged in on a different computer, separate browser profile, or incognito window, their local storage was empty. Because Supabase had zero rows, the inbox table showed nothing.
+3. **Admin Excluded from Instructor Security Helper**: The helper function `is_instructor_for(programme_id)` in migration `20261106_05` only checked `role = 'instructor'`, accidentally excluding `role = 'admin'`. This threw an authorization error whenever an administrator attempted to review, grade, or allow retakes.
+4. **UUID Mapping Format**: Older static forms used key strings like `'exam_q1'`, whereas `exam_questions` expects standard PostgreSQL UUIDs. Without key mapping, `submit_exam` aborted on invalid syntax.
+
+All local storage fallbacks have been eliminated. Submissions now write directly to PostgreSQL. If the server fails, the learner sees `"Submission failed, please retry: <real error>"` while retaining all typed responses in their text fields.
+
+---
+
+### 2. Database Migration File to Run
+Run this single migration in your **Supabase Dashboard > SQL Editor**:
+```sql
+-- Run file: supabase/migrations/20261112_13_exam_evaluation_inbox.sql
+```
+
+#### Order of Execution:
+1. Open [Supabase Dashboard](https://supabase.com/dashboard/project/fmblkesibzjrydswwldq) > **SQL Editor**.
+2. Click **New Query**.
+3. Open `supabase/migrations/20261112_13_exam_evaluation_inbox.sql`.
+4. Copy the entire file, paste it into the query window, and click **Run**.
+*(Note: The migration is completely idempotent and wrapped in a safe transaction block `begin; ... commit;`)*.
+
+---
+
+### 3. Data Stored Summary
+
+| Table | Column | Type | Purpose & Storage Justification |
+| :--- | :--- | :--- | :--- |
+| `public.exam_questions` | `id` | uuid (PK) | Unique question identifier |
+| `public.exam_questions` | `programme_id` | uuid (FK `programmes.id`) | Links rubric to specific curriculum track |
+| `public.exam_questions` | `question` | text | Question prompt / title |
+| `public.exam_questions` | `prompt` | text | Evaluation instructions and guidance |
+| `public.exam_questions` | `max_marks` | numeric (default 25) | Maximum score allocatable |
+| `public.exam_questions` | `sort_order` | int | Display ordering for learner and reviewer |
+| `public.exam_submissions` | `id` | uuid (PK) | Unique submission record |
+| `public.exam_submissions` | `user_id` | uuid (FK `profiles.id`) | Learner who took the exam |
+| `public.exam_submissions` | `programme_id` | uuid (FK `programmes.id`) | Programme track for the exam |
+| `public.exam_submissions` | `status` | text (`draft`, `submitted`, `graded`) | State of the submission |
+| `public.exam_submissions` | `submitted_at` | timestamptz | Date and time submitted |
+| `public.exam_submissions` | `grade` | text (e.g. `'A (92%)'`) | Letter grade and percentage |
+| `public.exam_submissions` | `score` | numeric (0–100) | Numerical aggregate percentage score |
+| `public.exam_submissions` | `instructor_comment` | text (max 2000 chars) | Overall qualitative feedback |
+| `public.exam_submissions` | `graded_by` | uuid (FK `profiles.id`) | Admin or instructor evaluator ID |
+| `public.exam_submissions` | `graded_at` | timestamptz | Date and time of evaluation |
+| `public.exam_submissions` | `allow_retake` | boolean (default false) | Whether learner can resubmit |
+| `public.exam_answers` | `id` | uuid (PK) | Unique answer entry |
+| `public.exam_answers` | `submission_id` | uuid (FK `exam_submissions.id`) | Parent submission |
+| `public.exam_answers` | `question_id` | uuid (FK `exam_questions.id`) | Evaluated question |
+| `public.exam_answers` | `answer_text` | text | Learner's typed response |
+| `public.exam_answers` | `marks` | numeric | Per-question awarded marks |
+| `public.exam_answers` | `comment` | text | Per-question evaluator note |
+
+**Deliberately NOT Stored**:
+- No duplicate offline copies in `localStorage` or `sessionStorage`.
+- No mock or simulated score values.
+- No client-side override of server-verified roles or grades.
+
+---
+
+### 4. Step-by-Step Test Plan Across Roles
+
+#### Test 1: Intern in Human Resources
+1. Sign in with an active intern account assigned to **Human Resources** (`programme_id` = Human Resources).
+2. Click **Written Exam** in the sidebar:
+   - Verify only the learner view is visible: "Start Exam" card is shown.
+   - The Evaluation Inbox table is completely hidden.
+3. Click **Start Exam**, fill in all responses, and click **Submit Exam**.
+4. Verify the confirmation prompt appears. Click **OK**.
+5. Once confirmed by the database, verify:
+   - Notice displays: `"Submitted on <Date>"` with status `"Submitted · Under Review"`.
+   - The form is read-only. Clicking **Review Your Responses** displays all answers read-only.
+   - Attempting to submit a second time is blocked by the server unless retake is allowed.
+
+#### Test 2: Intern in Data Analyst
+1. Sign in with an active intern assigned to **Data Analyst**.
+2. Navigate to **Written Exam**, click **Start Exam**, answer the questions, and submit.
+3. Verify submission status changes to `"Submitted on <Date>"`.
+
+#### Test 3: Instructor of Human Resources
+1. Sign in with an instructor account whose `programme_id` is **Human Resources**.
+2. Click **Written Exam** in the sidebar:
+   - Verify the learner "Start Exam" card is hidden.
+   - The **Evaluation Inbox** appears directly with tabs `All`, `Needs Grading`, `Graded`.
+3. Verify Programme Filter:
+   - Only the Human Resources programme is queried.
+   - The Human Resources intern submission appears.
+   - The Data Analyst intern submission does **NOT** appear, even if the instructor attempts calling `list_exam_submissions` directly with the Data Analyst UUID.
+
+#### Test 4: Administrator
+1. Sign in with an administrator account (e.g. `admin.ikaaiindia@gmail.com`).
+2. Observe the sidebar item **Written Exam**:
+   - The badge displays the real-time count of pending submissions (e.g. `2 Needs Grading`).
+3. Click **Written Exam**:
+   - The Evaluation Inbox appears with `"All Programmes"` dropdown.
+   - Both the Human Resources and Data Analyst submissions appear.
+   - "Needs Grading" entries are sorted oldest first.
+4. Click **Review & Grade** on a pending submission:
+   - Modal displays the learner's name, email, programme, and all questions with the learner's answers.
+   - Test validation: enter `150` in the overall marks field and click Save Grade -> refused with error `"Overall score percentage must be between 0 and 100."`
+   - Enter valid per-question marks, a comment, and an overall score of `88`.
+   - Click **Save Grade**: submission updates to `"Graded"` with `"B (88%)"`.
+5. Switch to the intern account:
+   - On the **Written Exam** screen, the status instantly updates via Realtime to `"Graded (B (88%))"` with the instructor feedback note.
+   - In the **Grade** screen, the official table lists `"Final Written Examination"` with `88%` and the full feedback box. No demo values are shown.
+6. As Administrator, open the graded submission and click **Allow Retake**:
+   - Confirm the prompt.
+   - The learner's Written Exam screen updates to allow **Start Retake**.

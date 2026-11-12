@@ -17,7 +17,7 @@
       email: 's.kumar@ikaaiindia.org',
       role: 'Intern',
       branch: 'New Delhi / Remote',
-      position: 'Human Resources Intern',
+      position: '',
       memberSince: 'October 2026',
       verified: true
     },
@@ -893,19 +893,19 @@
           answers: {},
           questions: [
             {
-              id: 'exam_q1',
+              id: '80000000-0000-0000-0000-000000000001',
               title: '1. Ikaai Mission & Social Impact Philosophy',
               prompt: 'Explain how Ikaai India Foundation differentiates its social research approach from conventional commercial market research. Mention at least three core principles discussed in your onboarding modules.',
               placeholder: 'Type your explanation here (minimum 100 words)...'
             },
             {
-              id: 'exam_q2',
+              id: '80000000-0000-0000-0000-000000000002',
               title: '2. Ethical Recruitment & Bias Mitigation Scenario',
               prompt: 'Suppose a candidate applying for a Field Research Associate role lacks formal academic credentials but demonstrates extensive grassroots community organizing experience and fluency in regional dialects. How would you evaluate their profile according to Ikaai recruitment guidelines?',
               placeholder: 'Outline your evaluation methodology and decision rationale...'
             },
             {
-              id: 'exam_q3',
+              id: '80000000-0000-0000-0000-000000000003',
               title: '3. Data Security & Confidentiality Protocols',
               prompt: 'A partner organization requests an un-anonymized spreadsheet of rural survey respondents including contact details. How do you respond based on Ikaai data protection policies and ethics charters?',
               placeholder: 'Draft your proposed response and the compliance protocols you would reference...'
@@ -1335,21 +1335,21 @@
           "answers": {},
           "questions": [
             {
-              "id": "data_exam_q1",
+              "id": "80000000-0000-0000-0000-000000000004",
               "title": "1. Data Pipeline Architecture & Anonymization",
               "prompt": "Outline step-by-step how you would ingest 50,000 raw household survey records from KoboToolbox, execute deduplication, handle missing value imputation, decouple PII, and export an analytical dataset adhering to the DPDP Act 2023.",
               "placeholder": "Detail your data pipeline architecture, data structures, and compliance checkpoints...",
               "rubric": "Evaluates understanding of reproducible data wrangling, data hygiene, and privacy compliance."
             },
             {
-              "id": "data_exam_q2",
+              "id": "80000000-0000-0000-0000-000000000005",
               "title": "2. High-Frequency Quality Checks & Fraud Diagnostics",
               "prompt": "Describe four statistical indicators you would monitor on a daily basis to identify enumerator fabrication, speed-running, or systematic skip-pattern exploitation during field data collection.",
               "placeholder": "Explain your diagnostics, threshold criteria, and operational escalation protocol...",
               "rubric": "Evaluates quality control rigor and practical field monitoring capabilities."
             },
             {
-              "id": "data_exam_q3",
+              "id": "80000000-0000-0000-0000-000000000006",
               "title": "3. Power BI Executive Dashboard Conceptualization",
               "prompt": "A state education department requires an interactive monitoring dashboard tracking foundational literacy and numeracy across 30 districts. Propose the star-schema data model, key DAX metrics, visual hierarchy, and Row-Level Security (RLS) implementation.",
               "placeholder": "Detail fact/dimension tables, DAX measures, visual components, and access controls...",
@@ -1766,21 +1766,21 @@
           "answers": {},
           "questions": [
             {
-              "id": "res_exam_q1",
+              "id": "80000000-0000-0000-0000-000000000007",
               "title": "1. Multi-Stage Sampling & Field Strategy",
               "prompt": "You are commissioned by a multilateral agency to evaluate a maternal and child nutrition programme across 12 high-burden districts in Uttar Pradesh. Propose your complete sampling design, sample size justification, clustering adjustments, and household selection methodology.",
               "placeholder": "Detail sampling frames, stratification, cluster calculations, and field protocols...",
               "rubric": "Evaluates sampling theory, logistical awareness, and statistical precision."
             },
             {
-              "id": "res_exam_q2",
+              "id": "80000000-0000-0000-0000-000000000008",
               "title": "2. Mixed-Methods Triangulation Framework",
               "prompt": "Explain how you would triangulate quantitative survey findings with Focus Group Discussions and Key Informant Interviews to assess why a rural drinking water initiative achieved high infrastructure installation but low community utilization.",
               "placeholder": "Detail your mixed-methods matrix, qualitative sampling, and analytical synthesis...",
               "rubric": "Evaluates qualitative-quantitative synthesis and development sector diagnostic capability."
             },
             {
-              "id": "res_exam_q3",
+              "id": "80000000-0000-0000-0000-000000000009",
               "title": "3. Executive Policy Recommendation Framing",
               "prompt": "Draft an executive summary and three actionable policy recommendations for a state Ministry of Health based on findings showing a 35% dropout rate in immunisation booster doses among migrant urban poor households.",
               "placeholder": "Write an executive brief: context, core evidence, root causes, and actionable recommendations...",
@@ -2195,21 +2195,21 @@
           "answers": {},
           "questions": [
             {
-              "id": "des_exam_q1",
+              "id": "80000000-0000-0000-0000-000000000010",
               "title": "1. Multi-Page Publication Design & Typographic Strategy",
               "prompt": "You are assigned to design the layout for a 60-page flagship evaluation report on rural healthcare interventions. Detail your typographic scale, grid structure, executive summary layout, chart styling, and print/digital export specifications.",
               "placeholder": "Detail your software workflow, grids, fonts, margins, and brand balance...",
               "rubric": "Evaluates editorial design proficiency, typography discipline, and production standards."
             },
             {
-              "id": "des_exam_q2",
+              "id": "80000000-0000-0000-0000-000000000011",
               "title": "2. Data Infographic Conception for Non-Technical Audiences",
               "prompt": "Translate a multi-district baseline study showing complex correlations between female literacy, household sanitation, and childhood stunting into a high-impact infographic concept. Describe the visual layout, chart choices, and color strategy.",
               "placeholder": "Describe visual hierarchy, chart archetypes, color palette, and key narrative points...",
               "rubric": "Evaluates information architecture, data accuracy, and visual storytelling."
             },
             {
-              "id": "des_exam_q3",
+              "id": "80000000-0000-0000-0000-000000000012",
               "title": "3. Integrated Social Media Launch Campaign",
               "prompt": "Create a 2-week digital launch campaign strategy for a newly published policy evaluation. Detail your content calendar, LinkedIn carousel slide breakdown, video teaser format, and key performance indicators (KPIs).",
               "placeholder": "Outline schedule, carousel outline, visual assets, copy hooks, and target metrics...",
@@ -2625,21 +2625,21 @@
           "answers": {},
           "questions": [
             {
-              "id": "bd_exam_q1",
+              "id": "80000000-0000-0000-0000-000000000013",
               "title": "1. Tender Sourcing & Go/No-Go Evaluation",
               "prompt": "You identify an RFP on GeM issued by a state livelihood mission for an impact evaluation of rural self-help groups (Budget: Rs 45 Lakhs, Sample: 12,000 households, Timeline: 4 months). Outline your Go/No-Go evaluation framework assessing technical feasibility, margin, and risk.",
               "placeholder": "Detail qualification parameters, cost estimation, timeline feasibility, and decision verdict...",
               "rubric": "Evaluates commercial judgment, operational realism, and risk assessment."
             },
             {
-              "id": "bd_exam_q2",
+              "id": "80000000-0000-0000-0000-000000000014",
               "title": "2. Competitive Technical Proposal Structuring",
               "prompt": "Structure the executive summary and methodology section of a winning technical proposal responding to an international donor's RFP for third-party monitoring of rural solar electrification across 200 tribal villages in Odisha and Jharkhand.",
               "placeholder": "Draft executive summary, technical approach, sampling, and risk mitigation...",
               "rubric": "Evaluates technical proposal writing, institutional persuasiveness, and sector competence."
             },
             {
-              "id": "bd_exam_q3",
+              "id": "80000000-0000-0000-0000-000000000015",
               "title": "3. Commercial Proposal Budget Breakdown",
               "prompt": "Construct a comprehensive commercial budget breakdown for a 6,000 household primary survey across 4 districts. Account for field staff remuneration, supervisor oversight, travel/logistics, tablet tech, management fee, and 18% GST.",
               "placeholder": "Present cost heads, unit rates, assumptions, and final commercial quote...",
@@ -2745,6 +2745,15 @@
       name: 'Business Development'
     }
   };
+
+  const PROGRAMMES_LIST = [
+    { id: 'hr', dbId: PROGRAMME_META.hr.id, title: 'Human Resources' },
+    { id: 'data', dbId: PROGRAMME_META.data.id, title: 'Data Analyst' },
+    { id: 'research', dbId: PROGRAMME_META.research.id, title: 'Social Research & Policy' },
+    { id: 'design', dbId: PROGRAMME_META.design.id, title: 'Design & Social Media' },
+    { id: 'bd', dbId: PROGRAMME_META.bd.id, title: 'Business Development' }
+  ];
+  window.PROGRAMMES_LIST = PROGRAMMES_LIST;
 
   const JD_PROGRAMME_MAP = {
     'data-analyst-intern': {
@@ -2869,6 +2878,9 @@
             parsed.programmes[pid] = JSON.parse(JSON.stringify(INITIAL_DATA.programmes[pid]));
           }
         });
+        if (parsed.profile && parsed.profile.position === 'Human Resources Intern' && parsed.profile.email !== 's.kumar@ikaaiindia.org') {
+          parsed.profile.position = '';
+        }
         return Object.assign({}, INITIAL_DATA, parsed);
       }
     } catch (e) {
@@ -3003,11 +3015,18 @@
     retakeExamBtn: document.getElementById('retakeExamBtn'),
     instructorExamReviewSection: document.getElementById('instructorExamReviewSection'),
     instructorExamProgFilter: document.getElementById('instructorExamProgFilter'),
+    instructorExamSearchInput: document.getElementById('instructorExamSearchInput'),
+    refreshInstructorExamsBtn: document.getElementById('refreshInstructorExamsBtn'),
     filterExamSubAll: document.getElementById('filterExamSubAll'),
     filterExamSubPending: document.getElementById('filterExamSubPending'),
     filterExamSubGraded: document.getElementById('filterExamSubGraded'),
     instructorExamTableBody: document.getElementById('instructorExamTableBody'),
     emptyInstructorExamsState: document.getElementById('emptyInstructorExamsState'),
+    instructorExamPagination: document.getElementById('instructorExamPagination'),
+    instructorExamPageInfo: document.getElementById('instructorExamPageInfo'),
+    prevExamPageBtn: document.getElementById('prevExamPageBtn'),
+    nextExamPageBtn: document.getElementById('nextExamPageBtn'),
+    sidebarExamBadge: document.getElementById('sidebarExamBadge'),
     gradeExamModal: document.getElementById('gradeExamModal'),
     closeGradeExamModalBtn: document.getElementById('closeGradeExamModalBtn'),
     cancelGradeExamBtn: document.getElementById('cancelGradeExamBtn'),
@@ -3189,6 +3208,9 @@
     learnerGradeSummaryCards: document.getElementById('learnerGradeSummaryCards'),
     learnerGradeEmptyState: document.getElementById('learnerGradeEmptyState'),
     learnerGradeTablesWrap: document.getElementById('learnerGradeTablesWrap'),
+    gradeWrittenExamFeedback: document.getElementById('gradeWrittenExamFeedback'),
+    gradeWrittenExamScoreBadge: document.getElementById('gradeWrittenExamScoreBadge'),
+    gradeWrittenExamCommentText: document.getElementById('gradeWrittenExamCommentText'),
     gradeModulesList: document.getElementById('gradeModulesList'),
     gradeTableBody: document.getElementById('gradeTableBody'),
     cohortGradeRosterSection: document.getElementById('cohortGradeRosterSection'),
@@ -3423,6 +3445,10 @@
   // ==========================================
 
   function switchScreen(screenKey) {
+    if (screenKey === 'jobDescriptions' && typeof isAuthorizedForJdSection === 'function' && !isAuthorizedForJdSection()) {
+      showToast('Access restricted: Only Admins, HR, and HR Interns can view Job Descriptions.');
+      screenKey = 'module';
+    }
     clearModuleTimer();
     activeScreen = screenKey;
     closeSidebar();
@@ -3501,6 +3527,10 @@
   // Register sidebar screen navigation events
   if (el.navJobDescriptions) {
     el.navJobDescriptions.addEventListener('click', () => {
+      if (typeof isAuthorizedForJdSection === 'function' && !isAuthorizedForJdSection()) {
+        showToast('Access restricted: Only Admins, HR, and HR Interns can view Job Descriptions.');
+        return;
+      }
       resetJdViewToGallery();
       switchScreen('jobDescriptions');
     });
@@ -3567,6 +3597,14 @@
     const isExpanded = el.programmeDescription.classList.toggle('expanded');
     el.showMoreToggle.textContent = isExpanded ? 'Show less' : 'Show more';
   });
+  // "Show more" toggle on programme header (hidden / removed)
+  if (el.showMoreToggle) {
+    el.showMoreToggle.style.display = 'none';
+    el.showMoreToggle.addEventListener('click', () => {
+      const isExpanded = el.programmeDescription ? el.programmeDescription.classList.toggle('expanded') : false;
+      el.showMoreToggle.textContent = isExpanded ? 'Show less' : 'Show more';
+    });
+  }
 
   // ==========================================
   // 7. PROGRAMME SELECTOR & SIDEBAR RENDERING
@@ -3639,6 +3677,9 @@
     if (typeof updateSidebarCompanyResourcesBadge === 'function') {
       updateSidebarCompanyResourcesBadge();
     }
+    if (typeof updateJdPermissionsUI === 'function') {
+      updateJdPermissionsUI();
+    }
     el.programmeSelect.value = prog.id;
     el.sidebarRoleBadge.textContent = prog.roleTag;
 
@@ -3647,12 +3688,39 @@
     el.sidebarProgressBar.style.width = `${completionRate}%`;
 
     // Render exam status in sidebar
-    if (prog.exam && prog.exam.submitted) {
-      el.sidebarExamBadge.textContent = 'Submitted';
-      el.sidebarExamBadge.classList.add('submitted');
+    const userRole = (state.profile?.role || '').toLowerCase().trim();
+    const isStaff = isCurrentUserAdmin() || userRole === 'instructor' || userRole === 'admin' || userRole === 'hr';
+    if (isStaff) {
+      const pendingCount = (instructorExamSubmissions || []).filter(s => s.status === 'submitted').length;
+      updateSidebarExamBadge(pendingCount);
+      if (typeof updateInstructorExamTabCounts === 'function') {
+        const progId = isCurrentUserAdmin() ? null : getProgrammeDbId(currentProgrammeId);
+        updateInstructorExamTabCounts(progId).catch(() => {});
+      }
+    } else if (currentExamSubmission?.status === 'graded') {
+      if (el.sidebarExamBadge) {
+        el.sidebarExamBadge.textContent = 'Graded';
+        el.sidebarExamBadge.className = 'exam-status-tag submitted';
+        el.sidebarExamBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+        el.sidebarExamBadge.style.color = '#10b981';
+        el.sidebarExamBadge.style.display = 'inline-block';
+      }
+    } else if (currentExamSubmission?.status === 'submitted' || (prog.exam && prog.exam.submitted)) {
+      if (el.sidebarExamBadge) {
+        el.sidebarExamBadge.textContent = 'Submitted';
+        el.sidebarExamBadge.className = 'exam-status-tag submitted';
+        el.sidebarExamBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+        el.sidebarExamBadge.style.color = '#10b981';
+        el.sidebarExamBadge.style.display = 'inline-block';
+      }
     } else {
-      el.sidebarExamBadge.textContent = 'Not submitted';
-      el.sidebarExamBadge.classList.remove('submitted');
+      if (el.sidebarExamBadge) {
+        el.sidebarExamBadge.textContent = 'Not submitted';
+        el.sidebarExamBadge.className = 'exam-status-tag';
+        el.sidebarExamBadge.style.backgroundColor = '';
+        el.sidebarExamBadge.style.color = '';
+        el.sidebarExamBadge.style.display = 'inline-block';
+      }
     }
 
     // Render modules accordion list
@@ -5480,13 +5548,45 @@
   let instructorExamProgSelected = '';
 
   async function renderExamScreen() {
+    setupExamSubmissionsRealtime();
     const prog = getCurrentProgramme();
     const dbProgId = getProgrammeDbId(currentProgrammeId);
     if (el.programmeTitle) el.programmeTitle.textContent = prog.title;
     if (el.programmeDescription) el.programmeDescription.textContent = prog.description;
 
-    const userRole = state.profile?.role || 'intern';
-    const isStaff = (userRole === 'instructor' || userRole === 'admin');
+    const isAdmin = isCurrentUserAdmin();
+    const userRole = (state.profile?.role || '').toLowerCase().trim();
+    const isStaff = isAdmin || userRole === 'instructor' || userRole === 'admin' || userRole === 'hr';
+
+    // Evaluator / Admin Review Mode: Show submissions table directly, do not show learner exam card
+    if (isStaff) {
+      const examCard = document.querySelector('.exam-card');
+      if (examCard) examCard.style.display = 'none';
+      if (el.examStatusPill) {
+        el.examStatusPill.textContent = 'Admin / Evaluator Mode';
+        el.examStatusPill.className = 'exam-pill submitted';
+        el.examStatusPill.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+        el.examStatusPill.style.color = '#10b981';
+      }
+      if (el.examIntroSection) el.examIntroSection.style.display = 'none';
+      if (el.examForm) el.examForm.style.display = 'none';
+      if (el.examSubmittedNotice) el.examSubmittedNotice.style.display = 'none';
+      if (el.examGradedDetails) el.examGradedDetails.style.display = 'none';
+      if (el.retakeExamBtn) el.retakeExamBtn.style.display = 'none';
+      if (el.instructorExamReviewSection) {
+        el.instructorExamReviewSection.style.display = 'block';
+        await renderInstructorExamSubmissions();
+      }
+      return;
+    }
+
+    const examCard = document.querySelector('.exam-card');
+    if (examCard) examCard.style.display = 'block';
+
+    // Hide admin submissions review section for learners
+    if (el.instructorExamReviewSection) {
+      el.instructorExamReviewSection.style.display = 'none';
+    }
 
     // 1. Load Real Questions from DB
     if (window.DataLayer) {
@@ -5549,7 +5649,11 @@
       }
       if (el.examSubmittedNotice) {
         el.examSubmittedNotice.style.display = 'flex';
-        if (el.examSubmittedTitle) el.examSubmittedTitle.textContent = 'Exam Submitted · Under Review';
+        const subDate = currentExamSubmission?.submitted_at ? new Date(currentExamSubmission.submitted_at) : null;
+        const subDateFormatted = subDate && !isNaN(subDate.getTime())
+          ? subDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+          : '';
+        if (el.examSubmittedTitle) el.examSubmittedTitle.textContent = subDateFormatted ? `Submitted on ${subDateFormatted}` : 'Exam Submitted · Under Review';
         if (el.examSubmittedDesc) el.examSubmittedDesc.textContent = 'Your responses have been securely submitted to your instructor for evaluation. Once graded, your final score and qualitative feedback will appear here and in your Grade Report.';
       }
     } else if (status === 'graded') {
@@ -5562,7 +5666,11 @@
       }
       if (el.examSubmittedNotice) {
         el.examSubmittedNotice.style.display = 'flex';
-        if (el.examSubmittedTitle) el.examSubmittedTitle.textContent = 'Examination Evaluated & Graded';
+        const subDate = currentExamSubmission?.submitted_at ? new Date(currentExamSubmission.submitted_at) : null;
+        const subDateFormatted = subDate && !isNaN(subDate.getTime())
+          ? subDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+          : '';
+        if (el.examSubmittedTitle) el.examSubmittedTitle.textContent = subDateFormatted ? `Submitted on ${subDateFormatted} · Evaluated & Graded` : 'Examination Evaluated & Graded';
         if (el.examSubmittedDesc) el.examSubmittedDesc.textContent = 'Your instructor has reviewed and graded your submission.';
       }
       if (el.examGradedDetails) {
@@ -5587,14 +5695,6 @@
         if (el.examPromptSubtitle) el.examPromptSubtitle.textContent = 'End of programme written examination';
       }
       if (el.startExamBtn) el.startExamBtn.textContent = 'Start Exam';
-    }
-
-    // 3. Instructor & Admin Submissions Review Card
-    if (isStaff && el.instructorExamReviewSection) {
-      el.instructorExamReviewSection.style.display = 'block';
-      await renderInstructorExamSubmissions();
-    } else if (el.instructorExamReviewSection) {
-      el.instructorExamReviewSection.style.display = 'none';
     }
   }
 
@@ -5735,7 +5835,7 @@
       try {
         if (el.submitExamBtn) {
           el.submitExamBtn.disabled = true;
-          el.submitExamBtn.textContent = 'Submitting...';
+          el.submitExamBtn.textContent = 'Submitting to database...';
         }
 
         if (window.DataLayer) {
@@ -5747,7 +5847,8 @@
         if (typeof renderSidebar === 'function') renderSidebar();
       } catch (err) {
         console.error('submitExam error:', err);
-        alert(err.message || 'Error submitting exam: Retakes are not allowed unless permitted by an instructor.');
+        alert(`Submission failed, please retry: ${err.message || 'Database error'}`);
+        // Keep learner's answers in the form - do not reset or hide!
       } finally {
         if (el.submitExamBtn) {
           el.submitExamBtn.disabled = false;
@@ -5824,19 +5925,25 @@
   // -------------------------------------------------------------------------
   // INSTRUCTOR / ADMIN EXAM REVIEW CONTROLLER
   // -------------------------------------------------------------------------
+  let instructorExamSearch = '';
+  let instructorExamPage = 1;
+  const INSTRUCTOR_EXAM_PER_PAGE = 15;
+  let instructorExamTotalCount = 0;
+  let examSubmissionsRealtimeChannel = null;
+
   async function renderInstructorExamSubmissions() {
     if (!el.instructorExamTableBody) return;
-    const userRole = state.profile?.role || 'intern';
-    const isAdmin = (userRole === 'admin');
+    const isAdmin = isCurrentUserAdmin();
+    const userRole = (state.profile?.role || '').toLowerCase().trim();
     const currentDbProgId = getProgrammeDbId(currentProgrammeId);
     const filterProgId = isAdmin ? (instructorExamProgSelected || null) : currentDbProgId;
 
-    // Admin programme filter dropdown
+    // Programme filter dropdown
     if (el.instructorExamProgFilter) {
       if (isAdmin) {
         el.instructorExamProgFilter.style.display = 'inline-block';
         el.instructorExamProgFilter.innerHTML = '<option value="">All Programmes</option>';
-        PROGRAMMES_LIST.forEach(p => {
+        (window.PROGRAMMES_LIST || PROGRAMMES_LIST || []).forEach(p => {
           const opt = document.createElement('option');
           opt.value = p.dbId;
           opt.textContent = p.title;
@@ -5844,41 +5951,58 @@
           el.instructorExamProgFilter.appendChild(opt);
         });
       } else {
+        // Instructor: lock to their assigned programme only
         el.instructorExamProgFilter.style.display = 'none';
       }
     }
 
-    // Load submissions
+    // Load submissions with pagination & filter
+    const offset = (instructorExamPage - 1) * INSTRUCTOR_EXAM_PER_PAGE;
+    let submissions = [];
+    let total = 0;
+
     if (window.DataLayer) {
       try {
-        instructorExamSubmissions = await window.DataLayer.getInstructorExamSubmissions(filterProgId);
+        const res = await window.DataLayer.listExamSubmissions(
+          filterProgId,
+          instructorExamFilter,
+          instructorExamSearch,
+          INSTRUCTOR_EXAM_PER_PAGE,
+          offset
+        );
+        submissions = res.submissions || [];
+        total = res.totalCount !== undefined ? res.totalCount : submissions.length;
+        instructorExamSubmissions = submissions;
+        instructorExamTotalCount = total;
       } catch (err) {
-        console.warn('getInstructorExamSubmissions error:', err);
-        instructorExamSubmissions = [];
+        console.warn('[EvaluationInbox] listExamSubmissions error:', err);
+        submissions = [];
+        total = 0;
       }
     }
 
-    // Filter by tab
-    let filtered = (instructorExamSubmissions || []).filter(s => s.status !== 'draft'); // Only show submitted or graded
-    if (instructorExamFilter === 'pending') {
-      filtered = filtered.filter(s => s.status === 'submitted');
-    } else if (instructorExamFilter === 'graded') {
-      filtered = filtered.filter(s => s.status === 'graded');
-    }
+    // Update tab badges with live counts
+    updateInstructorExamTabCounts(filterProgId, instructorExamSearch);
 
+    // Render Table Rows
     el.instructorExamTableBody.innerHTML = '';
-    if (filtered.length === 0) {
-      if (el.emptyInstructorExamsState) el.emptyInstructorExamsState.style.display = 'block';
+    if (submissions.length === 0) {
+      if (el.emptyInstructorExamsState) {
+        el.emptyInstructorExamsState.textContent = instructorExamSearch ? 'No submissions match your search.' : 'No submissions yet.';
+        el.emptyInstructorExamsState.style.display = 'block';
+      }
+      if (el.instructorExamPagination) el.instructorExamPagination.style.display = 'none';
       return;
     }
+
     if (el.emptyInstructorExamsState) el.emptyInstructorExamsState.style.display = 'none';
 
-    filtered.forEach(sub => {
+    submissions.forEach(sub => {
       const learnerName = sub.profiles?.full_name || 'Learner';
       const learnerEmail = sub.profiles?.email || 'N/A';
       const progName = sub.programmes?.name || 'Programme';
       const submittedDate = sub.submitted_at ? new Date(sub.submitted_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : '--';
-      const isGraded = sub.status === 'graded';
+      const isGraded = (sub.status || '').toLowerCase().trim() === 'graded';
       const statusPill = isGraded
         ? '<span class="exam-status-tag submitted">Graded</span>'
         : '<span class="exam-status-tag in-review">Needs Grading</span>';
@@ -5888,37 +6012,138 @@
       tr.style.borderBottom = '1px solid var(--border-subtle)';
       tr.innerHTML = `
         <td style="padding: 12px;">
-          <div style="font-weight: 700; color: var(--text-primary);">${learnerName}</div>
-          <div style="font-size: 11.5px; color: var(--text-muted);">${learnerEmail}</div>
+          <div style="font-weight: 700; color: var(--text-primary);">${escapeHtml(learnerName)}</div>
+          <div style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(learnerEmail)}</div>
         </td>
-        <td style="padding: 12px; color: var(--text-secondary); font-size: 12.5px;">${progName}</td>
+        <td style="padding: 12px; color: var(--text-secondary); font-size: 12.5px;">${escapeHtml(progName)}</td>
         <td style="padding: 12px; color: var(--text-secondary); font-size: 12px;">${submittedDate}</td>
         <td style="padding: 12px;">${statusPill}</td>
         <td style="padding: 12px; font-weight: 700; color: ${isGraded ? 'var(--accent-light)' : 'var(--text-secondary)'};">${gradeDisplay}</td>
         <td style="padding: 12px; text-align: right;">
           <button type="button" class="primary-accent-btn grade-sub-btn" data-sub-id="${sub.id}" style="padding: 6px 14px; font-size: 12.5px;">
-            ${isGraded ? 'Review / Edit Grade' : 'Grade Submission'}
+            ${isGraded ? 'View' : 'Review & Grade'}
           </button>
         </td>
       `;
       el.instructorExamTableBody.appendChild(tr);
     });
 
-    // Wire Grade Submission buttons
+    // Wire Action buttons
     el.instructorExamTableBody.querySelectorAll('.grade-sub-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const subId = btn.getAttribute('data-sub-id');
         openGradeExamModal(subId);
       });
     });
+
+    // Pagination controls
+    if (el.instructorExamPagination) {
+      if (total > INSTRUCTOR_EXAM_PER_PAGE) {
+        el.instructorExamPagination.style.display = 'flex';
+        const startItem = offset + 1;
+        const endItem = Math.min(offset + submissions.length, total);
+        if (el.instructorExamPageInfo) el.instructorExamPageInfo.textContent = `Showing ${startItem}–${endItem} of ${total}`;
+        if (el.prevExamPageBtn) el.prevExamPageBtn.disabled = instructorExamPage <= 1;
+        if (el.nextExamPageBtn) el.nextExamPageBtn.disabled = endItem >= total;
+      } else {
+        el.instructorExamPagination.style.display = 'none';
+      }
+    }
   }
 
+  // Update Evaluation Inbox Tab Badges & Counts
+  async function updateInstructorExamTabCounts(progId, search) {
+    if (!window.DataLayer) return;
+    try {
+      const [allRes, pendingRes, gradedRes] = await Promise.all([
+        window.DataLayer.listExamSubmissions(progId, 'all', search, 1, 0),
+        window.DataLayer.listExamSubmissions(progId, 'pending', search, 1, 0),
+        window.DataLayer.listExamSubmissions(progId, 'graded', search, 1, 0)
+      ]);
 
+      const allCount = allRes.totalCount || 0;
+      const pendingCount = pendingRes.totalCount || 0;
+      const gradedCount = gradedRes.totalCount || 0;
 
-  // Filter tab events
+      if (el.filterExamSubAll) el.filterExamSubAll.textContent = `All (${allCount})`;
+      if (el.filterExamSubPending) el.filterExamSubPending.textContent = `Needs Grading (${pendingCount})`;
+      if (el.filterExamSubGraded) el.filterExamSubGraded.textContent = `Graded (${gradedCount})`;
+
+      // Update sidebar badge for staff
+      updateSidebarExamBadge(pendingCount);
+    } catch (e) {
+      console.warn('[EvaluationInbox] Error updating tab counts:', e);
+    }
+  }
+
+  // Update Sidebar Badge with number of ungraded submissions for staff
+  function updateSidebarExamBadge(ungradedCount) {
+    if (!el.sidebarExamBadge) return;
+    const isAdmin = isCurrentUserAdmin();
+    const userRole = (state.profile?.role || '').toLowerCase().trim();
+    const isStaff = isAdmin || userRole === 'instructor' || userRole === 'admin' || userRole === 'hr';
+
+    if (isStaff) {
+      if (ungradedCount > 0) {
+        el.sidebarExamBadge.textContent = `${ungradedCount} Needs Grading`;
+        el.sidebarExamBadge.className = 'exam-status-tag in-review';
+        el.sidebarExamBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
+        el.sidebarExamBadge.style.color = '#f59e0b';
+        el.sidebarExamBadge.style.display = 'inline-block';
+      } else {
+        el.sidebarExamBadge.textContent = 'All Graded';
+        el.sidebarExamBadge.className = 'exam-status-tag submitted';
+        el.sidebarExamBadge.style.backgroundColor = 'rgba(16, 185, 129, 0.15)';
+        el.sidebarExamBadge.style.color = '#10b981';
+        el.sidebarExamBadge.style.display = 'inline-block';
+      }
+    }
+  }
+
+  // Setup Supabase Realtime Listener on exam_submissions table
+  function setupExamSubmissionsRealtime() {
+    if (!window.supabaseClient || examSubmissionsRealtimeChannel) return;
+    try {
+      examSubmissionsRealtimeChannel = window.supabaseClient
+        .channel('realtime_exam_submissions')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'exam_submissions' },
+          (payload) => {
+            console.log('[Realtime] exam_submissions update received:', payload);
+            const isAdmin = isCurrentUserAdmin();
+            const userRole = (state.profile?.role || '').toLowerCase().trim();
+            const isStaff = isAdmin || userRole === 'instructor' || userRole === 'admin' || userRole === 'hr';
+            if (isStaff) {
+              const filterProgId = isAdmin ? (instructorExamProgSelected || null) : getProgrammeDbId(currentProgrammeId);
+              updateInstructorExamTabCounts(filterProgId, instructorExamSearch);
+              if (el.instructorExamReviewSection && el.instructorExamReviewSection.style.display !== 'none') {
+                renderInstructorExamSubmissions();
+              }
+            } else {
+              // Learner: reload submission status and grade if active on Written Exam or Grade screen
+              if (activeScreen === 'exam') {
+                renderExamScreen();
+              } else if (activeScreen === 'grade') {
+                renderGradeReportScreen();
+              }
+              if (typeof renderSidebar === 'function') {
+                renderSidebar();
+              }
+            }
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn('[Realtime] Failed to subscribe to exam_submissions:', err);
+    }
+  }
+
+  // Wire Tab events
   if (el.filterExamSubAll) {
     el.filterExamSubAll.addEventListener('click', () => {
       instructorExamFilter = 'all';
+      instructorExamPage = 1;
       el.filterExamSubAll.classList.add('active');
       if (el.filterExamSubPending) el.filterExamSubPending.classList.remove('active');
       if (el.filterExamSubGraded) el.filterExamSubGraded.classList.remove('active');
@@ -5926,10 +6151,10 @@
     });
   }
 
-
   if (el.filterExamSubPending) {
     el.filterExamSubPending.addEventListener('click', () => {
       instructorExamFilter = 'pending';
+      instructorExamPage = 1;
       el.filterExamSubPending.classList.add('active');
       if (el.filterExamSubAll) el.filterExamSubAll.classList.remove('active');
       if (el.filterExamSubGraded) el.filterExamSubGraded.classList.remove('active');
@@ -5937,10 +6162,10 @@
     });
   }
 
-
   if (el.filterExamSubGraded) {
     el.filterExamSubGraded.addEventListener('click', () => {
       instructorExamFilter = 'graded';
+      instructorExamPage = 1;
       el.filterExamSubGraded.classList.add('active');
       if (el.filterExamSubAll) el.filterExamSubAll.classList.remove('active');
       if (el.filterExamSubPending) el.filterExamSubPending.classList.remove('active');
@@ -5948,71 +6173,128 @@
     });
   }
 
-
   if (el.instructorExamProgFilter) {
     el.instructorExamProgFilter.addEventListener('change', () => {
       instructorExamProgSelected = el.instructorExamProgFilter.value;
+      instructorExamPage = 1;
       renderInstructorExamSubmissions();
     });
   }
 
+  // Wire Search Input
+  let examSearchDebounceTimer = null;
+  if (el.instructorExamSearchInput) {
+    el.instructorExamSearchInput.addEventListener('input', (e) => {
+      clearTimeout(examSearchDebounceTimer);
+      examSearchDebounceTimer = setTimeout(() => {
+        instructorExamSearch = (e.target.value || '').trim();
+        instructorExamPage = 1;
+        renderInstructorExamSubmissions();
+      }, 300);
+    });
+  }
 
+  // Wire Refresh Button
+  if (el.refreshInstructorExamsBtn) {
+    el.refreshInstructorExamsBtn.addEventListener('click', async () => {
+      showToast('Refreshing submissions...');
+      await renderInstructorExamSubmissions();
+    });
+  }
+
+  // Wire Pagination buttons
+  if (el.prevExamPageBtn) {
+    el.prevExamPageBtn.addEventListener('click', () => {
+      if (instructorExamPage > 1) {
+        instructorExamPage--;
+        renderInstructorExamSubmissions();
+      }
+    });
+  }
+
+  if (el.nextExamPageBtn) {
+    el.nextExamPageBtn.addEventListener('click', () => {
+      const maxPage = Math.ceil(instructorExamTotalCount / INSTRUCTOR_EXAM_PER_PAGE);
+      if (instructorExamPage < maxPage) {
+        instructorExamPage++;
+        renderInstructorExamSubmissions();
+      }
+    });
+  }
 
   // Open Grade Exam Modal
   let activeGradingSub = null;
-  function openGradeExamModal(submissionId) {
-    activeGradingSub = (instructorExamSubmissions || []).find(s => s.id === submissionId);
-    if (!activeGradingSub || !el.gradeExamModal) return;
+  async function openGradeExamModal(submissionId) {
+    if (!el.gradeExamModal) return;
 
-    if (el.gradeSubId) el.gradeSubId.value = activeGradingSub.id;
-    if (el.gradeLearnerName) el.gradeLearnerName.textContent = activeGradingSub.profiles?.full_name || 'Learner';
-    if (el.gradeLearnerMeta) el.gradeLearnerMeta.textContent = `${activeGradingSub.profiles?.email || ''} • ${activeGradingSub.programmes?.name || ''}`;
-    if (el.gradeSubmissionDatePill) {
-      el.gradeSubmissionDatePill.textContent = activeGradingSub.submitted_at ? `Submitted: ${new Date(activeGradingSub.submitted_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}` : 'Submitted';
-    }
-
-    if (el.gradeOverallMarks) el.gradeOverallMarks.value = activeGradingSub.score !== null ? activeGradingSub.score : '';
-    if (el.gradeOverallComment) el.gradeOverallComment.value = activeGradingSub.instructor_comment || '';
-
-    // Render Answers per question
     if (el.gradeQuestionsList) {
-      el.gradeQuestionsList.innerHTML = '';
-      const answersList = activeGradingSub.exam_answers || [];
-      const answersByQ = {};
-      answersList.forEach(a => { answersByQ[a.question_id] = a; });
-
-      (currentExamQuestions || []).forEach((q, idx) => {
-        const ans = answersByQ[q.id] || {};
-        const qItem = document.createElement('div');
-        qItem.className = 'grade-question-review-card';
-        qItem.style.padding = '14px';
-        qItem.style.border = '1px solid var(--border-subtle)';
-        qItem.style.borderRadius = 'var(--radius-md)';
-        qItem.style.background = 'var(--bg-surface)';
-
-        qItem.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-            <strong style="font-size: 13.5px; color: var(--text-primary);">Q${idx + 1}: ${q.title}</strong>
-            <span style="font-size: 12px; color: var(--accent-light); font-weight: 600;">Max Marks: ${q.max_marks}</span>
-          </div>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">${q.prompt}</p>
-          <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; color: #f1f5f9; margin-bottom: 10px;">${ans.answer_text || '(No response recorded)'}</div>
-          <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
-            <div class="modal-form-group">
-              <label class="modal-field-label" style="font-size: 11.5px;">Awarded Marks</label>
-              <input type="number" class="form-text-input q-marks-input" data-q-id="${q.id}" min="0" max="${q.max_marks}" value="${ans.marks !== undefined && ans.marks !== null ? ans.marks : ''}" placeholder="0 - ${q.max_marks}">
-            </div>
-            <div class="modal-form-group">
-              <label class="modal-field-label" style="font-size: 11.5px;">Question Feedback</label>
-              <input type="text" class="form-text-input q-comment-input" data-q-id="${q.id}" value="${ans.comment || ''}" placeholder="Specific feedback for this answer...">
-            </div>
-          </div>
-        `;
-        el.gradeQuestionsList.appendChild(qItem);
-      });
+      el.gradeQuestionsList.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 13.5px;">Loading examination submission rubrics and answers...</div>';
     }
-
     el.gradeExamModal.style.display = 'flex';
+
+    try {
+      const detail = await window.DataLayer.getExamSubmissionDetail(submissionId);
+      activeGradingSub = detail;
+
+      if (el.gradeSubId) el.gradeSubId.value = detail.id;
+      if (el.gradeLearnerName) el.gradeLearnerName.textContent = detail.learner_name || 'Learner';
+      if (el.gradeLearnerMeta) el.gradeLearnerMeta.textContent = `${detail.learner_email || ''} • ${detail.programme_name || ''}`;
+      if (el.gradeSubmissionDatePill) {
+        el.gradeSubmissionDatePill.textContent = detail.submitted_at
+          ? `Submitted: ${new Date(detail.submitted_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
+          : 'Submitted';
+      }
+
+      if (el.gradeOverallMarks) el.gradeOverallMarks.value = detail.score !== null && detail.score !== undefined ? detail.score : '';
+      if (el.gradeOverallComment) el.gradeOverallComment.value = detail.instructor_comment || '';
+
+      const isGraded = (detail.status || '').toLowerCase().trim() === 'graded';
+      if (el.saveGradeBtn) el.saveGradeBtn.textContent = isGraded ? 'Update Official Grade' : 'Submit Official Grade';
+
+      // Render Question Responses
+      if (el.gradeQuestionsList) {
+        el.gradeQuestionsList.innerHTML = '';
+        const questions = detail.questions || [];
+        if (questions.length === 0) {
+          el.gradeQuestionsList.innerHTML = '<div style="padding: 16px; color: var(--text-muted); font-size: 13px;">No question rubrics recorded for this programme.</div>';
+        } else {
+          questions.forEach((q, idx) => {
+            const qItem = document.createElement('div');
+            qItem.className = 'grade-question-review-card';
+            qItem.style.padding = '14px';
+            qItem.style.border = '1px solid var(--border-subtle)';
+            qItem.style.borderRadius = 'var(--radius-md)';
+            qItem.style.background = 'var(--bg-surface)';
+            qItem.style.marginBottom = '12px';
+
+            const maxM = q.max_marks || 25;
+            qItem.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                <strong style="font-size: 13.5px; color: var(--text-primary);">Q${idx + 1}: ${escapeHtml(q.question_title || 'Question ' + (idx + 1))}</strong>
+                <span style="font-size: 12px; color: var(--accent-light); font-weight: 600;">Max Marks: ${maxM}</span>
+              </div>
+              ${q.prompt ? `<p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">${escapeHtml(q.prompt)}</p>` : ''}
+              <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; color: #f1f5f9; margin-bottom: 10px;">${escapeHtml(q.answer_text) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
+              <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
+                <div class="modal-form-group">
+                  <label class="modal-field-label" style="font-size: 11.5px;">Awarded Marks (0–${maxM})</label>
+                  <input type="number" class="form-text-input q-marks-input" data-q-id="${q.question_id}" min="0" max="${maxM}" step="0.5" value="${q.marks !== undefined && q.marks !== null ? q.marks : ''}" placeholder="0 - ${maxM}">
+                </div>
+                <div class="modal-form-group">
+                  <label class="modal-field-label" style="font-size: 11.5px;">Question Feedback</label>
+                  <input type="text" class="form-text-input q-comment-input" data-q-id="${q.question_id}" maxlength="1000" value="${escapeHtml(q.comment || '')}" placeholder="Specific feedback for this answer...">
+                </div>
+              </div>
+            `;
+            el.gradeQuestionsList.appendChild(qItem);
+          });
+        }
+      }
+    } catch (err) {
+      console.error('[EvaluationInbox] openGradeExamModal error:', err);
+      alert('Failed to load submission details: ' + (err.message || 'Unknown database error'));
+      closeGradeExamModal();
+    }
   }
 
   function closeGradeExamModal() {
@@ -6038,12 +6320,28 @@
         return;
       }
 
+      if (overallComment.length > 2000) {
+        alert('Overall comment cannot exceed 2000 characters.');
+        return;
+      }
+
       // Collect question marks & comments
       const answersGrades = [];
       const marksInputs = el.gradeQuestionsList.querySelectorAll('.q-marks-input');
+      let questionMarksValid = true;
+
       marksInputs.forEach(input => {
         const qId = input.getAttribute('data-q-id');
-        const marksVal = input.value !== '' ? parseFloat(input.value) : null;
+        const maxM = parseFloat(input.getAttribute('max') || '100');
+        const val = input.value.trim();
+        const marksVal = val !== '' ? parseFloat(val) : null;
+
+        if (marksVal !== null && (isNaN(marksVal) || marksVal < 0 || marksVal > maxM)) {
+          alert(`Marks for each question must be between 0 and ${maxM}.`);
+          questionMarksValid = false;
+          return;
+        }
+
         const commentInput = el.gradeQuestionsList.querySelector(`.q-comment-input[data-q-id="${qId}"]`);
         const commentVal = commentInput ? commentInput.value.trim() : '';
 
@@ -6053,6 +6351,8 @@
           comment: commentVal
         });
       });
+
+      if (!questionMarksValid) return;
 
       try {
         if (el.saveGradeBtn) {
@@ -6067,9 +6367,12 @@
         showToast('✓ Official exam grade and feedback saved successfully!');
         closeGradeExamModal();
         await renderInstructorExamSubmissions();
+        const isAdmin = isCurrentUserAdmin();
+        const filterProgId = isAdmin ? (instructorExamProgSelected || null) : getProgrammeDbId(currentProgrammeId);
+        updateInstructorExamTabCounts(filterProgId, instructorExamSearch);
       } catch (err) {
         console.error('gradeExam error:', err);
-        alert(`Error grading exam: ${err.message}`);
+        alert(`Error grading exam: ${err.message || 'Database rejected grade entry.'}`);
       } finally {
         if (el.saveGradeBtn) {
           el.saveGradeBtn.disabled = false;
@@ -6079,13 +6382,12 @@
     });
   }
 
-
-
   // Allow Exam Retake (Instructor / Admin action)
   if (el.allowRetakeBtn) {
     el.allowRetakeBtn.addEventListener('click', async () => {
       if (!activeGradingSub) return;
-      if (!confirm(`Are you sure you want to allow an exam retake for ${activeGradingSub.profiles?.full_name || 'this learner'}? This will unlock their examination screen.`)) {
+      const targetName = activeGradingSub.learner_name || activeGradingSub.profiles?.full_name || 'this learner';
+      if (!confirm(`Are you sure you want to allow an exam retake for ${targetName}? This will unlock their examination screen.`)) {
         return;
       }
 
@@ -6097,6 +6399,9 @@
         showToast('✓ Exam retake permitted for this learner.');
         closeGradeExamModal();
         await renderInstructorExamSubmissions();
+        const isAdmin = isCurrentUserAdmin();
+        const filterProgId = isAdmin ? (instructorExamProgSelected || null) : getProgrammeDbId(currentProgrammeId);
+        updateInstructorExamTabCounts(filterProgId, instructorExamSearch);
       } catch (err) {
         console.error('allowExamRetake error:', err);
         alert(`Error permitting retake: ${err.message}`);
@@ -9237,9 +9542,9 @@
       }
     }
 
-    // Determine if learner has any completed quizzes
+    // Determine if learner has any completed quizzes or exam submissions
     const completedQuizRows = (serverGrades || []).filter(g => g.score !== null && g.total > 0);
-    const hasAnyGrades = completedQuizRows.length > 0;
+    const hasAnyGrades = completedQuizRows.length > 0 || (examSubmission && (examSubmission.status === 'submitted' || examSubmission.status === 'graded'));
 
     // A. Quiz Average Display
     if (hasAnyGrades) {
@@ -9336,6 +9641,53 @@
           el.gradeTableBody.appendChild(tr);
         }
       });
+
+      // Append Written Exam Row to Official Academic Record
+      if (examSubmission && (examSubmission.status === 'submitted' || examSubmission.status === 'graded')) {
+        const isGraded = examSubmission.status === 'graded';
+        const examGradeText = isGraded
+          ? (examSubmission.grade ? `${examSubmission.grade} (${examSubmission.score}%)` : `${examSubmission.score}%`)
+          : 'Under Review';
+        const examStatusLabel = isGraded ? 'Graded' : 'Submitted';
+
+        if (el.gradeTableBody) {
+          const examTr = document.createElement('tr');
+          examTr.style.borderBottom = '1px solid var(--border-subtle)';
+          examTr.style.background = 'rgba(0, 165, 68, 0.04)';
+          examTr.innerHTML = `
+            <td style="padding: 10px 12px;"><strong>Final Written Examination</strong></td>
+            <td style="padding: 10px 12px;">End-of-Programme Written Assessment</td>
+            <td style="padding: 10px 12px;"><span class="grade-badge-cell" style="color: var(--accent-light); font-weight: 700;">${examGradeText}</span></td>
+            <td style="padding: 10px 12px;"><span class="exam-status-tag submitted">${examStatusLabel}</span></td>
+          `;
+          el.gradeTableBody.appendChild(examTr);
+        }
+      }
+
+      // Display Qualitative Feedback Card
+      if (el.gradeWrittenExamFeedback) {
+        if (examSubmission && examSubmission.status === 'graded') {
+          el.gradeWrittenExamFeedback.style.display = 'block';
+          if (el.gradeWrittenExamScoreBadge) {
+            el.gradeWrittenExamScoreBadge.textContent = examSubmission.grade
+              ? `${examSubmission.grade} (${examSubmission.score}%)`
+              : `${examSubmission.score}%`;
+          }
+          if (el.gradeWrittenExamCommentText) {
+            el.gradeWrittenExamCommentText.textContent = examSubmission.instructor_comment || 'No specific instructor comment recorded.';
+          }
+        } else if (examSubmission && examSubmission.status === 'submitted') {
+          el.gradeWrittenExamFeedback.style.display = 'block';
+          if (el.gradeWrittenExamScoreBadge) {
+            el.gradeWrittenExamScoreBadge.textContent = 'Submitted · Under Review';
+          }
+          if (el.gradeWrittenExamCommentText) {
+            el.gradeWrittenExamCommentText.textContent = 'Your responses have been securely submitted to your instructor. Once officially evaluated, your grade and qualitative review will be detailed here.';
+          }
+        } else {
+          el.gradeWrittenExamFeedback.style.display = 'none';
+        }
+      }
     }
 
     // 2. Instructor & Admin Cohort Roster Table Section
@@ -9890,7 +10242,7 @@
                   email: user.email,
                   name: user.name,
                   online_at: new Date().toISOString()
-                }).catch(() => {});
+                }).catch(() => { });
               }
             }
           }, 45000);
@@ -10840,6 +11192,10 @@
       el.navAdmin.style.display = isAdmin ? 'flex' : 'none';
     }
 
+    if (typeof updateJdPermissionsUI === 'function') {
+      updateJdPermissionsUI();
+    }
+
     if (el.programmeSelect) {
       if (isAdmin) {
         el.programmeSelect.disabled = false;
@@ -11389,69 +11745,98 @@
     return false;
   }
 
+  // Only Admins, HR staff, and HR Interns are authorized to access the Job Descriptions (JDs) section
+  function isAuthorizedForJdSection() {
+    // 1. Admin check
+    if (isCurrentUserAdmin()) return true;
+
+    const role = (state?.profile?.role || '').toLowerCase().trim();
+    const position = (state?.profile?.position || '').toLowerCase().trim();
+    const email = (state?.profile?.email || '').toLowerCase().trim();
+    const progKey = (currentProgrammeId || '').toLowerCase().trim();
+
+    if (role === 'admin' || email === 'admin.ikaaiindia@gmail.com' || email.includes('admin@') || email.startsWith('admin.')) {
+      return true;
+    }
+
+    // Non-HR intern roles/positions must NEVER see JDs
+    if (
+      position.includes('data analyst') ||
+      position.includes('research') ||
+      position.includes('design') ||
+      position.includes('graphic') ||
+      position.includes('partnership') ||
+      position.includes('business development') ||
+      position.includes('policy')
+    ) {
+      return false;
+    }
+
+    // If active track/programme is NOT HR, non-admins cannot access JDs
+    if (progKey && !progKey.includes('hr') && !progKey.includes('human-resources')) {
+      return false;
+    }
+
+    // 2. HR staff check (role or staff position)
+    if (role === 'hr' || role === 'hr_admin' || role === 'hr and admin') {
+      return true;
+    }
+    if (position.includes('hr and admin') || position.includes('hr associate') || position.includes('hr manager') || position.includes('human resources associate')) {
+      return true;
+    }
+
+    // 3. HR Intern check (position must explicitly be HR Intern / Human Resources Intern)
+    if (position === 'hr intern' || position === 'human resources intern' || position.includes('hr intern') || position.includes('human resources intern')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Update UI visibility for JDs section across sidebar, dropdown, and module cards
+  function updateJdPermissionsUI() {
+    const canSee = isAuthorizedForJdSection();
+    if (canSee) {
+      document.body.classList.add('can-view-jds');
+      if (el.navJobDescriptions) el.navJobDescriptions.style.display = 'flex';
+      const dropdownJd = document.getElementById('dropdownJdBtn');
+      if (dropdownJd) dropdownJd.style.display = 'flex';
+      const progJdCard = document.getElementById('programmeJdsCard');
+      if (progJdCard) progJdCard.style.display = 'block';
+    } else {
+      document.body.classList.remove('can-view-jds');
+      if (el.navJobDescriptions) el.navJobDescriptions.style.display = 'none';
+      const dropdownJd = document.getElementById('dropdownJdBtn');
+      if (dropdownJd) dropdownJd.style.display = 'none';
+      const progJdCard = document.getElementById('programmeJdsCard');
+      if (progJdCard) progJdCard.style.display = 'none';
+    }
+    if (el.sidebarJdCountBadge) {
+      const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
+      el.sidebarJdCountBadge.textContent = allJds.length;
+    }
+  }
+
   function getUserAssignedJds() {
     const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
-    if (isCurrentUserAdmin()) {
+    // Only Admins, HR, and HR Interns can see JDs, and they see all JDs
+    if (isAuthorizedForJdSection()) {
       return allJds;
     }
-
-    const currentProg = (currentProgrammeId || '').toLowerCase().trim();
-    const userPos = (state.profile?.position || '').toLowerCase().trim();
-    const progName = (state.profile?.programmeName || '').toLowerCase().trim();
-
-    // 1. Direct match by jd.id with currentProgrammeId (e.g. 'data-analyst-intern', 'hr-intern', etc.)
-    let target = allJds.find(jd => jd.id.toLowerCase() === currentProg);
-
-    // 2. Exact or specific match by position (avoid generic 'intern')
-    if (!target && userPos && userPos !== 'intern') {
-      target = allJds.find(jd => jd.id.toLowerCase() === userPos || jd.title.toLowerCase() === userPos);
-      if (!target) {
-        if (userPos.includes('data analyst')) target = allJds.find(j => j.id === 'data-analyst-intern');
-        else if (userPos.includes('hr and admin') || userPos.includes('hr & admin')) target = allJds.find(j => j.id === 'hr-and-admin');
-        else if (userPos.includes('hr intern') || userPos.includes('human resources')) target = allJds.find(j => j.id === 'hr-intern');
-        else if (userPos.includes('sr') && userPos.includes('research')) target = allJds.find(j => j.id === 'sr-research-associate');
-        else if (userPos.includes('executive')) target = allJds.find(j => j.id === 'research-executive');
-        else if (userPos.includes('assistant')) target = allJds.find(j => j.id === 'research-assistant');
-        else if (userPos.includes('trainee')) target = allJds.find(j => j.id === 'research-trainee');
-        else if (userPos.includes('associate') && userPos.includes('research')) target = allJds.find(j => j.id === 'research-associate');
-        else if (userPos.includes('research intern')) target = allJds.find(j => j.id === 'research-intern');
-        else if (userPos.includes('graphic') || userPos.includes('social media') || userPos.includes('design')) target = allJds.find(j => j.id === 'social-media-design-intern');
-        else if (userPos.includes('partnership') || userPos.includes('business development') || userPos.includes('bd')) target = allJds.find(j => j.id === 'associate-partnerships-bd');
-      }
-    }
-
-    // 3. Match using JD_PROGRAMME_MAP
-    if (!target && typeof JD_PROGRAMME_MAP !== 'undefined' && JD_PROGRAMME_MAP[currentProg]) {
-      const meta = JD_PROGRAMME_MAP[currentProg];
-      target = allJds.find(jd => jd.id.toLowerCase() === currentProg || jd.title.toLowerCase() === meta.title.toLowerCase());
-    }
-
-    // 4. Match using track prefix or programmeName
-    if (!target) {
-      if (currentProg.includes('data') || progName.includes('data')) {
-        target = allJds.find(j => j.id === 'data-analyst-intern');
-      } else if (currentProg.includes('research') || progName.includes('research') || progName.includes('policy')) {
-        target = allJds.find(j => j.id === 'research-intern');
-      } else if (currentProg.includes('design') || progName.includes('design') || progName.includes('media')) {
-        target = allJds.find(j => j.id === 'social-media-design-intern');
-      } else if (currentProg.includes('bd') || progName.includes('business') || progName.includes('partnership')) {
-        target = allJds.find(j => j.id === 'associate-partnerships-bd');
-      } else {
-        target = allJds.find(j => j.id === 'hr-intern');
-      }
-    }
-
-    return target ? [target] : (allJds.length > 0 ? [allJds[0]] : []);
+    return [];
   }
 
   function renderJobDescriptionsScreen() {
     if (!el.jdsCardsGrid) return;
-    const availableJds = getUserAssignedJds();
-    const isAdmin = isCurrentUserAdmin();
+    if (!isAuthorizedForJdSection()) {
+      if (el.jdsScreenView) el.jdsScreenView.style.display = 'none';
+      switchScreen('module');
+      return;
+    }
+    const availableJds = window.IKAAI_JOB_DESCRIPTIONS || [];
 
-    // Filter by category and search keyword (interns see their assigned JD directly)
+    // Filter by category and search keyword (authorized users see all JDs)
     const filtered = availableJds.filter(jd => {
-      if (!isAdmin) return true;
       const matchCat = (activeJdCategory === 'All') || (jd.category === activeJdCategory);
       if (!matchCat) return false;
       if (!jdSearchQuery) return true;
@@ -11464,38 +11849,30 @@
     });
 
     if (el.jdVisibleCount) {
-      if (isAdmin) {
-        el.jdVisibleCount.textContent = `Showing ${filtered.length} of ${availableJds.length} role specifications`;
-      } else {
-        el.jdVisibleCount.textContent = `Your assigned role specification (${availableJds.length})`;
-      }
+      el.jdVisibleCount.textContent = `Showing ${filtered.length} of ${availableJds.length} role specifications`;
     }
 
     if (el.sidebarJdCountBadge) {
       el.sidebarJdCountBadge.textContent = availableJds.length;
     }
 
-    // Render filter chips
+    // Render filter chips for all role categories
     if (el.jdFilterChips) {
-      if (!isAdmin || availableJds.length <= 1) {
-        el.jdFilterChips.style.display = 'none';
-      } else {
-        el.jdFilterChips.style.display = 'flex';
-        const categories = ['All', 'Research', 'HR & Admin', 'Data Analyst', 'Business Development', 'Social Media & Design'];
-        el.jdFilterChips.innerHTML = '';
-        categories.forEach(cat => {
-          const count = cat === 'All' ? availableJds.length : availableJds.filter(j => j.category === cat).length;
-          const chip = document.createElement('button');
-          chip.className = `filter-chip ${activeJdCategory === cat ? 'active' : ''}`;
-          chip.type = 'button';
-          chip.textContent = `${cat} (${count})`;
-          chip.onclick = () => {
-            activeJdCategory = cat;
-            renderJobDescriptionsScreen();
-          };
-          el.jdFilterChips.appendChild(chip);
-        });
-      }
+      el.jdFilterChips.style.display = 'flex';
+      const categories = ['All', 'Research', 'HR & Admin', 'Data Analyst', 'Business Development', 'Social Media & Design'];
+      el.jdFilterChips.innerHTML = '';
+      categories.forEach(cat => {
+        const count = cat === 'All' ? availableJds.length : availableJds.filter(j => j.category === cat).length;
+        const chip = document.createElement('button');
+        chip.className = `filter-chip ${activeJdCategory === cat ? 'active' : ''}`;
+        chip.type = 'button';
+        chip.textContent = `${cat} (${count})`;
+        chip.onclick = () => {
+          activeJdCategory = cat;
+          renderJobDescriptionsScreen();
+        };
+        el.jdFilterChips.appendChild(chip);
+      });
     }
 
     // Render cards
@@ -11544,9 +11921,12 @@
     });
   }
 
-  
-
   function openJdDetailById(jdId) {
+    if (!isAuthorizedForJdSection()) {
+      showToast('Access restricted: Only Admins, HR, and HR Interns can view Job Descriptions.');
+      switchScreen('module');
+      return;
+    }
     const allJds = window.IKAAI_JOB_DESCRIPTIONS || [];
     const jd = allJds.find(j => j.id === jdId);
     if (!jd) return;
@@ -11565,7 +11945,7 @@
 
       const backText = document.getElementById('backToJdsText');
       if (backText) {
-        backText.textContent = isCurrentUserAdmin() ? 'Back to all Job Descriptions' : 'Back to Programme Modules';
+        backText.textContent = 'Back to all Job Descriptions';
       }
     }
 
@@ -11577,22 +11957,26 @@
 
   function renderProgrammeJds(progId) {
     if (!el.programmeJdsChipsList) return;
+    const canSee = isAuthorizedForJdSection();
+    const progCard = document.getElementById('programmeJdsCard');
+    if (progCard) {
+      progCard.style.display = canSee ? 'block' : 'none';
+    }
+    if (!canSee) return;
+
     el.programmeJdsChipsList.innerHTML = '';
-    const jdsToRender = getUserAssignedJds();
-    const isAdmin = isCurrentUserAdmin();
+    const jdsToRender = window.IKAAI_JOB_DESCRIPTIONS || [];
 
     const titleEl = document.getElementById('programmeJdsCardTitle');
     const descEl = document.getElementById('programmeJdsCardDesc');
     if (titleEl) {
-      titleEl.textContent = isAdmin ? 'Programme Roles & JDs' : 'Your Role Specification';
+      titleEl.textContent = 'Programme Roles & JDs';
     }
     if (descEl) {
-      descEl.textContent = isAdmin
-        ? 'Official role specifications across all programme tracks (11 JDs).'
-        : 'Official role specification for your assigned track.';
+      descEl.textContent = 'Official role specifications across all programme tracks (11 JDs).';
     }
     if (el.viewAllJdsFromModBtn) {
-      el.viewAllJdsFromModBtn.textContent = isAdmin ? 'View all 11 JDs →' : 'View Role Spec →';
+      el.viewAllJdsFromModBtn.textContent = 'View all 11 JDs →';
     }
 
     if (jdsToRender.length === 0) {
@@ -11615,17 +11999,10 @@
     });
   }
 
-
-
   // JD detail back, print, and search events
   if (el.backToJdsBtn) {
     el.backToJdsBtn.addEventListener('click', () => {
-      const isAdm = isCurrentUserAdmin();
-      if (!isAdm) {
-        switchScreen('module');
-      } else {
-        resetJdViewToGallery();
-      }
+      resetJdViewToGallery();
     });
   }
 
@@ -11635,12 +12012,11 @@
 
   if (el.viewAllJdsFromModBtn) {
     el.viewAllJdsFromModBtn.addEventListener('click', () => {
-      const assigned = getUserAssignedJds();
-      if (!isCurrentUserAdmin() && assigned.length === 1) {
-        openJdDetailById(assigned[0].id);
-      } else {
+      if (isAuthorizedForJdSection()) {
         resetJdViewToGallery();
         switchScreen('jobDescriptions');
+      } else {
+        showToast('Access restricted: Only Admins, HR, and HR Interns can view Job Descriptions.');
       }
     });
   }
@@ -14021,6 +14397,10 @@
       localStorage.setItem('ikaai_portal_session', JSON.stringify(userData));
     }
 
+    try {
+      document.documentElement.classList.add('has-portal-session');
+    } catch (e) { }
+
     if (userData.id) state.profile.id = userData.id;
     if (userData.name) state.profile.name = userData.name;
     if (userData.email) state.profile.email = userData.email;
@@ -14040,15 +14420,35 @@
       state.profile.initials = parts[0].substring(0, 2).toUpperCase();
     }
 
+    // Reset Google button in case it was showing "Completing Google sign-in..."
+    isGoogleAuthInProgress = false;
+    if (el.googleAuthBtn) {
+      el.googleAuthBtn.style.pointerEvents = '';
+      el.googleAuthBtn.style.opacity = '';
+      const btnSpan = el.googleAuthBtn.querySelector('span');
+      if (btnSpan) btnSpan.textContent = 'Continue with Google';
+    }
+
     // INSTANT UI RENDERING: Show appShell immediately, hide authScreen (< 5ms)
-    if (el.authScreen) el.authScreen.style.display = 'none';
-    if (el.appShell) el.appShell.style.display = 'flex';
+    if (el.authScreen) {
+      el.authScreen.style.removeProperty('display');
+      el.authScreen.style.display = 'none';
+    }
+    if (el.appShell) {
+      el.appShell.style.removeProperty('display');
+      el.appShell.style.display = 'flex';
+    }
     updateUserAvatarUI();
+    if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
     renderSidebar();
     if (activeScreen === 'module') {
       renderModulePage();
     } else if (activeScreen === 'jobDescriptions') {
-      renderJobDescriptionsScreen();
+      if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
+        renderJobDescriptionsScreen();
+      } else {
+        switchScreen('module');
+      }
     }
 
     // Background verification and curriculum synchronization (non-blocking)
@@ -14067,6 +14467,7 @@
 
           // 1. Access Pending: Gating screen active until approved by Admin
           if (accessStatus === 'pending') {
+            try { document.documentElement.classList.remove('has-portal-session'); } catch (e) { }
             if (el.pendingUserEmail) el.pendingUserEmail.textContent = userEmail || '--';
             if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'flex';
             if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
@@ -14077,6 +14478,7 @@
 
           // 2. Access Revoked: User account has been deactivated by Admin
           if (accessStatus === 'revoked') {
+            try { document.documentElement.classList.remove('has-portal-session'); } catch (e) { }
             if (el.revokedUserEmail) el.revokedUserEmail.textContent = userEmail || '--';
             if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'flex';
             if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
@@ -14088,6 +14490,15 @@
           // 3. Active User: Hide gating screens and configure portal
           if (el.accessPendingScreen) el.accessPendingScreen.style.display = 'none';
           if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
+          try { document.documentElement.classList.add('has-portal-session'); } catch (e) { }
+          if (el.authScreen) {
+            el.authScreen.style.removeProperty('display');
+            el.authScreen.style.display = 'none';
+          }
+          if (el.appShell) {
+            el.appShell.style.removeProperty('display');
+            el.appShell.style.display = 'flex';
+          }
 
           const profile = await window.DataLayer.getProfile(userData.id);
           if (profile) {
@@ -14107,9 +14518,16 @@
 
           saveState();
           updateUserAvatarUI();
+          if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
           renderSidebar();
           if (activeScreen === 'module') renderModulePage();
-          if (activeScreen === 'jobDescriptions') renderJobDescriptionsScreen();
+          if (activeScreen === 'jobDescriptions') {
+            if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
+              renderJobDescriptionsScreen();
+            } else {
+              switchScreen('module');
+            }
+          }
         } catch (err) {
           console.warn('[DataLayer] Auth profile background load error:', err);
         }
@@ -14127,6 +14545,15 @@
         }
       }
 
+      // Start Supabase Realtime for exam submissions
+      if (typeof setupExamSubmissionsRealtime === 'function') {
+        try {
+          setupExamSubmissionsRealtime();
+        } catch (examErr) {
+          console.warn('[ExamRealtime] Startup note:', examErr);
+        }
+      }
+
       // Sync curriculum live from database
       syncCurriculumFromBackend();
     })();
@@ -14137,6 +14564,14 @@
       document.documentElement.classList.remove('has-portal-session');
       document.body.classList.remove('is-admin');
     } catch (e) { }
+
+    isGoogleAuthInProgress = false;
+    if (el.googleAuthBtn) {
+      el.googleAuthBtn.style.pointerEvents = '';
+      el.googleAuthBtn.style.opacity = '';
+      const btnSpan = el.googleAuthBtn.querySelector('span');
+      if (btnSpan) btnSpan.textContent = 'Continue with Google';
+    }
 
     if (typeof cleanupSupportInbox === 'function') cleanupSupportInbox();
 
@@ -14163,12 +14598,13 @@
     if (el.accessRevokedScreen) el.accessRevokedScreen.style.display = 'none';
     if (el.userDropdownCard) el.userDropdownCard.style.display = 'none';
 
-    // Strictly enforce hiding appShell and showing authScreen with !important
     if (el.appShell) {
-      el.appShell.style.setProperty('display', 'none', 'important');
+      el.appShell.style.removeProperty('display');
+      el.appShell.style.display = 'none';
     }
     if (el.authScreen) {
-      el.authScreen.style.setProperty('display', 'flex', 'important');
+      el.authScreen.style.removeProperty('display');
+      el.authScreen.style.display = 'flex';
     }
   }
 
@@ -14209,12 +14645,26 @@
           if (userEmail !== 'admin.ikaaiindia@gmail.com' && state.profile.role === 'admin') {
             state.profile.role = 'Intern';
           }
-          if (el.authScreen) el.authScreen.style.display = 'none';
-          if (el.appShell) el.appShell.style.display = 'flex';
+          try { document.documentElement.classList.add('has-portal-session'); } catch (e) { }
+          if (el.authScreen) {
+            el.authScreen.style.removeProperty('display');
+            el.authScreen.style.display = 'none';
+          }
+          if (el.appShell) {
+            el.appShell.style.removeProperty('display');
+            el.appShell.style.display = 'flex';
+          }
           updateUserAvatarUI();
+          if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
           renderSidebar();
           if (activeScreen === 'module') renderModulePage();
-          if (activeScreen === 'jobDescriptions') renderJobDescriptionsScreen();
+          if (activeScreen === 'jobDescriptions') {
+            if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
+              renderJobDescriptionsScreen();
+            } else {
+              switchScreen('module');
+            }
+          }
         }
       } catch (e) { }
     }
@@ -14268,23 +14718,62 @@
               if (btnSpan) btnSpan.textContent = 'Completing Google sign-in...';
             }
             try {
-              const { data: exData, error: exErr } = await window.supabaseClient.auth.exchangeCodeForSession(oauthCode);
-              if (exErr) {
-                console.warn('[Auth] Explicit exchangeCodeForSession notice:', exErr);
-              } else if (exData?.session?.user) {
-                const u = exData.session.user;
-                const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
-                handleSuccessfulAuth({
+              let authUser = null;
+              // 1. Try explicit exchangeCodeForSession
+              try {
+                const { data: exData, error: exErr } = await window.supabaseClient.auth.exchangeCodeForSession(oauthCode);
+                if (exData?.session?.user) {
+                  authUser = exData.session.user;
+                } else if (exErr) {
+                  console.warn('[Auth] Explicit exchangeCodeForSession notice:', exErr);
+                }
+              } catch (exException) {
+                console.warn('[Auth] Exception during code exchange:', exException);
+              }
+
+              // 2. Fallback check for session (in case detectSessionInUrl handled exchange in background)
+              if (!authUser) {
+                for (let attempt = 0; attempt < 5; attempt++) {
+                  const { data: sData } = await window.supabaseClient.auth.getSession();
+                  if (sData?.session?.user) {
+                    authUser = sData.session.user;
+                    break;
+                  }
+                  await new Promise(res => setTimeout(res, 200));
+                }
+              }
+
+              if (authUser) {
+                const name = authUser.user_metadata?.full_name || authUser.user_metadata?.name || authUser.email.split('@')[0];
+                await handleSuccessfulAuth({
                   name,
-                  email: u.email,
-                  id: u.id
+                  email: authUser.email,
+                  id: authUser.id
                 }, true);
                 const cleanUrl = window.location.origin + window.location.pathname;
                 window.history.replaceState({}, document.title, cleanUrl);
                 return;
+              } else {
+                if (el.googleAuthBtn) {
+                  el.googleAuthBtn.style.pointerEvents = '';
+                  el.googleAuthBtn.style.opacity = '';
+                  const btnSpan = el.googleAuthBtn.querySelector('span');
+                  if (btnSpan) btnSpan.textContent = 'Continue with Google';
+                }
+                isGoogleAuthInProgress = false;
+                showAuthError('Google sign-in could not be completed. Please try again.');
+                window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
               }
             } catch (exException) {
               console.warn('[Auth] Exception during code exchange:', exException);
+              if (el.googleAuthBtn) {
+                el.googleAuthBtn.style.pointerEvents = '';
+                el.googleAuthBtn.style.opacity = '';
+                const btnSpan = el.googleAuthBtn.querySelector('span');
+                if (btnSpan) btnSpan.textContent = 'Continue with Google';
+              }
+              isGoogleAuthInProgress = false;
+              showAuthError('Google sign-in was interrupted. Please try again.');
             }
           }
 
@@ -14302,7 +14791,7 @@
               if (!setErr && setData?.session?.user) {
                 const u = setData.session.user;
                 const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
-                handleSuccessfulAuth({
+                await handleSuccessfulAuth({
                   name,
                   email: u.email,
                   id: u.id
@@ -14316,16 +14805,19 @@
             }
           }
 
-          window.supabaseClient.auth.onAuthStateChange((event, session) => {
+          window.supabaseClient.auth.onAuthStateChange(async (event, session) => {
             console.log('[Auth] onAuthStateChange event:', event, 'user:', session?.user?.email);
             if (session && session.user) {
               const u = session.user;
               const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
-              handleSuccessfulAuth({
+              await handleSuccessfulAuth({
                 name,
                 email: u.email,
                 id: u.id
               }, true);
+              if (window.location.search.includes('code=') || window.location.hash.includes('access_token=')) {
+                window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
+              }
             } else if (event === 'SIGNED_OUT') {
               handleSignOutCleanup();
             }
@@ -14338,7 +14830,7 @@
           } else if (data?.session?.user) {
             const u = data.session.user;
             const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
-            handleSuccessfulAuth({
+            await handleSuccessfulAuth({
               name,
               email: u.email,
               id: u.id
@@ -14362,12 +14854,24 @@
         handleSuccessfulAuth(u, false);
       } catch (e) {
         localStorage.removeItem('ikaai_portal_session');
-        if (el.authScreen) el.authScreen.style.display = 'flex';
-        if (el.appShell) el.appShell.style.display = 'none';
+        if (el.authScreen) {
+          el.authScreen.style.removeProperty('display');
+          el.authScreen.style.display = 'flex';
+        }
+        if (el.appShell) {
+          el.appShell.style.removeProperty('display');
+          el.appShell.style.display = 'none';
+        }
       }
     } else {
-      if (el.authScreen) el.authScreen.style.display = 'flex';
-      if (el.appShell) el.appShell.style.display = 'none';
+      if (el.authScreen) {
+        el.authScreen.style.removeProperty('display');
+        el.authScreen.style.display = 'flex';
+      }
+      if (el.appShell) {
+        el.appShell.style.removeProperty('display');
+        el.appShell.style.display = 'none';
+      }
     }
   }
 
@@ -14742,6 +15246,10 @@
   if (el.dropdownJdBtn) {
     el.dropdownJdBtn.addEventListener('click', () => {
       if (el.userDropdownCard) el.userDropdownCard.style.display = 'none';
+      if (!isAuthorizedForJdSection()) {
+        showToast('Access restricted: Only Admins, HR, and HR Interns can view Job Descriptions.');
+        return;
+      }
       resetJdViewToGallery();
       switchScreen('jobDescriptions');
     });

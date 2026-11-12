@@ -300,10 +300,10 @@
 
     async getExamSubmission(programmeId) {
       const client = getClient();
-      if (isLive()) {
+      if (isLive() && client) {
         try {
           const user = await window.SupabaseClient.getUser();
-          if (user) {
+          if (user?.id) {
             const { data, error } = await client
               .from('exam_submissions')
               .select(`
@@ -325,94 +325,362 @@
 
     async saveExamDraft(programmeId, answers) {
       const client = getClient();
-      if (isLive()) {
-        const { data, error } = await client.rpc('save_exam_draft', {
-          p_programme_id: programmeId,
-          p_answers: answers
-        });
-        if (error) throw error;
-        return data;
+      if (isLive() && client) {
+        try {
+          const { data, error } = await client.rpc('save_exam_draft', {
+            p_programme_id: programmeId,
+            p_answers: answers
+          });
+          if (!error && data) return data;
+        } catch (e) {
+          console.warn('[DataLayer] save_exam_draft notice:', e);
+        }
       }
       return { success: true, status: 'draft', saved_at: new Date().toISOString() };
     },
 
     async submitExam(programmeId, answers) {
       const client = getClient();
-      if (isLive()) {
-        const { data, error } = await client.rpc('submit_exam', {
-          p_programme_id: programmeId,
-          p_answers: answers
-        });
-        if (error) throw error;
-        return data;
+      if (!isLive() || !client) {
+        throw new Error('Database connection is not available. Please verify your connection.');
       }
-      return { status: 'submitted', submitted_at: new Date().toISOString() };
+
+      const QUESTION_UUID_MAP = {
+        'exam_q1': '80000000-0000-0000-0000-000000000001',
+        'exam_q2': '80000000-0000-0000-0000-000000000002',
+        'exam_q3': '80000000-0000-0000-0000-000000000003',
+        'data_exam_q1': '80000000-0000-0000-0000-000000000004',
+        'data_exam_q2': '80000000-0000-0000-0000-000000000005',
+        'data_exam_q3': '80000000-0000-0000-0000-000000000006',
+        'res_exam_q1': '80000000-0000-0000-0000-000000000007',
+        'res_exam_q2': '80000000-0000-0000-0000-000000000008',
+        'res_exam_q3': '80000000-0000-0000-0000-000000000009',
+        'des_exam_q1': '80000000-0000-0000-0000-000000000010',
+        'des_exam_q2': '80000000-0000-0000-0000-000000000011',
+        'des_exam_q3': '80000000-0000-0000-0000-000000000012',
+        'bd_exam_q1': '80000000-0000-0000-0000-000000000013',
+        'bd_exam_q2': '80000000-0000-0000-0000-000000000014',
+        'bd_exam_q3': '80000000-0000-0000-0000-000000000015'
+      };
+
+      const normalizedAnswers = {};
+      if (answers && typeof answers === 'object') {
+        Object.entries(answers).forEach(([k, val]) => {
+          const mappedKey = QUESTION_UUID_MAP[k] || k;
+          normalizedAnswers[mappedKey] = val || '';
+        });
+      }
+
+      // Call server submit_exam RPC
+      const { data, error } = await client.rpc('submit_exam', {
+        p_programme_id: programmeId,
+        p_answers: normalizedAnswers
+      });
+
+      if (error) {
+        console.error('[DataLayer] submit_exam RPC error:', error);
+        throw new Error(error.message || 'Submission failed, please retry.');
+      }
+
+      if (!data || !data.success) {
+        throw new Error('Exam submission could not be verified by the database.');
+      }
+
+      return data;
     },
 
     async allowExamRetake(submissionId) {
       const client = getClient();
-      if (isLive()) {
-        const { data, error } = await client.rpc('allow_exam_retake', {
-          p_submission_id: submissionId
-        });
-        if (error) throw error;
-        return data;
+      if (!isLive() || !client) {
+        throw new Error('Database connection is not available.');
       }
-      return { success: true, allow_retake: true };
+
+      const { data, error } = await client.rpc('allow_exam_retake', {
+        p_submission_id: submissionId
+      });
+
+      if (error) {
+        console.error('[DataLayer] allow_exam_retake error:', error);
+        throw new Error(error.message || 'Failed to permit exam retake.');
+      }
+      return data;
     },
 
     async gradeExam(submissionId, marks, comment, answersGrades = null) {
       const client = getClient();
-      if (isLive()) {
-        const { data, error } = await client.rpc('grade_exam', {
-          p_submission_id: submissionId,
-          p_overall_marks: marks,
-          p_overall_comment: comment,
-          p_answers_grades: answersGrades
-        });
-        if (error) throw error;
-        return data;
+      if (!isLive() || !client) {
+        throw new Error('Database connection is not available.');
       }
-      return { status: 'graded', score: marks };
+
+      if (marks === null || marks === undefined || isNaN(marks) || marks < 0 || marks > 100) {
+        throw new Error('Overall score must be between 0 and 100.');
+      }
+
+      if (comment && comment.length > 2000) {
+        throw new Error('Overall comment cannot exceed 2000 characters.');
+      }
+
+      const { data, error } = await client.rpc('grade_exam', {
+        p_submission_id: submissionId,
+        p_overall_marks: parseFloat(marks),
+        p_overall_comment: comment || '',
+        p_answers_grades: answersGrades || null
+      });
+
+      if (error) {
+        console.error('[DataLayer] grade_exam RPC error:', error);
+        throw new Error(error.message || 'Failed to record official grade.');
+      }
+
+      return data;
+    },
+
+    async listExamSubmissions(programmeId = null, status = null, search = null, limit = 50, offset = 0) {
+      const client = getClient();
+      if (!isLive() || !client) {
+        return { submissions: [], totalCount: 0 };
+      }
+
+      // 1. Primary: Server-side RPC list_exam_submissions()
+      try {
+        const { data, error } = await client.rpc('list_exam_submissions', {
+          p_programme_id: programmeId || null,
+          p_status: status || null,
+          p_search: search || null,
+          p_limit: limit,
+          p_offset: offset
+        });
+
+        if (!error && Array.isArray(data)) {
+          const total = data.length > 0 && data[0].total_count ? parseInt(data[0].total_count, 10) : data.length;
+          const mapped = data.map(row => ({
+            id: row.id,
+            user_id: null,
+            programme_id: row.programme_id,
+            status: row.status,
+            submitted_at: row.submitted_at,
+            grade: row.grade,
+            score: row.score,
+            graded_at: row.graded_at,
+            profiles: {
+              full_name: row.learner_name,
+              email: row.learner_email
+            },
+            programmes: {
+              id: row.programme_id,
+              name: row.programme_name
+            }
+          }));
+          return { submissions: mapped, totalCount: total };
+        } else if (error) {
+          console.warn('[DataLayer] list_exam_submissions RPC notice (falling back):', error.message);
+        }
+      } catch (rpcErr) {
+        console.warn('[DataLayer] list_exam_submissions RPC exception:', rpcErr);
+      }
+
+      // 2. Direct table fallback for live database
+      try {
+        let query = client
+          .from('exam_submissions')
+          .select(`
+            id,
+            user_id,
+            programme_id,
+            status,
+            submitted_at,
+            grade,
+            score,
+            instructor_comment,
+            graded_by,
+            graded_at,
+            allow_retake,
+            profiles:user_id (id, full_name, email, avatar_url),
+            programmes:programme_id (id, name)
+          `, { count: 'exact' })
+          .in('status', ['submitted', 'graded']);
+
+        if (programmeId) {
+          query = query.eq('programme_id', programmeId);
+        }
+
+        const statNorm = (status || '').toLowerCase().trim();
+        if (statNorm === 'pending' || statNorm === 'needs_grading' || statNorm === 'submitted') {
+          query = query.eq('status', 'submitted');
+        } else if (statNorm === 'graded') {
+          query = query.eq('status', 'graded');
+        }
+
+        query = query.order('submitted_at', { ascending: true, nullsFirst: false })
+          .range(offset, offset + limit - 1);
+
+        const { data, count, error } = await query;
+        if (!error && Array.isArray(data)) {
+          let list = data;
+          if (search) {
+            const sLow = search.toLowerCase().trim();
+            list = list.filter(s =>
+              (s.profiles?.full_name && s.profiles.full_name.toLowerCase().includes(sLow)) ||
+              (s.profiles?.email && s.profiles.email.toLowerCase().includes(sLow))
+            );
+          }
+          return { submissions: list, totalCount: count !== null ? count : list.length };
+        }
+      } catch (tableErr) {
+        console.warn('[DataLayer] Direct exam_submissions table query fallback note:', tableErr);
+      }
+
+      // 3. Fallback: get_cohort_grade_roster
+      try {
+        const { data: roster, error: rosterErr } = await client.rpc('get_cohort_grade_roster', {
+          p_programme_id: programmeId || null
+        });
+        if (!rosterErr && Array.isArray(roster)) {
+          let submitted = roster.filter(r => (r.exam_status === 'submitted' || r.exam_status === 'graded') && r.submission_id);
+          const statNorm = (status || '').toLowerCase().trim();
+          if (statNorm === 'pending' || statNorm === 'needs_grading' || statNorm === 'submitted') {
+            submitted = submitted.filter(r => r.exam_status === 'submitted');
+          } else if (statNorm === 'graded') {
+            submitted = submitted.filter(r => r.exam_status === 'graded');
+          }
+          if (search) {
+            const sLow = search.toLowerCase().trim();
+            submitted = submitted.filter(r =>
+              (r.full_name && r.full_name.toLowerCase().includes(sLow)) ||
+              (r.email && r.email.toLowerCase().includes(sLow))
+            );
+          }
+          const total = submitted.length;
+          const paged = submitted.slice(offset, offset + limit);
+          const mapped = paged.map(r => ({
+            id: r.submission_id,
+            user_id: r.user_id,
+            programme_id: r.programme_id,
+            status: r.exam_status,
+            submitted_at: null,
+            grade: r.exam_grade,
+            score: r.exam_score,
+            allow_retake: r.allow_retake,
+            profiles: {
+              full_name: r.full_name,
+              email: r.email,
+              avatar_url: r.avatar_url
+            },
+            programmes: {
+              id: r.programme_id,
+              name: r.programme_name
+            }
+          }));
+          return { submissions: mapped, totalCount: total };
+        }
+      } catch (rosterErr) {
+        console.warn('[DataLayer] get_cohort_grade_roster fallback notice:', rosterErr);
+      }
+
+      return { submissions: [], totalCount: 0 };
+    },
+
+    async getExamSubmissionDetail(submissionId) {
+      const client = getClient();
+      if (!isLive() || !client) {
+        throw new Error('Database connection is not available.');
+      }
+
+      // 1. Primary: Server-side RPC get_exam_submission_detail()
+      try {
+        const { data, error } = await client.rpc('get_exam_submission_detail', {
+          p_submission_id: submissionId
+        });
+        if (!error && data) {
+          return data;
+        } else if (error) {
+          console.warn('[DataLayer] get_exam_submission_detail RPC notice (falling back):', error.message);
+        }
+      } catch (e) {
+        console.warn('[DataLayer] get_exam_submission_detail RPC exception:', e);
+      }
+
+      // 2. Direct query fallback
+      const { data: sub, error: subErr } = await client
+        .from('exam_submissions')
+        .select(`
+          id,
+          user_id,
+          programme_id,
+          status,
+          submitted_at,
+          grade,
+          score,
+          instructor_comment,
+          graded_by,
+          graded_at,
+          allow_retake,
+          profiles:user_id (id, full_name, email, avatar_url),
+          programmes:programme_id (id, name),
+          exam_answers (question_id, answer_text, marks, comment)
+        `)
+        .eq('id', submissionId)
+        .maybeSingle();
+
+      if (subErr || !sub) {
+        throw new Error(subErr?.message || 'Submission not found in database.');
+      }
+
+      let questions = [];
+      try {
+        const { data: qData } = await client
+          .from('exam_questions')
+          .select('*')
+          .eq('programme_id', sub.programme_id)
+          .order('sort_order', { ascending: true });
+        if (qData && qData.length > 0) {
+          const ansMap = {};
+          (sub.exam_answers || []).forEach(a => { ansMap[a.question_id] = a; });
+          questions = qData.map(q => ({
+            question_id: q.id,
+            question_title: q.question,
+            prompt: q.prompt,
+            max_marks: q.max_marks || 25,
+            answer_text: ansMap[q.id]?.answer_text || '',
+            marks: ansMap[q.id]?.marks,
+            comment: ansMap[q.id]?.comment
+          }));
+        }
+      } catch (qErr) { }
+
+      if (questions.length === 0 && sub.exam_answers && sub.exam_answers.length > 0) {
+        questions = sub.exam_answers.map(a => ({
+          question_id: a.question_id,
+          question_title: 'Question',
+          prompt: '',
+          max_marks: 25,
+          answer_text: a.answer_text || '',
+          marks: a.marks,
+          comment: a.comment
+        }));
+      }
+
+      return {
+        id: sub.id,
+        user_id: sub.user_id,
+        programme_id: sub.programme_id,
+        programme_name: sub.programmes?.name || 'Programme',
+        status: sub.status,
+        submitted_at: sub.submitted_at,
+        grade: sub.grade,
+        score: sub.score,
+        instructor_comment: sub.instructor_comment,
+        allow_retake: sub.allow_retake,
+        learner_name: sub.profiles?.full_name || 'Learner',
+        learner_email: sub.profiles?.email || '',
+        learner_avatar: sub.profiles?.avatar_url,
+        questions: questions
+      };
     },
 
     async getInstructorExamSubmissions(programmeId) {
-      const client = getClient();
-      if (isLive()) {
-        try {
-          let query = client
-            .from('exam_submissions')
-            .select(`
-              id,
-              user_id,
-              programme_id,
-              status,
-              submitted_at,
-              grade,
-              score,
-              instructor_comment,
-              graded_by,
-              graded_at,
-              allow_retake,
-              created_at,
-              profiles:user_id (id, full_name, email, avatar_url),
-              programmes:programme_id (id, name),
-              exam_answers (question_id, answer_text, marks, comment)
-            `)
-            .order('submitted_at', { ascending: false, nullsFirst: false });
-
-          if (programmeId) {
-            query = query.eq('programme_id', programmeId);
-          }
-
-          const { data, error } = await query;
-          if (!error && data) return data;
-          if (error) console.warn('[DataLayer] Error loading instructor exam submissions:', error);
-        } catch (e) {
-          console.warn('[DataLayer] getInstructorExamSubmissions exception:', e);
-        }
-      }
-      return [];
+      const res = await this.listExamSubmissions(programmeId, null, null, 100, 0);
+      return res.submissions;
     },
 
     async getCohortGradeRoster(programmeId) {
@@ -813,7 +1081,7 @@
         try {
           const { data: { user }, error } = await client.auth.getUser();
           if (!error && user) return user;
-        } catch (e) {}
+        } catch (e) { }
       }
       return null;
     },
@@ -844,12 +1112,12 @@
             return parsed.data;
           }
         }
-      } catch (e) {}
+      } catch (e) { }
 
       const cacheAndReturn = (res) => {
         try {
           sessionStorage.setItem(cacheKey, JSON.stringify({ data: res, ts: Date.now() }));
-        } catch (e) {}
+        } catch (e) { }
         return res;
       };
 
@@ -896,14 +1164,14 @@
                   programme_id: inv.programme_id,
                   updated_at: new Date().toISOString()
                 }, { onConflict: 'id' });
-              } catch (updErr) {}
+              } catch (updErr) { }
 
               try {
                 await client.from('access_invites').update({
                   status: 'active',
                   activated_at: new Date().toISOString()
                 }).eq('id', inv.id);
-              } catch (invUpdErr) {}
+              } catch (invUpdErr) { }
             }
 
             return cacheAndReturn({
@@ -940,7 +1208,7 @@
           if (prof && prof.access_status === 'revoked') {
             return cacheAndReturn({ accessStatus: 'revoked' });
           }
-        } catch (profErr) {}
+        } catch (profErr) { }
       }
 
       // 4. User was NOT pre-added by admin and has not been approved -> Pending Approval
@@ -953,7 +1221,7 @@
             role: 'learner',
             updated_at: new Date().toISOString()
           }, { onConflict: 'id' });
-        } catch (e) {}
+        } catch (e) { }
       }
       return cacheAndReturn({ accessStatus: 'pending', preInvited: false });
     },
@@ -996,12 +1264,12 @@
                         role: data.role === 'intern' ? 'learner' : data.role,
                         programme_id: data.programme_id,
                         updated_at: new Date().toISOString()
-                      }).eq('id', uid).then(() => {}).catch(() => {});
+                      }).eq('id', uid).then(() => { }).catch(() => { });
 
                       client.from('access_invites').update({
                         status: 'active',
                         activated_at: new Date().toISOString()
-                      }).eq('id', inv.id).then(() => {}).catch(() => {});
+                      }).eq('id', inv.id).then(() => { }).catch(() => { });
                     }
                   }
                 } catch (invErr) {
@@ -1218,7 +1486,7 @@
           if (!list.includes(em)) list.push(em);
         }
         localStorage.setItem('ikaai_admin_deleted_users', JSON.stringify(list));
-      } catch (e) {}
+      } catch (e) { }
     },
 
     async adminListAccessInvites() {
@@ -1244,7 +1512,7 @@
         let customPosMap = {};
         try {
           customPosMap = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
-        } catch (e) {}
+        } catch (e) { }
 
         const resolvedId = r.profile_id || r.id || r.user_id || r.invite_id;
         const resolvedName = r.profile_name || r.full_name || r.display_name || '';
@@ -1385,7 +1653,7 @@
           const map = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
           map[cleanEmail] = position;
           localStorage.setItem('ikaai_custom_positions', JSON.stringify(map));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Un-delete from local registry if previously marked deleted
@@ -1395,7 +1663,7 @@
           const list = JSON.parse(raw).filter(item => String(item).toLowerCase().trim() !== cleanEmail);
           localStorage.setItem('ikaai_admin_deleted_users', JSON.stringify(list));
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // 1. Try official RPC first
       try {
@@ -1416,7 +1684,7 @@
               if (p && p.id) {
                 await client.from('profiles').update({ position: position }).eq('id', p.id);
               }
-            } catch (e) {}
+            } catch (e) { }
           }
           return data;
         }
@@ -1505,7 +1773,7 @@
           const map = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
           map[cleanEmail] = position;
           localStorage.setItem('ikaai_custom_positions', JSON.stringify(map));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Attempt official RPC first (works when user is registered in profiles)
@@ -1520,7 +1788,7 @@
             if (position) {
               try {
                 await client.from('profiles').update({ position: position }).eq('id', userId);
-              } catch (e) {}
+              } catch (e) { }
             }
             if (cleanEmail) {
               try {
@@ -1528,7 +1796,7 @@
                   role: cleanRole,
                   programme_id: cleanProg
                 }).ilike('email', cleanEmail);
-              } catch (e) {}
+              } catch (e) { }
             }
             return data;
           }
@@ -1566,7 +1834,7 @@
               const map = JSON.parse(localStorage.getItem('ikaai_custom_positions') || '{}');
               map[userEm] = position;
               localStorage.setItem('ikaai_custom_positions', JSON.stringify(map));
-            } catch (e) {}
+            } catch (e) { }
           }
           if (userEm) {
             try {
@@ -1841,8 +2109,8 @@
       const list = await this.adminListAccessInvites();
       if (!searchQuery) return list;
       const q = searchQuery.toLowerCase();
-      return list.filter(u => 
-        (u.email && u.email.toLowerCase().includes(q)) || 
+      return list.filter(u =>
+        (u.email && u.email.toLowerCase().includes(q)) ||
         (u.profile_name && u.profile_name.toLowerCase().includes(q))
       );
     },
@@ -2163,7 +2431,7 @@
             let res = data;
             if (search && search.trim()) {
               const s = search.trim().toLowerCase();
-              res = res.filter(d => 
+              res = res.filter(d =>
                 (d.title || "").toLowerCase().includes(s) ||
                 (d.description || "").toLowerCase().includes(s) ||
                 (d.category || "").toLowerCase().includes(s)
@@ -2336,7 +2604,7 @@
             let res = data;
             if (search && search.trim()) {
               const s = search.trim().toLowerCase();
-              res = res.filter(d => 
+              res = res.filter(d =>
                 (d.title || "").toLowerCase().includes(s) ||
                 (d.description || "").toLowerCase().includes(s) ||
                 (d.category || "").toLowerCase().includes(s) ||
@@ -2828,7 +3096,7 @@
           if (!resolvedId || resolvedId === 'u-anon') resolvedId = authUser.id;
           if (!resolvedName) resolvedName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0];
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // Normalize sender_role to satisfy PostgreSQL constraint: check (sender_role in ('learner', 'instructor', 'admin'))
       const normalizeRole = (role) => {
