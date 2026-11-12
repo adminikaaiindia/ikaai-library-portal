@@ -6540,31 +6540,61 @@
     return [];
   }
 
-  // Purge any stored dummy support threads across all programmes from localStorage
+  function isDummySupportThread(t) {
+    if (!t) return true;
+    const id = String(t.id || '').toLowerCase();
+    const subj = String(t.subject || '').toLowerCase();
+    const preview = String(t.last_message_preview || '').toLowerCase();
+    if (id.includes('seed')) return true;
+    if (subj.includes('rfp scoring') || subj.includes('client deliverable') || subj.includes('case study')) return true;
+    if (preview.includes('rfp evaluation') || preview.includes('docx and pdf') || preview.includes('case studies')) return true;
+    if (Array.isArray(t.messages)) {
+      if (t.messages.some(m => {
+        const body = String(m.body || '').toLowerCase();
+        return body.includes('rfp scoring') || body.includes('rfp evaluation') || body.includes('docx and pdf') || body.includes('case study annexure') || body.includes('sudha maam');
+      })) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Purge any stored dummy support threads across ALL localStorage keys
   function purgeAllDummySupportThreads() {
     try {
-      const progKeys = ['hr', 'data', 'research', 'design', 'bd'];
-      progKeys.forEach(pKey => {
-        const key = 'ikaai_support_threads_' + pKey;
-        const raw = localStorage.getItem(key);
-        if (raw) {
-          try {
+      const keysToClean = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('ikaai_support_threads') || k.includes('support_thread') || k.includes('active_support_thread'))) {
+          keysToClean.push(k);
+        }
+      }
+      keysToClean.forEach(key => {
+        try {
+          if (key === 'ikaai_active_support_thread') {
+            const val = String(localStorage.getItem(key) || '').toLowerCase();
+            if (val.includes('seed')) localStorage.removeItem(key);
+            return;
+          }
+          const raw = localStorage.getItem(key);
+          if (raw) {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
-              const cleaned = parsed.filter(t => t && t.id && !String(t.id).startsWith('thread_seed_') && !String(t.id).includes('seed'));
-              if (cleaned.length !== parsed.length) {
-                if (cleaned.length > 0) {
-                  localStorage.setItem(key, JSON.stringify(cleaned));
-                } else {
-                  localStorage.removeItem(key);
-                }
+              const cleaned = parsed.filter(t => !isDummySupportThread(t));
+              if (cleaned.length > 0) {
+                localStorage.setItem(key, JSON.stringify(cleaned));
+              } else {
+                localStorage.removeItem(key);
               }
             }
-          } catch (e) { }
-        }
+          }
+        } catch (e) { }
       });
-      if (typeof supportActiveThreadId !== 'undefined' && supportActiveThreadId && String(supportActiveThreadId).startsWith('thread_seed_')) {
-        supportActiveThreadId = null;
+      if (typeof supportActiveThreadId !== 'undefined' && supportActiveThreadId) {
+        const sid = String(supportActiveThreadId).toLowerCase();
+        if (sid.includes('seed')) {
+          supportActiveThreadId = null;
+        }
       }
     } catch (e) { }
   }
@@ -6578,9 +6608,13 @@
       try {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          const cleaned = parsed.filter(t => t && t.id && !String(t.id).startsWith('thread_seed_') && !String(t.id).includes('seed'));
+          const cleaned = parsed.filter(t => !isDummySupportThread(t));
           if (cleaned.length !== parsed.length) {
-            saveLocalSupportThreads(cleaned);
+            if (cleaned.length > 0) {
+              saveLocalSupportThreads(cleaned);
+            } else {
+              localStorage.removeItem('ikaai_support_threads_' + currentProgrammeId);
+            }
           }
           return cleaned;
         }
@@ -6765,14 +6799,15 @@
     const isLearner = supportRole === 'learner';
     const currentUser = getCurrentUserSupportInfo();
     const currentDbProgId = getProgrammeDbId(currentProgrammeId);
+    const nonDummy = (threads || []).filter(t => !isDummySupportThread(t));
     const visibleThreads = isLearner && currentUser.id
-      ? threads.filter(t => {
+      ? nonDummy.filter(t => {
         const progId = t.programme_id ? getProgrammeKey(t.programme_id) : (t.programme ? getProgrammeKey(t.programme) : null);
         if (progId && progId !== currentProgrammeId) return false;
         const isOwner = t.learner_id === currentUser.id || t.learner_id === 'usr_1' || t.learner_id === 'local_user';
         return isOwner;
       })
-      : threads.filter(t => !t.programme || t.programme === currentProgrammeId);
+      : nonDummy.filter(t => !t.programme || t.programme === currentProgrammeId);
 
     const unreadCount = visibleThreads.filter(t => isLearner ? t.unread_by_learner : t.unread_by_instructor).length;
     if (el.messagesUnreadBadge) {
@@ -6798,8 +6833,9 @@
   function getFilteredSupportThreads(threads) {
     const currentUser = getCurrentUserSupportInfo();
     const query = (supportSearchQuery || '').trim().toLowerCase();
+    const nonDummy = (threads || []).filter(t => !isDummySupportThread(t));
 
-    return threads.filter(t => {
+    return nonDummy.filter(t => {
       // Programme match via relational programme_id or legacy programme key
       const progId = t.programme_id ? getProgrammeKey(t.programme_id) : (t.programme ? getProgrammeKey(t.programme) : null);
       if (progId && progId !== currentProgrammeId) return false;

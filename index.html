@@ -11,7 +11,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261112_1545">
+  <link rel="stylesheet" href="styles.css?v=20261112_1645">
 
   <!-- Supabase JS Client v2 (Local bundle with CDN fallback) -->
   <script src="supabase.js"></script>
@@ -22,6 +22,37 @@
     try {
       if (localStorage.getItem('ikaai_portal_session')) {
         document.documentElement.classList.add('has-portal-session');
+      }
+      // Instant purge of dummy support threads from localStorage
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && (k.indexOf('ikaai_support_threads') !== -1 || k.indexOf('support_thread') !== -1)) {
+          try {
+            var raw = localStorage.getItem(k);
+            if (raw) {
+              var arr = JSON.parse(raw);
+              if (Array.isArray(arr)) {
+                var clean = arr.filter(function(t) {
+                  if (!t) return false;
+                  var id = String(t.id || '').toLowerCase();
+                  var subj = String(t.subject || '').toLowerCase();
+                  var preview = String(t.last_message_preview || '').toLowerCase();
+                  if (id.indexOf('seed') !== -1) return false;
+                  if (subj.indexOf('rfp scoring') !== -1 || subj.indexOf('client deliverable') !== -1 || subj.indexOf('case study') !== -1) return false;
+                  if (preview.indexOf('rfp evaluation') !== -1 || preview.indexOf('docx and pdf') !== -1 || preview.indexOf('case studies') !== -1) return false;
+                  return true;
+                });
+                if (clean.length > 0) {
+                  localStorage.setItem(k, JSON.stringify(clean));
+                } else {
+                  localStorage.removeItem(k);
+                }
+              }
+            }
+          } catch(e) {
+            localStorage.removeItem(k);
+          }
+        }
       }
     } catch (e) { }
   </script>
@@ -4573,11 +4604,11 @@
           <!-- Structured JDs and Supabase Data Layer -->
           <script src="jspdf.umd.min.js"></script>
           <script>if (!window.jspdf) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'); }</script>
-          <script src="supabase-config.js?v=20261112_1630"></script>
-          <script src="supabase-client.js?v=20261112_1630"></script>
-          <script src="jd-data.js?v=20261112_1630"></script>
-          <script src="data.js?v=20261112_1630"></script>
-          <script src="app.js?v=20261112_1630"></script>
+          <script src="supabase-config.js?v=20261112_1645"></script>
+          <script src="supabase-client.js?v=20261112_1645"></script>
+          <script src="jd-data.js?v=20261112_1645"></script>
+          <script src="data.js?v=20261112_1645"></script>
+          <script src="app.js?v=20261112_1645"></script>
 </body>
 
 </html>
