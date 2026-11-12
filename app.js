@@ -6535,245 +6535,58 @@
     return 'other';
   }
 
-  // Initial Seed generator for local storage fallback
+  // Initial Seed generator: dummy messages removed
   function generateDefaultSeedThreads() {
-    const now = Date.now();
-    const insts = getProgrammeInstructorsList();
-    const inst1 = insts[0] || { id: 'inst_devashish', name: 'Devashish Chauhan' };
-    const inst2 = insts[1] || { id: 'inst_neha', name: 'Neha Singhal' };
-    const inst3 = insts[2] || { id: 'inst_gehna', name: 'Gehna Sahni' };
-    const currentUser = getCurrentUserSupportInfo();
-
-    return [
-      {
-        id: 'thread_seed_1',
-        programme: currentProgrammeId,
-        subject: 'Question regarding RFP scoring matrix calculation in Module 2.1',
-        category: 'module_question', // check constraint compliant
-        programme_id: getProgrammeDbId(currentProgrammeId),
-        module_id: 'mod_2',
-        module_title: '2. Technical Proposal Writing',
-        status: 'open',
-        learner_name: currentUser.name || 'Akshay Tiwari',
-        learner_email: currentUser.email || 'learner@ikaaiindia.org',
-        learner_id: currentUser.id || 'usr_1',
-        instructor_id: inst1.id,
-        instructor_name: inst1.name,
-        created_at: new Date(now - 2 * 3600 * 1000).toISOString(),
-        updated_at: new Date(now - 2 * 3600 * 1000).toISOString(),
-        last_message_at: new Date(now - 2 * 3600 * 1000).toISOString(),
-        last_message_preview: 'Could you clarify whether cost weighting in the RFP evaluation matrix is fixed at 30% or varies by agency?',
-        unread_by_learner: false,
-        unread_by_instructor: true,
-        rating: null,
-        rating_comment: '',
-        resolved_at: null,
-        messages: [
-          {
-            id: 'm1_1',
-            thread_id: 'thread_seed_1',
-            sender_id: currentUser.id || 'usr_1',
-            sender_name: currentUser.name || 'Akshay Tiwari',
-            sender_role: 'learner',
-            body: 'Hello Devashish Sir, could you clarify whether cost weighting in the RFP evaluation matrix is fixed at 30% or varies by funding agency? In Module 2.1 slides it mentions both 30% and 40%.',
-            attachments: [],
-            created_at: new Date(now - 2 * 3600 * 1000).toISOString(),
-            read_at: null
-          }
-        ],
-        internal_notes: []
-      },
-      {
-        id: 'thread_seed_2',
-        programme: currentProgrammeId,
-        subject: 'Clarification on client deliverable submission format',
-        category: 'technical_issue', // check constraint compliant
-        programme_id: getProgrammeDbId(currentProgrammeId),
-        module_id: 'mod_1',
-        module_title: '1. RFP Sourcing & Bid Tracking',
-        status: 'answered',
-        learner_name: currentUser.name || 'Akshay Tiwari',
-        learner_email: currentUser.email || 'learner@ikaaiindia.org',
-        learner_id: currentUser.id || 'usr_1',
-        instructor_id: inst2.id,
-        instructor_name: inst2.name,
-        created_at: new Date(now - 26 * 3600 * 1000).toISOString(),
-        updated_at: new Date(now - 4 * 3600 * 1000).toISOString(),
-        last_message_at: new Date(now - 4 * 3600 * 1000).toISOString(),
-        last_message_preview: 'Hi Akshay, both DOCX and PDF are accepted, but please ensure tables are preserved...',
-        unread_by_learner: true,
-        unread_by_instructor: false,
-        rating: null,
-        rating_comment: '',
-        resolved_at: null,
-        messages: [
-          {
-            id: 'm2_1',
-            thread_id: 'thread_seed_2',
-            sender_id: currentUser.id || 'usr_1',
-            sender_name: currentUser.name || 'Akshay Tiwari',
-            sender_role: 'learner',
-            body: 'Hi team, is the final proposal document required to be in DOCX format or PDF? The portal upload mentions both.',
-            attachments: [],
-            created_at: new Date(now - 26 * 3600 * 1000).toISOString(),
-            read_at: new Date(now - 20 * 3600 * 1000).toISOString()
-          },
-          {
-            id: 'm2_2',
-            thread_id: 'thread_seed_2',
-            sender_id: inst2.id,
-            sender_name: inst2.name,
-            sender_role: 'instructor',
-            body: 'Hi Akshay, both DOCX and PDF are accepted for client draft submissions! For final government bids, always export a flattened PDF to preserve layout and typography. Attached is the sample cover page guideline.',
-            attachments: [
-              { name: 'Ikaai_Proposal_Cover_Guidelines.pdf', size: '245 KB', url: '#' }
-            ],
-            created_at: new Date(now - 4 * 3600 * 1000).toISOString(),
-            read_at: new Date(now - 4 * 3600 * 1000).toISOString()
-          }
-        ],
-        internal_notes: [
-          {
-            id: 'n2_1',
-            author_id: inst2.id,
-            author_name: inst2.name,
-            body: 'Learner is preparing for the Ministry bid. Provided standard PDF submission checklist.',
-            created_at: new Date(now - 4 * 3600 * 1000).toISOString()
-          }
-        ]
-      },
-      {
-        id: 'thread_seed_3',
-        programme: currentProgrammeId,
-        subject: 'Accessing case study materials for Module 1',
-        category: 'exam_grading', // check constraint compliant
-        programme_id: getProgrammeDbId(currentProgrammeId),
-        module_id: 'mod_0',
-        module_title: '0. Development Sector Landscape',
-        status: 'resolved',
-        learner_name: currentUser.name || 'Akshay Tiwari',
-        learner_email: currentUser.email || 'learner@ikaaiindia.org',
-        learner_id: currentUser.id || 'usr_1',
-        instructor_id: inst3.id,
-        instructor_name: inst3.name,
-        created_at: new Date(now - 72 * 3600 * 1000).toISOString(),
-        updated_at: new Date(now - 48 * 3600 * 1000).toISOString(),
-        last_message_at: new Date(now - 48 * 3600 * 1000).toISOString(),
-        last_message_preview: 'Confirmed working now! Thank you so much for the quick fix.',
-        unread_by_learner: false,
-        unread_by_instructor: false,
-        rating: 'up', // check constraint: 'up' | 'down' | null
-        rating_comment: 'Super fast response and resolved immediately. Thank you!',
-        resolved_at: new Date(now - 48 * 3600 * 1000).toISOString(),
-        messages: [
-          {
-            id: 'm3_1',
-            thread_id: 'thread_seed_3',
-            sender_id: currentUser.id || 'usr_1',
-            sender_name: currentUser.name || 'Akshay Tiwari',
-            sender_role: 'learner',
-            body: 'Good morning, the link to the case study annexure in Module 0 was prompting for permissions.',
-            attachments: [],
-            created_at: new Date(now - 72 * 3600 * 1000).toISOString(),
-            read_at: new Date(now - 70 * 3600 * 1000).toISOString()
-          },
-          {
-            id: 'm3_2',
-            thread_id: 'thread_seed_3',
-            sender_id: inst1.id,
-            sender_name: inst1.name,
-            sender_role: 'instructor',
-            body: 'Permissions have been updated to anyone with the Ikaai domain. You should be able to view and download all case studies now!',
-            attachments: [],
-            created_at: new Date(now - 50 * 3600 * 1000).toISOString(),
-            read_at: new Date(now - 50 * 3600 * 1000).toISOString()
-          },
-          {
-            id: 'm3_3',
-            thread_id: 'thread_seed_3',
-            sender_id: currentUser.id || 'usr_1',
-            sender_name: currentUser.name || 'Akshay Tiwari',
-            sender_role: 'learner',
-            body: 'Confirmed working now! Thank you so much for the quick fix.',
-            attachments: [],
-            created_at: new Date(now - 48 * 3600 * 1000).toISOString(),
-            read_at: new Date(now - 48 * 3600 * 1000).toISOString()
-          }
-        ],
-        internal_notes: []
-      }
-    ];
+    return [];
   }
 
+  // Purge any stored dummy support threads across all programmes from localStorage
+  function purgeAllDummySupportThreads() {
+    try {
+      const progKeys = ['hr', 'data', 'research', 'design', 'bd'];
+      progKeys.forEach(pKey => {
+        const key = 'ikaai_support_threads_' + pKey;
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              const cleaned = parsed.filter(t => t && t.id && !String(t.id).startsWith('thread_seed_') && !String(t.id).includes('seed'));
+              if (cleaned.length !== parsed.length) {
+                if (cleaned.length > 0) {
+                  localStorage.setItem(key, JSON.stringify(cleaned));
+                } else {
+                  localStorage.removeItem(key);
+                }
+              }
+            }
+          } catch (e) { }
+        }
+      });
+      if (typeof supportActiveThreadId !== 'undefined' && supportActiveThreadId && String(supportActiveThreadId).startsWith('thread_seed_')) {
+        supportActiveThreadId = null;
+      }
+    } catch (e) { }
+  }
+  purgeAllDummySupportThreads();
+
   function getLocalSupportThreads() {
-    const raw = localStorage.getItem(`ikaai_support_threads_${currentProgrammeId}`);
-    const insts = getProgrammeInstructorsList();
-    const inst1 = insts[0] || { id: 'inst_devashish', name: 'Devashish Chauhan' };
-    const inst2 = insts[1] || { id: 'inst_neha', name: 'Neha Singhal' };
-    const inst3 = insts[2] || { id: 'inst_gehna', name: 'Gehna Sahni' };
+    purgeAllDummySupportThreads();
+    const raw = localStorage.getItem('ikaai_support_threads_' + currentProgrammeId);
 
     if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          let updated = false;
-          parsed.forEach(t => {
-            if (t.id && t.id.startsWith('thread_seed_')) {
-              if (t.id === 'thread_seed_1' || t.instructor_name === 'Sudha Ashwini Janabalan' || t.instructor_id === 'inst_1') {
-                if (t.instructor_name !== inst1.name) {
-                  t.instructor_name = inst1.name;
-                  t.instructor_id = inst1.id;
-                  updated = true;
-                }
-              } else if (t.id === 'thread_seed_2' || t.instructor_name === 'Maaruf Khan' || t.instructor_id === 'inst_2') {
-                if (t.instructor_name !== inst2.name) {
-                  t.instructor_name = inst2.name;
-                  t.instructor_id = inst2.id;
-                  updated = true;
-                }
-              } else if (t.id === 'thread_seed_3') {
-                if (t.instructor_name !== inst3.name) {
-                  t.instructor_name = inst3.name;
-                  t.instructor_id = inst3.id;
-                  updated = true;
-                }
-              }
-              if (Array.isArray(t.messages)) {
-                t.messages.forEach(m => {
-                  if (m.sender_name === 'Sudha Ashwini Janabalan' || (m.sender_role === 'instructor' && t.id === 'thread_seed_1')) {
-                    if (m.sender_name !== inst1.name) {
-                      m.sender_name = inst1.name;
-                      updated = true;
-                    }
-                  } else if (m.sender_name === 'Maaruf Khan' || (m.sender_role === 'instructor' && t.id === 'thread_seed_2')) {
-                    if (m.sender_name !== inst2.name) {
-                      m.sender_name = inst2.name;
-                      updated = true;
-                    }
-                  } else if (m.sender_role === 'instructor' && t.id === 'thread_seed_3') {
-                    if (m.sender_name !== inst3.name) {
-                      m.sender_name = inst3.name;
-                      updated = true;
-                    }
-                  }
-                  if (m.body && m.body.includes('Sudha Maam')) {
-                    m.body = m.body.replace('Sudha Maam', 'Devashish Sir');
-                    updated = true;
-                  }
-                });
-              }
-            }
-          });
-          if (updated) {
-            saveLocalSupportThreads(parsed);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.filter(t => t && t.id && !String(t.id).startsWith('thread_seed_') && !String(t.id).includes('seed'));
+          if (cleaned.length !== parsed.length) {
+            saveLocalSupportThreads(cleaned);
           }
-          return parsed;
+          return cleaned;
         }
       } catch (e) { }
     }
-    const seed = generateDefaultSeedThreads();
-    saveLocalSupportThreads(seed);
-    return seed;
+    return [];
   }
 
   function saveLocalSupportThreads(threads) {
@@ -6956,9 +6769,8 @@
       ? threads.filter(t => {
         const progId = t.programme_id ? getProgrammeKey(t.programme_id) : (t.programme ? getProgrammeKey(t.programme) : null);
         if (progId && progId !== currentProgrammeId) return false;
-        const isDemoSeed = t.id && t.id.startsWith('thread_seed_');
         const isOwner = t.learner_id === currentUser.id || t.learner_id === 'usr_1' || t.learner_id === 'local_user';
-        return isOwner || isDemoSeed;
+        return isOwner;
       })
       : threads.filter(t => !t.programme || t.programme === currentProgrammeId);
 
@@ -6992,11 +6804,10 @@
       const progId = t.programme_id ? getProgrammeKey(t.programme_id) : (t.programme ? getProgrammeKey(t.programme) : null);
       if (progId && progId !== currentProgrammeId) return false;
 
-      // Learner sees only their own threads in Learner view (demo seeds visible to all learners)
+      // Learner sees only their own threads in Learner view
       if (supportRole === 'learner' && currentUser.id && t.learner_id) {
-        const isDemoSeed = t.id && t.id.startsWith('thread_seed_');
         const isOwner = t.learner_id === currentUser.id || t.learner_id === 'usr_1' || t.learner_id === 'local_user';
-        if (!isOwner && !isDemoSeed) {
+        if (!isOwner) {
           return false;
         }
       }
