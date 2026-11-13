@@ -16,6 +16,9 @@ begin;
 -- --------------------------------------------------------------------
 -- 1. RPC: public.touch_last_seen()
 -- --------------------------------------------------------------------
+drop function if exists public.touch_last_seen() cascade;
+drop function if exists public.touch_last_seen(text) cascade;
+
 create or replace function public.touch_last_seen()
 returns timestamptz
 language plpgsql
@@ -85,3 +88,4 @@ begin
 end $$;
 
 commit;
+
