@@ -1,5 +1,9 @@
-# Netlify configuration for Ikaai Library Portal
-# Static SPA hosting configuration with robust security headers
+# ====================================================================
+# [NOTE: UNUSED ON GITHUB PAGES]
+# The Ikaai Library Portal is hosted on GitHub Pages (https://adminikaaiindia.github.io/ikaai-library-portal/).
+# GitHub Pages does not evaluate netlify.toml. This file is retained only
+# as a legacy reference in case the site is mirrored back to Netlify.
+# ====================================================================
 
 [build]
   publish = "."

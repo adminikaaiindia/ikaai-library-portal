@@ -8376,6 +8376,52 @@ button.timer-locked,
   overflow: hidden;
 }
 
+/* Reconnecting Live Chat Banner */
+.chat-reconnecting-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: #fef3c7;
+  color: #92400e;
+  border-bottom: 1px solid #fde68a;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+  z-index: 20;
+}
+[data-theme="dark"] .chat-reconnecting-banner {
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #fcd34d;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+.chat-reconnecting-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: chatSpin 0.75s linear infinite;
+}
+@keyframes chatSpin {
+  to { transform: rotate(360deg); }
+}
+.chat-reconnecting-retry-btn {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.chat-reconnecting-retry-btn:hover {
+  opacity: 0.8;
+}
+
 /* Chat Header */
 .chat-view-header {
   height: 60px;

@@ -9922,29 +9922,13 @@
       if (!userOrProfile) return false;
       const currentUser = this.getPortalUser();
       const uid = userOrProfile.id || userOrProfile.userId;
-      const email = (userOrProfile.email || '').toLowerCase().trim();
+      if (!uid || uid === 'u-anon') return false;
 
-      // Current user is always online while using the portal
-      if (uid && currentUser.id && uid === currentUser.id && uid !== 'u-anon') return true;
-      if (email && currentUser.email && email === currentUser.email) return true;
+      // Current logged in user is always active in their open tab
+      if (currentUser && currentUser.id && uid === currentUser.id && uid !== 'u-anon') return true;
 
-      // Realtime Presence WebSocket check
-      if (uid && this.onlineUserIds.has(uid)) return true;
-      if (email && this.onlineUserIds.has(email)) return true;
-
-      // Fallback check against last_seen timestamp in database
-      const lastSeenIso = userOrProfile.rawLastSeen || userOrProfile.last_seen;
-      if (lastSeenIso) {
-        const seenDate = new Date(lastSeenIso);
-        if (!isNaN(seenDate.getTime())) {
-          const diffMins = (Date.now() - seenDate.getTime()) / 60000;
-          // Only within 2.5 minutes and status is not explicitly offline
-          if (diffMins <= 2.5 && userOrProfile.chat_status !== 'offline') {
-            return true;
-          }
-        }
-      }
-      return false;
+      // Realtime Presence WebSocket check (strictly user ID only)
+      return this.onlineUserIds.has(uid);
     },
 
     formatLastSeen(isoStr, isOnline) {
@@ -9958,30 +9942,34 @@
       const diffHours = Math.floor(diffMins / 60);
 
       const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-      if (diffMins < 1) return 'Active just now';
-      if (diffMins < 60) return `Active ${diffMins}m ago`;
+      if (diffMins < 1) return 'Last seen just now';
+      if (diffMins < 60) return `Last seen ${diffMins}m ago`;
+      if (diffHours < 24) return `Last seen ${diffHours}h ago`;
 
       const isToday = date.toDateString() === now.toDateString();
-      if (isToday) return `Today ${timeStr}`;
+      if (isToday) return `Last seen today ${timeStr}`;
 
       const yesterday = new Date(now);
       yesterday.setDate(now.getDate() - 1);
       const isYesterday = date.toDateString() === yesterday.toDateString();
-      if (isYesterday) return `Yesterday ${timeStr}`;
+      if (isYesterday) return `Last seen yesterday ${timeStr}`;
 
-      return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' + timeStr;
+      return `Last seen ${date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} ${timeStr}`;
+    },
+
+    async touchLastSeen() {
+      const client = window.supabaseClient;
+      const user = this.getPortalUser();
+      if (!client || !user || !user.id || user.id === 'u-anon' || typeof client.rpc !== 'function') return;
+      try {
+        await client.rpc('touch_last_seen');
+      } catch (e) {
+        console.warn('[GlobalPresence] touch_last_seen note:', e);
+      }
     },
 
     async sendHeartbeat(status = 'online') {
-      const client = window.supabaseClient;
-      const user = this.getPortalUser();
-      if (!client || !user || !user.id || user.id === 'u-anon') return;
-      try {
-        await client.from('profiles').update({
-          last_seen: new Date().toISOString(),
-          chat_status: status
-        }).eq('id', user.id);
-      } catch (e) { }
+      return this.touchLastSeen();
     },
 
     syncUI() {
@@ -10003,10 +9991,10 @@
 
       this.initialized = true;
 
-      // Update database status immediately
-      this.sendHeartbeat('online');
+      // 1. Update server last_seen via RPC immediately on sign-in
+      this.touchLastSeen();
 
-      // Join Realtime presence channel
+      // 2. Realtime presence channel (user id only)
       try {
         this.channel = client.channel('ikaai-online-presence', {
           config: {
@@ -10019,16 +10007,14 @@
           const presState = this.channel.presenceState();
           const newSet = new Set();
           if (user.id && user.id !== 'u-anon') newSet.add(user.id);
-          if (user.email) newSet.add(user.email);
 
           Object.keys(presState).forEach(k => {
-            newSet.add(k);
+            if (k && k !== 'u-anon') newSet.add(k);
             const items = presState[k];
             if (Array.isArray(items)) {
               items.forEach(it => {
-                if (it.userId) newSet.add(it.userId);
-                if (it.user_id) newSet.add(it.user_id);
-                if (it.email) newSet.add(it.email.toLowerCase().trim());
+                const uid = it.userId || it.user_id;
+                if (uid && uid !== 'u-anon') newSet.add(uid);
               });
             }
           });
@@ -10041,12 +10027,11 @@
             parsePresences();
           })
           .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-            this.onlineUserIds.add(key);
+            if (key && key !== 'u-anon') this.onlineUserIds.add(key);
             if (Array.isArray(newPresences)) {
               newPresences.forEach(p => {
-                if (p.userId) this.onlineUserIds.add(p.userId);
-                if (p.user_id) this.onlineUserIds.add(p.user_id);
-                if (p.email) this.onlineUserIds.add(p.email.toLowerCase().trim());
+                const uid = p.userId || p.user_id;
+                if (uid && uid !== 'u-anon') this.onlineUserIds.add(uid);
               });
             }
             this.syncUI();
@@ -10056,9 +10041,8 @@
               this.onlineUserIds.delete(key);
               if (Array.isArray(leftPresences)) {
                 leftPresences.forEach(p => {
-                  if (p.userId && p.userId !== user.id) this.onlineUserIds.delete(p.userId);
-                  if (p.user_id && p.user_id !== user.id) this.onlineUserIds.delete(p.user_id);
-                  if (p.email && p.email !== user.email) this.onlineUserIds.delete(p.email.toLowerCase().trim());
+                  const uid = p.userId || p.user_id;
+                  if (uid && uid !== user.id) this.onlineUserIds.delete(uid);
                 });
               }
             }
@@ -10070,7 +10054,6 @@
                 await this.channel.track({
                   userId: user.id,
                   user_id: user.id,
-                  email: user.email,
                   name: user.name,
                   online_at: new Date().toISOString()
                 });
@@ -10078,22 +10061,31 @@
             }
           });
 
-        // Periodic heartbeat every 45s while browser tab is active
+        // 3. Periodic RPC touch every 2 minutes while browser tab is visible
         if (!this.heartbeatInterval) {
           this.heartbeatInterval = setInterval(() => {
             if (document.visibilityState === 'visible') {
-              this.sendHeartbeat('online');
+              this.touchLastSeen();
               if (this.channel) {
                 this.channel.track({
                   userId: user.id,
                   user_id: user.id,
-                  email: user.email,
                   name: user.name,
                   online_at: new Date().toISOString()
                 }).catch(() => { });
               }
             }
-          }, 45000);
+          }, 120000); // 2 minutes
+        }
+
+        // 4. Touch last seen when document becomes visible again
+        if (!this.visibilityBound) {
+          this.visibilityBound = true;
+          document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+              this.touchLastSeen();
+            }
+          });
         }
 
         window.addEventListener('beforeunload', () => {
@@ -10112,15 +10104,18 @@
         this.heartbeatInterval = null;
       }
       if (this.channel) {
+        const client = window.supabaseClient;
         try {
           await this.channel.untrack();
           this.channel.unsubscribe();
+          if (client && typeof client.removeChannel === 'function') {
+            client.removeChannel(this.channel);
+          }
         } catch (e) { }
         this.channel = null;
       }
       this.initialized = false;
       this.onlineUserIds.clear();
-      await this.sendHeartbeat('offline');
     }
   };
 
@@ -14422,6 +14417,9 @@
     }
 
     if (typeof cleanupSupportInbox === 'function') cleanupSupportInbox();
+    if (window.TeamChat && typeof window.TeamChat.cleanupRealtime === 'function') {
+      try { window.TeamChat.cleanupRealtime(); } catch (e) { }
+    }
 
     try {
       localStorage.removeItem('ikaai_portal_session');
@@ -14459,6 +14457,9 @@
   async function signOutUser() {
     if (typeof GlobalPresence !== 'undefined' && GlobalPresence.cleanup) {
       try { await GlobalPresence.cleanup(); } catch (e) { }
+    }
+    if (window.TeamChat && typeof window.TeamChat.cleanupRealtime === 'function') {
+      try { window.TeamChat.cleanupRealtime(); } catch (e) { }
     }
     if (window.DataLayer && typeof window.DataLayer.signOut === 'function') {
       try { await window.DataLayer.signOut(); } catch (e) { }
@@ -15157,6 +15158,12 @@
       },
       typingUsers: {},   // convId -> { [userName]: timeoutId }
       supabaseChannel: null,
+      messagesChannel: null,
+      profilesChannel: null,
+      reconnectTimeout: null,
+      reconnectAttempts: 0,
+      realtimeConnected: false,
+      realtimeInitialized: false,
 
       // Directory of programme members (synced dynamically from Supabase profiles)
       members: [],
@@ -18325,20 +18332,91 @@
       initEmojiPopover();
     }
 
+    function scheduleChatReconnect() {
+      if (state.reconnectTimeout) return;
+      state.reconnectAttempts = (state.reconnectAttempts || 0) + 1;
+      const delay = Math.min(1000 * Math.pow(2, state.reconnectAttempts - 1), 30000);
+      console.warn(`[TeamChat] Channel connection failed. Retrying in ${delay}ms (attempt ${state.reconnectAttempts})...`);
+      state.reconnectTimeout = setTimeout(() => {
+        state.reconnectTimeout = null;
+        cleanupRealtimeChannels(false);
+        initRealtimeSync();
+      }, delay);
+    }
+
+    function cleanupRealtimeChannels(resetAll = true) {
+      const client = window.supabaseClient || (typeof supabase !== 'undefined' ? supabase : null);
+      if (state.reconnectTimeout) {
+        clearTimeout(state.reconnectTimeout);
+        state.reconnectTimeout = null;
+      }
+      if (client && typeof client.removeChannel === 'function') {
+        if (state.messagesChannel) {
+          try { client.removeChannel(state.messagesChannel); } catch (e) { }
+          state.messagesChannel = null;
+        }
+        if (state.profilesChannel) {
+          try { client.removeChannel(state.profilesChannel); } catch (e) { }
+          state.profilesChannel = null;
+        }
+        if (state.supabaseChannel) {
+          try { client.removeChannel(state.supabaseChannel); } catch (e) { }
+          state.supabaseChannel = null;
+        }
+      }
+      state.realtimeInitialized = false;
+      state.realtimeConnected = false;
+      if (resetAll) {
+        state.reconnectAttempts = 0;
+        if (state.pollingInterval) {
+          clearInterval(state.pollingInterval);
+          state.pollingInterval = null;
+        }
+        const banner = document.getElementById('chatReconnectingBanner');
+        if (banner) banner.style.display = 'none';
+      }
+    }
+
     // Setup Supabase Realtime channel if available
-    function initRealtimeSync() {
-      if (state.realtimeInitialized) return;
+    async function initRealtimeSync() {
+      if (state.realtimeInitialized && state.messagesChannel) return;
       try {
         const client = window.supabaseClient || (typeof supabase !== 'undefined' ? supabase : null);
         if (!client || typeof client.channel !== 'function') return;
 
+        // Ensure session auth token is bound to realtime connection
+        try {
+          if (client.auth && typeof client.auth.getSession === 'function') {
+            const sessionRes = await client.auth.getSession();
+            const token = sessionRes?.data?.session?.access_token;
+            if (token && client.realtime && typeof client.realtime.setAuth === 'function') {
+              await client.realtime.setAuth(token);
+            }
+          }
+        } catch (authErr) { }
+
+        // Wire manual retry button if not yet bound
+        const retryBtn = document.getElementById('chatManualRetryBtn');
+        if (retryBtn && !retryBtn._retryWired) {
+          retryBtn._retryWired = true;
+          retryBtn.addEventListener('click', () => {
+            cleanupRealtimeChannels(false);
+            initRealtimeSync();
+          });
+        }
+
         state.realtimeInitialized = true;
 
         // 1. Live database sync for incoming messages and documents
-        client.channel('chat-messages-live')
+        state.messagesChannel = client.channel('chat-messages-live');
+        state.messagesChannel
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, async (payload) => {
             const row = payload.new;
             if (!row) return;
+
+            // Diagnostic log as required
+            console.log('[TeamChat] realtime message ' + row.id);
+
             const currentUser = getCurrentUser();
             // Ignore own messages that were already optimistically rendered
             if (row.sender_id && row.sender_id === currentUser.id) return;
@@ -18520,10 +18598,28 @@
               await loadConversationMessages(state.activeConvId);
             }
           })
-          .subscribe();
+          .subscribe((status) => {
+            // Diagnostic log as required
+            console.log('[TeamChat] subscribed: ' + status);
+
+            const banner = document.getElementById('chatReconnectingBanner');
+            if (status === 'SUBSCRIBED') {
+              state.realtimeConnected = true;
+              if (banner) banner.style.display = 'none';
+              if (state.reconnectTimeout) {
+                clearTimeout(state.reconnectTimeout);
+                state.reconnectTimeout = null;
+              }
+              state.reconnectAttempts = 0;
+            } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              state.realtimeConnected = false;
+              if (banner) banner.style.display = 'flex';
+              scheduleChatReconnect();
+            }
+          });
 
         // 2. Realtime listener for newly registered profiles (Directory sync)
-        client.channel('realtime-profiles-sync')
+        state.profilesChannel = client.channel('realtime-profiles-sync')
           .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
             console.log('[TeamChat] Realtime profiles table update - reloading directory');
             loadRealDirectoryMembers();
@@ -18623,6 +18719,7 @@
     return {
       render: renderScreen,
       initRealtime: initRealtimeSync,
+      cleanupRealtime: cleanupRealtimeChannels,
       selectConversation,
       syncPresenceState,
       getState: () => state
@@ -18654,15 +18751,17 @@
     }
   }
 
-  // Re-sync presence and heartbeat whenever user returns to window tab
+  // Re-sync presence and touch last seen whenever user returns to window tab
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && typeof GlobalPresence !== 'undefined' && GlobalPresence.init) {
-      GlobalPresence.init();
-      GlobalPresence.sendHeartbeat('online');
+    if (document.visibilityState === 'visible' && typeof GlobalPresence !== 'undefined') {
+      if (GlobalPresence.init) GlobalPresence.init();
+      if (GlobalPresence.touchLastSeen) GlobalPresence.touchLastSeen();
     }
   });
 
   // Initial Boot
   renderAll();
+
+  console.log('%c[Ikaai Portal] Version 20261113_1530 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
 
 })();

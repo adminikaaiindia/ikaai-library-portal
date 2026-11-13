@@ -1,4 +1,5 @@
 {
+  "_comment": "UNUSED ON GITHUB PAGES - This portal is deployed on GitHub Pages at https://adminikaaiindia.github.io/ikaai-library-portal/. GitHub Pages does not evaluate vercel.json. Retained for legacy reference only.",
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
