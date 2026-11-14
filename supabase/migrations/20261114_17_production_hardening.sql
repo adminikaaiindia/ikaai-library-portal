@@ -603,25 +603,63 @@ begin
 end;
 $$ language plpgsql security definer set search_path = public;
 
--- 6.2 Safely drop deprecated columns on profiles
+-- 6.2 Decouple auto-join trigger from deprecated programme column
+drop trigger if exists trg_auto_join_default_channels on public.profiles;
+drop trigger if exists trg_auto_enroll_user_in_chat on public.profiles;
+
+create or replace function public.auto_join_default_channels_func()
+returns trigger as $$
+declare
+  conv_record record;
+  user_prog_slug text;
+begin
+  if new.programme_id is not null then
+    select slug into user_prog_slug from public.programmes where id = new.programme_id;
+  end if;
+
+  for conv_record in
+    select id from public.chat_conversations
+    where type in ('all_members', 'channel')
+    and (
+      (new.programme_id is not null and programme_id = new.programme_id)
+      or (user_prog_slug is not null and programme_slug = user_prog_slug)
+      or type = 'all_members'
+      or id = 'all-members'
+    )
+  loop
+    insert into public.chat_conversation_members (conversation_id, user_id, role)
+    values (
+      conv_record.id,
+      new.id,
+      case
+        when new.role = 'admin' then 'admin'
+        when new.role = 'instructor' then 'moderator'
+        else 'member'
+      end
+    )
+    on conflict (conversation_id, user_id) do nothing;
+  end loop;
+
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+-- 6.3 Safely drop deprecated columns on profiles
 do $$
 begin
-  -- Disable user trigger on profiles temporarily
-  execute 'alter table public.profiles disable trigger user';
-
+  -- Drop dependent columns with cascade to cleanly remove any remaining column-level triggers
   alter table public.profiles
-    drop column if exists display_name,
-    drop column if exists programme,
-    drop column if exists member_since;
-
-  execute 'alter table public.profiles enable trigger user';
+    drop column if exists display_name cascade,
+    drop column if exists programme cascade,
+    drop column if exists member_since cascade;
 exception when others then
-  -- In case user trigger doesn't exist under that exact name, attempt column drop directly
-  alter table public.profiles
-    drop column if exists display_name,
-    drop column if exists programme,
-    drop column if exists member_since;
+  raise notice 'Profiles column drop notice: %', sqlerrm;
 end $$;
+
+-- Recreate auto-join trigger listening strictly on programme_id
+create trigger trg_auto_join_default_channels
+  after insert or update of programme_id on public.profiles
+  for each row execute function public.auto_join_default_channels_func();
 
 -- 6.3 Drop legacy 20261106 reconciliation snapshot backup tables
 drop table if exists public.backup_profiles_20261106 cascade;
@@ -637,3 +675,4 @@ drop table if exists public.backup_feedback_20261106 cascade;
 notify pgrst, 'reload schema';
 
 -- End of 20261114_17_production_hardening.sql
+
