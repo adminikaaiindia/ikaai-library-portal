@@ -14,8 +14,6 @@
 
 begin;
 
-drop function if exists public.get_dashboard_summary() cascade;
-
 create or replace function public.get_dashboard_summary()
 returns jsonb
 language plpgsql
@@ -191,9 +189,9 @@ begin
     select status, submitted_at, grade, score, instructor_comment, graded_at
     into v_exam
     from public.exam_submissions
-    where user_id = v_caller_id and programme_id = v_prog_id;
+    where user_id = v_caller_id and (programme_id = v_prog_id or (programme_id is null and v_prog_id is null));
 
-    if v_next_step is null then
+    if v_next_step is null and v_total_modules > 0 and v_completed_modules = v_total_modules then
       if v_exam.status is null or v_exam.status = 'not_submitted' then
         v_next_step := jsonb_build_object(
           'type', 'take_exam',
@@ -215,6 +213,12 @@ begin
           'action_label', 'View Evaluation'
         );
       end if;
+    elsif v_next_step is null and (v_prog_id is null or v_total_modules = 0) then
+      v_next_step := jsonb_build_object(
+        'type', 'pending_setup',
+        'title', 'Programme curriculum setup in progress',
+        'action_label', 'View Resources'
+      );
     end if;
 
     -- Calculate completion percentage
@@ -306,13 +310,14 @@ begin
       and coalesce(is_revoked, false) = false;
 
     -- Unread chat messages from chat_conversation_members.last_read_at
+    -- Type-safe join & comparison (cast to text to prevent uuid <> text operator error)
     select coalesce(count(m.id), 0)
     into v_unread_chat_count
     from public.chat_conversation_members ccm
-    join public.chat_messages m on m.conversation_id = ccm.conversation_id
+    join public.chat_messages m on m.conversation_id::text = ccm.conversation_id::text
     where ccm.user_id = v_caller_id
-      and m.created_at > ccm.last_read_at
-      and (m.sender_id is null or m.sender_id != v_caller_id::text)
+      and (ccm.last_read_at is null or m.created_at > ccm.last_read_at)
+      and (m.sender_id is null or m.sender_id::text != v_caller_id::text)
       and coalesce(m.is_deleted, false) = false;
 
     -- Unanswered replies in Message Instructor

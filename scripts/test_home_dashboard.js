@@ -76,3 +76,4 @@ assert(css.includes('.home-table'), '.home-table styled');
 assert(css.includes('.home-skeleton-shimmer'), '.home-skeleton-shimmer styled');
 
 console.log('\n🎉 ALL HOME DASHBOARD CHECKS PASSED PERFECTLY!');
+
