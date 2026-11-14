@@ -52,6 +52,24 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Accessibility: High-contrast focus rings for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--accent-light, #5ee9b5);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex="0"]:focus-visible,
+.sidebar-nav-item:focus-visible,
+.accordion-header:focus-visible {
+  outline: 2px solid var(--accent-light, #5ee9b5);
+  outline-offset: 2px;
+}
+
 html, body {
   width: 100%;
   min-height: 100%;

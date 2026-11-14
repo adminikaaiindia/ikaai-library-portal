@@ -5,6 +5,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://fmblkesibzjrydswwldq.supabase.co https://lh3.googleusercontent.com; connect-src 'self' https://fmblkesibzjrydswwldq.supabase.co wss://fmblkesibzjrydswwldq.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com; frame-src 'self' blob: https://fmblkesibzjrydswwldq.supabase.co https://accounts.google.com; object-src 'none';">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <script>
+    // Frame-busting protection against clickjacking
+    if (window.top !== window.self) {
+      window.top.location = window.self.location;
+    }
+  </script>
   <title>Ikaai India Library – Learning Portal</title>
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -12,7 +19,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261114_1350">
+  <link rel="stylesheet" href="styles.css?v=20261114_1800">
 
   <!-- Supabase JS Client v2 (Local bundle with CDN fallback) -->
   <script src="supabase.js"></script>
@@ -161,13 +168,16 @@
               <h2 class="auth-mobile-title">Ikaai India Library</h2>
             </div>
 
-            <!-- Demo Mode Notice Banner -->
-            <div class="demo-mode-banner" id="demoBanner" style="display: none;">
-              <div class="demo-banner-icon">ℹ️</div>
-              <div class="demo-banner-text">
-                <strong>Demo Mode Active:</strong> Supabase credentials are placeholders. Sign-in runs locally with
-                localStorage. Real security is enabled when <code>supabase-config.js</code> is configured.
-              </div>
+            <!-- Offline Fallback Screen -->
+            <div id="offlineStateContainer" style="display: none; padding: 24px; text-align: center; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); margin-bottom: 20px;">
+              <div style="font-size: 36px; margin-bottom: 12px;">📡</div>
+              <h3 style="font-size: 17px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Portal Temporarily Offline</h3>
+              <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+                Unable to establish a secure connection to the database. Please check your internet connection or click retry.
+              </p>
+              <button type="button" class="auth-submit-btn" onclick="window.location.reload()" style="max-width: 200px; margin: 0 auto; height: 38px; font-size: 13px;">
+                Retry Connection
+              </button>
             </div>
 
             <!-- Auth Tabs (Login / Sign Up) -->
@@ -185,7 +195,7 @@
             <form class="auth-form" id="loginForm">
               <div class="form-group">
                 <label class="form-label" for="loginEmail">Email address</label>
-                <input type="email" id="loginEmail" class="form-text-input" placeholder="e.g. s.kumar@ikaaiindia.org"
+                <input type="email" id="loginEmail" class="form-text-input" placeholder="e.g. learner@ikaaiindia.org"
                   required autocomplete="email">
               </div>
 
@@ -222,7 +232,7 @@
             <form class="auth-form" id="signupForm" style="display: none;">
               <div class="form-group">
                 <label class="form-label" for="signupName">Full Name</label>
-                <input type="text" id="signupName" class="form-text-input" placeholder="e.g. Sudhir Kumar" required
+                <input type="text" id="signupName" class="form-text-input" placeholder="e.g. Priya Sharma" required
                   autocomplete="name">
               </div>
 
@@ -660,8 +670,8 @@
 
             <div class="user-menu-wrapper">
               <div class="user-avatar-btn" id="userMenuBtn" title="Account Menu">
-                <div class="avatar-circle" id="userAvatarInitials">SK</div>
-                <div class="avatar-name-label desktop-only" id="topBarUserName">Sudhir Kumar</div>
+                <div class="avatar-circle" id="userAvatarInitials">--</div>
+                <div class="avatar-name-label desktop-only" id="topBarUserName">Portal User</div>
                 <div class="avatar-arrows">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                     stroke-linecap="round" stroke-linejoin="round">
@@ -673,8 +683,8 @@
               <!-- Dropdown Menu -->
               <div class="user-dropdown-card" id="userDropdownCard" style="display: none;">
                 <div class="dropdown-user-header">
-                  <strong class="dropdown-name" id="dropdownUserName">Sudhir Kumar</strong>
-                  <span class="dropdown-email" id="dropdownUserEmail">s.kumar@ikaaiindia.org</span>
+                  <strong class="dropdown-name" id="dropdownUserName">Portal User</strong>
+                  <span class="dropdown-email" id="dropdownUserEmail">user@ikaaiindia.org</span>
                 </div>
                 <div class="dropdown-divider"></div>
                 <button class="dropdown-menu-item" id="dropdownSettingsBtn">
@@ -2183,7 +2193,7 @@
                         <span class="details-profile-pip online" id="detailsProfilePip"></span>
                       </div>
                       <h4 class="details-profile-name" id="detailsProfileName">Devashish Chauhan</h4>
-                      <span class="details-profile-role-badge instructor" id="detailsProfileRole">Full-Time</span>
+                      <span class="details-profile-role-badge instructor" id="detailsProfileRole">Instructor</span>
                       <p class="details-profile-email" id="detailsProfileEmail">devashish@ikaaiindia.in</p>
                       <div class="details-profile-status" id="detailsProfileStatus">Active now</div>
                     </div>
@@ -2927,15 +2937,10 @@
                           style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Role
                           *</label>
                         <select id="adminInviteRole" class="form-text-input">
-                          <option value="intern" selected>Intern</option>
-                          <option value="instructor">Full-Time</option>
-                          <option value="admin">Admin</option>
-                          <option value="custom">Custom Role...</option>
+                          <option value="intern" selected>Intern / Learner</option>
+                          <option value="instructor">Instructor / Mentor</option>
+                          <option value="admin">Administrator</option>
                         </select>
-                        <div id="adminInviteCustomRoleWrap" style="display: none; margin-top: 6px;">
-                          <input type="text" id="adminInviteCustomRole" class="form-text-input"
-                            placeholder="Enter custom role title (e.g. Field Operations Lead)">
-                        </div>
                       </div>
                       <div>
                         <label
@@ -2968,14 +2973,7 @@
                             <option value="associate-partnerships-bd">Associate – Partnerships &amp; BD</option>
                             <option value="10000000-0000-0000-0000-000000000005">Business Development</option>
                           </optgroup>
-                          <optgroup label="Custom Role / Track">
-                            <option value="custom">Custom Role...</option>
-                          </optgroup>
                         </select>
-                        <div id="adminInviteCustomProgWrap" style="display: none; margin-top: 6px;">
-                          <input type="text" id="adminInviteCustomProg" class="form-text-input"
-                            placeholder="Enter custom position / role title">
-                        </div>
                         <div id="adminInviteProgNote"
                           style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: none;">Admins have
                           unrestricted access across all programmes.</div>
@@ -3061,9 +3059,8 @@
                     <select id="adminFilterRole" class="form-text-input">
                       <option value="">All Roles</option>
                       <option value="intern">Intern</option>
-                      <option value="instructor">Full-Time</option>
+                      <option value="instructor">Instructor</option>
                       <option value="admin">Admin</option>
-                      <option value="custom">Custom Roles</option>
                     </select>
                     <select id="adminFilterProg" class="form-text-input">
                       <option value="">All Programmes &amp; Roles</option>
@@ -3156,15 +3153,10 @@
                     style="display: block; font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">Role
                     *</label>
                   <select id="adminEditRoleSelect" class="form-text-input">
-                    <option value="intern" selected>Intern</option>
-                    <option value="instructor">Full-Time</option>
-                    <option value="admin">Admin</option>
-                    <option value="custom">Custom Role...</option>
+                    <option value="intern" selected>Intern / Learner</option>
+                    <option value="instructor">Instructor / Mentor</option>
+                    <option value="admin">Administrator</option>
                   </select>
-                  <div id="adminEditCustomRoleWrap" style="display: none; margin-top: 6px;">
-                    <input type="text" id="adminEditCustomRole" class="form-text-input"
-                      placeholder="Enter custom role title (e.g. Field Operations Lead)">
-                  </div>
                 </div>
                 <div style="margin-bottom: 20px;">
                   <label
@@ -3197,14 +3189,7 @@
                       <option value="associate-partnerships-bd">Associate – Partnerships &amp; BD</option>
                       <option value="10000000-0000-0000-0000-000000000005">Business Development</option>
                     </optgroup>
-                    <optgroup label="Custom Role / Track">
-                      <option value="custom">Custom Role...</option>
-                    </optgroup>
                   </select>
-                  <div id="adminEditCustomProgWrap" style="display: none; margin-top: 6px;">
-                    <input type="text" id="adminEditCustomProg" class="form-text-input"
-                      placeholder="Enter custom position / role title">
-                  </div>
                   <div id="adminEditProgNote"
                     style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: none;">Admins have
                     unrestricted access across all programmes.</div>
@@ -4379,7 +4364,7 @@
                       <select id="announcementAudienceSelect" class="form-text-input">
                         <option value="all">Everyone (All Learners &amp; Staff)</option>
                         <option value="programme">Specific Programme Only</option>
-                        <option value="role">Specific Role (Interns or Full-Time)</option>
+                        <option value="role">Specific Role (Interns or Instructors)</option>
                       </select>
                     </div>
                   </div>
@@ -4395,7 +4380,7 @@
                     <label for="announcementRoleSelect" class="modal-field-label">Select Target Role</label>
                     <select id="announcementRoleSelect" class="form-text-input">
                       <option value="intern">Interns / Learners Only</option>
-                      <option value="instructor">Full-Time Only</option>
+                      <option value="instructor">Instructors Only</option>
                     </select>
                   </div>
 
@@ -4568,20 +4553,16 @@
                   <div>
                     <h4 style="font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">2.
                       Contact &amp; Data Protection Officer</h4>
-                    <p>For data queries, access requests, or corrections, contact our designated officer:
-                      <br><strong>Data Protection Officer:</strong>
-                      <code>[DATA PROTECTION OFFICER PLACEHOLDER: dpo@ikaaiindia.org]</code>
-                      <br><strong>Organizational Contact:</strong>
-                      <code>[IKAAI CONTACT PLACEHOLDER: hr@ikaaiindia.in / Registered Office: New Delhi]</code>
+                    <p>For data queries, access requests, or corrections under the Digital Personal Data Protection Act, contact:
+                      <br><strong>Data Protection Officer:</strong> <a href="mailto:dpo@ikaaiindia.org" style="color: var(--accent-light);">dpo@ikaaiindia.org</a>
+                      <br><strong>Organizational Contact:</strong> <a href="mailto:hr@ikaaiindia.in" style="color: var(--accent-light);">hr@ikaaiindia.in</a> / Registered Office: New Delhi, India
                     </p>
                   </div>
 
                   <div>
                     <h4 style="font-size: 14.5px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">3.
                       Data Retention Period</h4>
-                    <p>User account data, assessment logs, and submitted examinations are retained for:
-                      <br><code>[RETENTION PERIOD PLACEHOLDER: Duration of active internship plus 12 calendar months for academic verification]</code>,
-                      after which records are archived or anonymized.
+                    <p>User account data, assessment logs, and submitted examinations are retained for the duration of the active internship plus 12 calendar months for academic verification and accreditation, after which records are archived or anonymized.
                     </p>
                   </div>
 
@@ -4632,14 +4613,13 @@
 
           </div>
 
-          <!-- Structured JDs and Supabase Data Layer -->
+          <!-- Structured Supabase Data Layer & Core App -->
           <script src="jspdf.umd.min.js"></script>
           <script>if (!window.jspdf) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'); }</script>
-          <script src="supabase-config.js?v=20261114_1350"></script>
-          <script src="supabase-client.js?v=20261114_1350"></script>
-          <script src="jd-data.js?v=20261114_1350"></script>
-          <script src="data.js?v=20261114_1350"></script>
-          <script src="app.js?v=20261114_1350"></script>
+          <script src="supabase-config.js?v=20261114_1800"></script>
+          <script src="supabase-client.js?v=20261114_1800"></script>
+          <script src="data.js?v=20261114_1800"></script>
+          <script src="app.js?v=20261114_1800"></script>
 </body>
 
 </html>

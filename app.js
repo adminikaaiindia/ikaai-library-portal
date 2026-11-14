@@ -12,9 +12,9 @@
 
   const INITIAL_DATA = {
     profile: {
-      name: 'Sudhir Kumar',
-      initials: 'SK',
-      email: 's.kumar@ikaaiindia.org',
+      name: 'Portal Learner',
+      initials: 'PL',
+      email: 'learner@ikaaiindia.org',
       role: 'Intern',
       branch: 'New Delhi / Remote',
       position: '',
@@ -2878,9 +2878,6 @@
             parsed.programmes[pid] = JSON.parse(JSON.stringify(INITIAL_DATA.programmes[pid]));
           }
         });
-        if (parsed.profile && parsed.profile.position === 'Human Resources Intern' && parsed.profile.email !== 's.kumar@ikaaiindia.org') {
-          parsed.profile.position = '';
-        }
         return Object.assign({}, INITIAL_DATA, parsed);
       }
     } catch (e) {
@@ -11361,10 +11358,6 @@
 
   function checkUrlParams() {
     const params = new URLSearchParams(window.location.search);
-    const authParam = params.get('auth');
-    if (authParam === 'demo' || authParam === '1') {
-      handleSuccessfulAuth({ name: 'Sudhir Kumar', email: 's.kumar@ikaaiindia.org' });
-    }
     const progParam = params.get('prog') || params.get('programme');
     if (progParam && state.programmes[progParam]) {
       currentProgrammeId = progParam;
@@ -11442,13 +11435,12 @@
 
   function isCurrentUserAdmin() {
     const role = (state && state.profile && state.profile.role ? state.profile.role : '').toLowerCase();
-    const email = (state && state.profile && state.profile.email ? state.profile.email : '').toLowerCase().trim();
-    if (role === 'admin' || email === 'admin.ikaaiindia@gmail.com') return true;
+    if (role === 'admin') return true;
     try {
       const sessionRaw = localStorage.getItem('ikaai_portal_session');
       if (sessionRaw) {
         const u = JSON.parse(sessionRaw);
-        if ((u.role && u.role.toLowerCase() === 'admin') || (u.email && u.email.toLowerCase().trim() === 'admin.ikaaiindia@gmail.com')) {
+        if (u.role && u.role.toLowerCase() === 'admin') {
           return true;
         }
       }
@@ -11463,10 +11455,9 @@
 
     const role = (state?.profile?.role || '').toLowerCase().trim();
     const position = (state?.profile?.position || '').toLowerCase().trim();
-    const email = (state?.profile?.email || '').toLowerCase().trim();
     const progKey = (currentProgrammeId || '').toLowerCase().trim();
 
-    if (role === 'admin' || email === 'admin.ikaaiindia@gmail.com' || email.includes('admin@') || email.startsWith('admin.')) {
+    if (role === 'admin') {
       return true;
     }
 
@@ -14115,14 +14106,9 @@
     if (userData.id) state.profile.id = userData.id;
     if (userData.name) state.profile.name = userData.name;
     if (userData.email) state.profile.email = userData.email;
+    if (userData.role) state.profile.role = userData.role;
 
     const userEmail = (userData.email || state.profile.email || '').trim().toLowerCase();
-    const isRootAdmin = (userEmail === 'admin.ikaaiindia@gmail.com');
-
-    // Prevent inheriting 'admin' role from a previous session on the same device
-    if (!isRootAdmin && state.profile.role === 'admin') {
-      state.profile.role = 'Intern';
-    }
 
     const parts = (state.profile.name || 'User').trim().split(/\s+/);
     if (parts.length >= 2) {
@@ -14162,7 +14148,7 @@
           const accessCheck = await window.DataLayer.resolveUserAccess(userData.id, userEmail);
           let accessStatus = accessCheck.accessStatus;
 
-          const isExplicitAdmin = (accessCheck.role === 'admin') || userEmail === 'admin.ikaaiindia@gmail.com';
+          const isExplicitAdmin = (accessCheck.role === 'admin');
           if (isExplicitAdmin) {
             accessStatus = 'active';
             state.profile.role = 'admin';
@@ -14343,34 +14329,16 @@
           if (cachedUser.name) state.profile.name = cachedUser.name;
           if (cachedUser.email) state.profile.email = cachedUser.email;
           if (cachedUser.id) state.profile.id = cachedUser.id;
-          const userEmail = (cachedUser.email || '').trim().toLowerCase();
-          if (userEmail !== 'admin.ikaaiindia@gmail.com' && state.profile.role === 'admin') {
-            state.profile.role = 'Intern';
-          }
-          try { document.documentElement.classList.add('has-portal-session'); } catch (e) { }
-          if (el.authScreen) {
-            el.authScreen.style.removeProperty('display');
-            el.authScreen.style.display = 'none';
-          }
-          if (el.appShell) {
-            el.appShell.style.removeProperty('display');
-            el.appShell.style.display = 'flex';
-          }
-          updateUserAvatarUI();
-          if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
-          renderSidebar();
-          switchScreen(activeScreen || 'home');
-        }
-      } catch (e) { }
-    }
-
     const isConfigured = (typeof window.isSupabaseConfigured === 'function') && window.isSupabaseConfigured();
-    isDemoAuth = !isConfigured;
 
-    if (isDemoAuth) {
-      if (el.demoBanner) el.demoBanner.style.display = 'flex';
+    if (!isConfigured) {
+      const offlineContainer = document.getElementById('offlineStateContainer');
+      if (offlineContainer) offlineContainer.style.display = 'block';
+      if (el.authScreen) el.authScreen.style.display = 'none';
+      if (el.appShell) el.appShell.style.display = 'none';
     } else {
-      if (el.demoBanner) el.demoBanner.style.display = 'none';
+      const offlineContainer = document.getElementById('offlineStateContainer');
+      if (offlineContainer) offlineContainer.style.display = 'none';
 
       if (!window.supabaseClient && window.supabase && typeof window.supabase.createClient === 'function' && window.SUPABASE_CONFIG) {
         try {
@@ -14631,24 +14599,14 @@
       el.loginSubmitBtn.disabled = true;
       el.loginSubmitBtn.textContent = 'Logging in...';
 
-      if (isDemoAuth) {
-        setTimeout(() => {
-          el.loginSubmitBtn.disabled = false;
-          el.loginSubmitBtn.textContent = 'Log In';
-          const registered = JSON.parse(localStorage.getItem('ikaai_registered_users') || '[]');
-          const existing = registered.find(u => u.email.toLowerCase() === email.toLowerCase());
-          const name = existing ? existing.name : (email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
-          handleSuccessfulAuth({ name, email });
-          showToast(`Welcome back, ${name}!`);
-        }, 350);
-      } else {
-        try {
-          const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-            email,
-            password
-          });
-          el.loginSubmitBtn.disabled = false;
-          el.loginSubmitBtn.textContent = 'Log In';
+      try {
+        if (!window.supabaseClient) throw new Error('Supabase client is not initialized.');
+        const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+          email,
+          password
+        });
+        el.loginSubmitBtn.disabled = false;
+        el.loginSubmitBtn.textContent = 'Log In';
 
           if (error) {
             let msg = error.message || 'Login failed. Please check your credentials.';
@@ -14712,31 +14670,21 @@
       el.signupSubmitBtn.disabled = true;
       el.signupSubmitBtn.textContent = 'Creating account...';
 
-      if (isDemoAuth) {
-        setTimeout(() => {
-          el.signupSubmitBtn.disabled = false;
-          el.signupSubmitBtn.textContent = 'Create Account';
-          const registered = JSON.parse(localStorage.getItem('ikaai_registered_users') || '[]');
-          registered.push({ name, email });
-          localStorage.setItem('ikaai_registered_users', JSON.stringify(registered));
-          handleSuccessfulAuth({ name, email });
-          showToast(`Welcome to Ikaai Academy, ${name}!`);
-        }, 400);
-      } else {
-        try {
-          const { data, error } = await window.supabaseClient.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: name,
-                portal: 'ikaai_academy'
-              }
+      try {
+        if (!window.supabaseClient) throw new Error('Supabase client is not initialized.');
+        const { data, error } = await window.supabaseClient.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name,
+              portal: 'ikaai_academy'
             }
-          });
+          }
+        });
 
-          el.signupSubmitBtn.disabled = false;
-          el.signupSubmitBtn.textContent = 'Create Account';
+        el.signupSubmitBtn.disabled = false;
+        el.signupSubmitBtn.textContent = 'Create Account';
 
           if (error) {
             let msg = error.message || 'Failed to create account.';
@@ -14787,19 +14735,12 @@
     el.googleAuthBtn.addEventListener('click', async () => {
       if (isGoogleAuthInProgress) return;
       hideAuthError();
-      if (isDemoAuth) {
-        handleSuccessfulAuth({
-          name: 'Akshay Tiwari',
-          email: 'akshay.tiwari@ikaaiindia.in'
-        });
-        showToast('Signed in via Google Demo Account');
-      } else {
-        try {
-          const client = window.supabaseClient || (window.SupabaseClient && window.SupabaseClient.getClient && window.SupabaseClient.getClient());
-          if (!client || !client.auth) {
-            showAuthError('Authentication service is initializing. Please try again in a moment.');
-            return;
-          }
+      try {
+        const client = window.supabaseClient || (window.SupabaseClient && window.SupabaseClient.getClient && window.SupabaseClient.getClient());
+        if (!client || !client.auth) {
+          showAuthError('Authentication service is initializing. Please try again in a moment.');
+          return;
+        }
           isGoogleAuthInProgress = true;
           el.googleAuthBtn.style.pointerEvents = 'none';
           el.googleAuthBtn.style.opacity = '0.7';
@@ -14839,9 +14780,8 @@
           if (btnSpan) btnSpan.textContent = 'Continue with Google';
           showAuthError(err.message || 'Google sign-in was cancelled or failed.');
         }
-      }
-    });
-  }
+      });
+    }
 
   // Forgot Password handler with dynamic origin redirect
   const forgotPwLink = document.getElementById('forgotPasswordLink');
@@ -15102,7 +15042,7 @@
       try {
         const { data: profiles, error } = await client
           .from('profiles')
-          .select('id, full_name, display_name, email, role, avatar_url, last_seen, chat_status')
+          .select('id, full_name, email, role, avatar_url, last_seen, chat_status')
           .order('full_name', { ascending: true });
 
         if (error) {
@@ -15121,7 +15061,6 @@
 
           const realProfiles = profiles.filter(p => {
             const em = (p.email || '').toLowerCase().trim();
-            if (em === 'akshaytiwarigaming@gmail.com' || em === 'akshaytiwari8527@gmail.com') return false;
             if (em.startsWith('deleted_') || em.includes('@deleted.local') || p.full_name === '[Deleted User]') return false;
             if (deletedUsersList.includes(em)) return false;
             return true;
@@ -15129,7 +15068,7 @@
 
           // Transform DB profiles into state.members (strictly real registered persons only!)
           state.members = realProfiles.map(p => {
-            const displayName = p.full_name || p.display_name || (p.email ? p.email.split('@')[0] : 'Member');
+            const displayName = p.full_name || (p.email ? p.email.split('@')[0] : 'Member');
             const initials = displayName.split(/\s+/).filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
             return {
               id: p.id,
@@ -16404,7 +16343,6 @@
         uploadStatus.style.display = 'none';
         uploadStatus.textContent = '';
       }
-      if (sendBtn) sendBtn.disabled = false;
 
       // Deduplicate previous failed attempt for the same content
       if (state.messages[conv.id]) {
@@ -16505,6 +16443,7 @@
         updateCharCounter();
         renderMessages();
       }
+      if (sendBtn) sendBtn.disabled = false;
     }
 
     // Retry sending a message that previously failed persistence

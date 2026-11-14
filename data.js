@@ -1113,11 +1113,6 @@
       const cleanEmail = (email || '').trim().toLowerCase();
       if (!cleanEmail) return { accessStatus: 'pending' };
 
-      // Root Admin is unconditionally active
-      if (cleanEmail === 'admin.ikaaiindia@gmail.com' || cleanEmail.includes('admin')) {
-        return { accessStatus: 'active', role: 'admin' };
-      }
-
       // Check session cache first to eliminate repeated network roundtrips
       const cacheKey = `ikaai_acc_${cleanEmail}`;
       try {
@@ -1259,20 +1254,16 @@
               if ((!data.access_status || data.access_status === 'pending') && data.email) {
                 try {
                   const cleanEm = data.email.trim().toLowerCase();
-                  if (cleanEm === 'admin.ikaaiindia@gmail.com' || cleanEm.includes('admin')) {
-                    data.access_status = 'active';
-                    data.role = 'admin';
-                  } else {
-                    const { data: inv } = await client
-                      .from('access_invites')
-                      .select('*')
-                      .ilike('email', cleanEm)
-                      .maybeSingle();
+                  const { data: inv } = await client
+                    .from('access_invites')
+                    .select('*')
+                    .ilike('email', cleanEm)
+                    .maybeSingle();
 
-                    if (inv && (inv.status === 'invited' || inv.status === 'active')) {
-                      data.access_status = 'active';
-                      data.role = inv.role || data.role || 'intern';
-                      data.programme_id = inv.programme_id || data.programme_id;
+                  if (inv && (inv.status === 'invited' || inv.status === 'active')) {
+                    data.access_status = 'active';
+                    data.role = inv.role || data.role || 'intern';
+                    data.programme_id = inv.programme_id || data.programme_id;
 
                       // Synchronize asynchronously
                       client.from('profiles').update({
@@ -1325,8 +1316,6 @@
             throw new Error('Name must be between 2 and 60 characters.');
           }
           updates.full_name = trimmed;
-          // Deprecated: display_name is mirrored for backward compatibility only
-          updates.display_name = trimmed;
         }
 
         if (phone !== undefined) {
@@ -1514,7 +1503,6 @@
         if (!item) return true;
         const em = (item.email || '').toLowerCase().trim();
         if (!em) return true;
-        if (em === 'akshaytiwarigaming@gmail.com' || em === 'akshaytiwari8527@gmail.com') return true;
         if (em.startsWith('deleted_') || em.includes('@deleted.local') || item.full_name === '[Deleted User]') return true;
         if (deletedSet.has(em)) return true;
         if (item.id && deletedSet.has(String(item.id).toLowerCase())) return true;
@@ -1534,9 +1522,7 @@
         const resolvedName = r.profile_name || r.full_name || r.display_name || '';
         const isRegistered = Boolean(r.profile_id || r.user_id || r.is_registered);
         const email = (r.email || '').trim().toLowerCase();
-        const isAdmin = r.role === 'admin' ||
-          email === 'admin.ikaaiindia@gmail.com' ||
-          email.includes('admin');
+        const isAdmin = (r.role === 'admin');
 
         // Admin accounts must always be active and hold admin role
         let role = isAdmin ? 'admin' : (r.role || 'intern');
@@ -1626,7 +1612,7 @@
             (profiles || []).forEach(p => {
               const profEmail = (p.email || '').trim().toLowerCase();
               if (profEmail && !seenEmails.has(profEmail)) {
-                const isUserActive = p.access_status === 'active' || p.role === 'admin' || profEmail === 'admin.ikaaiindia@gmail.com' || profEmail.includes('admin');
+                const isUserActive = (p.access_status === 'active' || p.role === 'admin');
                 combined.push(normalizeAdminRecord({
                   invite_id: null,
                   email: p.email,
@@ -1926,16 +1912,11 @@
           .eq('id', userId)
           .maybeSingle();
 
-        const targetEmail = (targetProfile?.email || '').trim().toLowerCase();
-        const protectedAdmins = [
-          'admin.ikaaiindia@gmail.com'
-        ];
-
-        if (protectedAdmins.includes(targetEmail)) {
-          throw new Error('The primary administrator account is protected and cannot be revoked.');
+        if (targetProfile && targetProfile.role === 'admin') {
+          throw new Error('Administrator accounts are protected and cannot be revoked.');
         }
       } catch (checkErr) {
-        if (checkErr.message && checkErr.message.includes('administrator account is protected')) {
+        if (checkErr.message && checkErr.message.includes('Administrator accounts are protected')) {
           throw checkErr;
         }
       }
@@ -1977,15 +1958,6 @@
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
-      const cleanEmail = (userEmail || '').trim().toLowerCase();
-      const protectedAdmins = [
-        'admin.ikaaiindia@gmail.com'
-      ];
-
-      if (cleanEmail && protectedAdmins.includes(cleanEmail)) {
-        throw new Error('Administrator accounts are protected and cannot be deleted.');
-      }
-
       // Check profile role before deleting
       if (userId) {
         try {
@@ -1995,8 +1967,7 @@
             .eq('id', userId)
             .maybeSingle();
 
-          const emailCheck = (prof?.email || '').trim().toLowerCase();
-          if (prof?.role === 'admin' || protectedAdmins.includes(emailCheck)) {
+          if (prof?.role === 'admin') {
             throw new Error('Administrator accounts are protected and cannot be deleted.');
           }
         } catch (chkErr) {
