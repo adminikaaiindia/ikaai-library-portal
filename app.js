@@ -2864,7 +2864,7 @@
       : 'hr-intern';
   let currentModuleIndex = 0;
   let expandedModules = new Set([0]);
-  let activeScreen = 'module'; // 'module', 'exam', 'messages', 'chat', 'announcements', 'feedback', 'grade', 'settings'
+  let activeScreen = 'home'; // 'home', 'module', 'exam', 'messages', 'chat', 'announcements', 'feedback', 'grade', 'settings'
   let activeQuizState = null;
 
   function loadState() {
@@ -2922,6 +2922,7 @@
     sidebarExamBadge: document.getElementById('sidebarExamBadge'),
 
     // Nav buttons
+    navHome: document.getElementById('navHome'),
     navWrittenExam: document.getElementById('navWrittenExam'),
     navMessageInstructor: document.getElementById('navMessageInstructor'),
     navChat: document.getElementById('navChat'),
@@ -2964,6 +2965,7 @@
 
     // Screen views
     screens: {
+      home: document.getElementById('homeScreenView'),
       module: document.getElementById('moduleScreenView'),
       jobDescriptions: document.getElementById('jdsScreenView'),
       companyResources: document.getElementById('companyResourcesScreenView'),
@@ -2976,6 +2978,10 @@
       settings: document.getElementById('settingsScreenView'),
       admin: document.getElementById('adminScreenView')
     },
+
+    // Home Dashboard Elements
+    homeScreenView: document.getElementById('homeScreenView'),
+    homeDashboardContainer: document.getElementById('homeDashboardContainer'),
 
     // Module View Elements
     moduleTitle: document.getElementById('moduleTitle'),
@@ -3428,11 +3434,20 @@
     }
   }
 
+  function navigateToHome() {
+    switchScreen('home');
+    const scrollElem = el.mainContentScroll || document.getElementById('mainContentScroll');
+    if (scrollElem) {
+      scrollElem.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   if (el.sidebarBrandHome) {
-    el.sidebarBrandHome.addEventListener('click', navigateToModuleZero);
+    el.sidebarBrandHome.addEventListener('click', navigateToHome);
   }
   if (el.topBarBrand) {
-    el.topBarBrand.addEventListener('click', navigateToModuleZero);
+    el.topBarBrand.addEventListener('click', navigateToHome);
   }
 
   // User avatar click opens Account Settings
@@ -3447,7 +3462,7 @@
   function switchScreen(screenKey) {
     if (screenKey === 'jobDescriptions' && typeof isAuthorizedForJdSection === 'function' && !isAuthorizedForJdSection()) {
       showToast('Access restricted: Only Admins, HR, and HR Interns can view Job Descriptions.');
-      screenKey = 'module';
+      screenKey = 'home';
     }
     clearModuleTimer();
     activeScreen = screenKey;
@@ -3462,6 +3477,7 @@
 
     // Update sidebar navigation active highlight
     const navButtons = [
+      { btn: el.navHome, key: 'home' },
       { btn: el.navJobDescriptions, key: 'jobDescriptions' },
       { btn: el.navCompanyResources, key: 'companyResources' },
       { btn: el.navWrittenExam, key: 'exam' },
@@ -3493,7 +3509,9 @@
     renderSidebar();
 
     // Render screen content
-    if (screenKey === 'module') {
+    if (screenKey === 'home') {
+      renderHomeScreen();
+    } else if (screenKey === 'module') {
       renderModulePage();
     } else if (screenKey === 'jobDescriptions') {
       renderJobDescriptionsScreen();
@@ -3525,6 +3543,9 @@
   }
 
   // Register sidebar screen navigation events
+  if (el.navHome) {
+    el.navHome.addEventListener('click', () => switchScreen('home'));
+  }
   if (el.navJobDescriptions) {
     el.navJobDescriptions.addEventListener('click', () => {
       if (typeof isAuthorizedForJdSection === 'function' && !isAuthorizedForJdSection()) {
@@ -4294,6 +4315,900 @@
       }
     }
   });
+
+  // ==========================================
+  // HOME DASHBOARD SYSTEM
+  // ==========================================
+
+  // Future dashboard cards can plug in here: Onboarding checklist, Assigned mentor/buddy, Formal Certificate download, Leave requests, Programme deadlines.
+
+  let lastHomeSummaryFetch = 0;
+  let cachedHomeSummary = null;
+  let isFetchingHomeSummary = false;
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function formatHomeDate(dateStr) {
+    if (!dateStr) return '--';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch (e) {
+      return String(dateStr);
+    }
+  }
+
+  function formatRelativeLastSeen(dateStr) {
+    if (!dateStr) return 'Never';
+    try {
+      const diffMs = Date.now() - new Date(dateStr).getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays <= 0) {
+        const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+        if (diffHrs <= 0) return 'Just now';
+        return `${diffHrs}h ago`;
+      }
+      if (diffDays === 1) return 'Yesterday';
+      return `${diffDays} days ago`;
+    } catch (e) {
+      return String(dateStr);
+    }
+  }
+
+  function syncSidebarBadgesFromSummary(summary) {
+    if (!summary) return;
+    try {
+      // 1. Announcements badge
+      const unreadAnnouncements = summary.attention?.unread_announcements_count || 0;
+      const annBadge = document.getElementById('announcementsUnreadBadge');
+      if (annBadge) {
+        annBadge.textContent = unreadAnnouncements;
+        annBadge.style.display = unreadAnnouncements > 0 ? 'inline-flex' : 'none';
+      }
+
+      // 2. Messages badge
+      const unreadMsgs = summary.role === 'learner'
+        ? (summary.attention?.unanswered_replies_count || 0)
+        : (summary.attention?.open_threads_count || 0);
+      const msgBadge = document.getElementById('messagesUnreadBadge');
+      if (msgBadge) {
+        msgBadge.textContent = unreadMsgs;
+        msgBadge.style.display = unreadMsgs > 0 ? 'inline-flex' : 'none';
+      }
+
+      // 3. Exam badge
+      const examBadge = document.getElementById('sidebarExamBadge');
+      if (examBadge) {
+        if (summary.role === 'learner') {
+          const examStatus = summary.exam?.status;
+          if (examStatus === 'graded' || summary.exam?.grade) {
+            examBadge.textContent = 'Graded';
+            examBadge.className = 'exam-status-tag graded';
+          } else if (examStatus === 'submitted') {
+            examBadge.textContent = 'Submitted';
+            examBadge.className = 'exam-status-tag submitted';
+          } else {
+            examBadge.textContent = 'Not submitted';
+            examBadge.className = 'exam-status-tag';
+          }
+        } else {
+          const ungraded = summary.attention?.ungraded_exams_count || 0;
+          if (ungraded > 0) {
+            examBadge.textContent = `${ungraded} pending`;
+            examBadge.className = 'exam-status-tag submitted';
+          } else {
+            examBadge.textContent = 'Up to date';
+            examBadge.className = 'exam-status-tag graded';
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[HomeDashboard] Badge sync warning:', e);
+    }
+  }
+
+  async function renderHomeScreen(force = false) {
+    const container = el.homeDashboardContainer || document.getElementById('homeDashboardContainer');
+    if (!container) return;
+
+    // 60-second throttle check
+    const now = Date.now();
+    if (!force && cachedHomeSummary && (now - lastHomeSummaryFetch < 60000)) {
+      renderHomeSummaryData(container, cachedHomeSummary);
+      return;
+    }
+
+    if (isFetchingHomeSummary) return;
+
+    // Show skeleton shimmer
+    container.innerHTML = `
+      <div class="home-skeleton-card home-skeleton-shimmer" style="height: 140px; margin-bottom: 20px;"></div>
+      <div class="home-stat-grid" style="margin-bottom: 20px;">
+        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
+        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
+        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
+        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
+      </div>
+      <div class="home-grid-2col">
+        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 280px;"></div>
+        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 280px;"></div>
+      </div>
+    `;
+
+    try {
+      isFetchingHomeSummary = true;
+      if (!window.DataLayer || typeof window.DataLayer.getDashboardSummary !== 'function') {
+        throw new Error('DataLayer.getDashboardSummary is not available.');
+      }
+      const summary = await window.DataLayer.getDashboardSummary();
+      cachedHomeSummary = summary;
+      lastHomeSummaryFetch = Date.now();
+      syncSidebarBadgesFromSummary(summary);
+      renderHomeSummaryData(container, summary);
+    } catch (err) {
+      console.error('[HomeDashboard] Error loading summary:', err);
+      container.innerHTML = `
+        <div class="home-error-card">
+          <div class="home-error-title">Unable to load dashboard</div>
+          <div class="home-error-desc">${escapeHtml(err.message || 'Please check your connection and try again.')}</div>
+          <button type="button" class="home-retry-btn" id="homeRetryBtn">Retry</button>
+        </div>
+      `;
+      const retryBtn = container.querySelector('#homeRetryBtn');
+      if (retryBtn) {
+        retryBtn.addEventListener('click', () => renderHomeScreen(true));
+      }
+    } finally {
+      isFetchingHomeSummary = false;
+    }
+  }
+
+  function renderHomeSummaryData(container, summary) {
+    if (!summary) return;
+    const role = (summary.role || 'learner').toLowerCase();
+    if (role === 'admin') {
+      renderAdminHome(container, summary);
+    } else if (role === 'instructor') {
+      renderInstructorHome(container, summary);
+    } else {
+      renderLearnerHome(container, summary);
+    }
+
+    // Attach refresh button handler
+    const refreshBtn = container.querySelector('#homeRefreshBtn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        const svg = refreshBtn.querySelector('svg');
+        if (svg) svg.classList.add('spin');
+        renderHomeScreen(true);
+      });
+    }
+  }
+
+  function renderLearnerHome(container, summary) {
+    const user = summary.user || {};
+    const firstName = user.first_name || 'Learner';
+    const progName = user.programme_name || state.profile.programmeName || 'Human Resources';
+    const todayFormatted = new Date().toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const nextStep = summary.next_step;
+    let nextStepHtml = '';
+    if (nextStep) {
+      if (nextStep.type === 'module') {
+        nextStepHtml = `
+          <div class="home-next-step-box">
+            <div class="home-next-step-info">
+              <span class="home-next-step-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Your Next Step &bull; Module ${escapeHtml(nextStep.module_number)}
+              </span>
+              <h2 class="home-next-step-title">Module ${escapeHtml(nextStep.module_number)}: ${escapeHtml(nextStep.title)}</h2>
+              <p class="home-next-step-desc">Pick up where you left off. Read through the core material and complete the knowledge check.</p>
+            </div>
+            <div class="home-next-step-action">
+              <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
+                ${escapeHtml(nextStep.action_label || 'Continue Module')}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (nextStep.type === 'take_exam') {
+        nextStepHtml = `
+          <div class="home-next-step-box">
+            <div class="home-next-step-info">
+              <span class="home-next-step-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                Final Assessment Unlocked
+              </span>
+              <h2 class="home-next-step-title">${escapeHtml(nextStep.title)}</h2>
+              <p class="home-next-step-desc">Congratulations on completing all modules! You are now eligible to complete your comprehensive written evaluation.</p>
+            </div>
+            <div class="home-next-step-action">
+              <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
+                Start Written Exam
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (nextStep.type === 'exam_waiting') {
+        nextStepHtml = `
+          <div class="home-next-step-box">
+            <div class="home-next-step-info">
+              <span class="home-next-step-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                Evaluation in Progress
+              </span>
+              <h2 class="home-next-step-title">${escapeHtml(nextStep.title)}</h2>
+              <p class="home-next-step-desc">Your written exam was received and is currently in the instructor grading inbox. You will be notified once graded.</p>
+            </div>
+            <div class="home-next-step-action">
+              <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
+                View Submission
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      } else if (nextStep.type === 'programme_complete') {
+        nextStepHtml = `
+          <div class="home-next-step-box">
+            <div class="home-next-step-info">
+              <span class="home-next-step-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                Curriculum Completed
+              </span>
+              <h2 class="home-next-step-title">${escapeHtml(nextStep.title)} &bull; Final Grade: ${escapeHtml(nextStep.grade || 'Pass')}</h2>
+              <p class="home-next-step-desc">You have successfully finished all curriculum coursework and your written examination evaluation.</p>
+            </div>
+            <div class="home-next-step-action">
+              <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
+                View Grade Report
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    const attention = summary.attention || {};
+    const unreadAnnouncements = attention.unread_announcements_count || 0;
+    const unackDocs = attention.unacknowledged_documents_count || 0;
+    const unreadChat = attention.unread_chat_messages_count || 0;
+    const unansweredReplies = attention.unanswered_replies_count || 0;
+
+    const progress = summary.progress || {};
+    const compPct = progress.completion_percentage || 0;
+    const completedMods = progress.completed_modules || 0;
+    const totalMods = progress.total_modules || 0;
+    const quizAvg = progress.quiz_average !== null && progress.quiz_average !== undefined ? `${progress.quiz_average}%` : '--';
+    const modules = progress.modules || [];
+
+    const recentAnnouncements = attention.recent_announcements || [];
+    const instructors = summary.instructors || [];
+
+    container.innerHTML = `
+      <!-- Hero Card -->
+      <div class="home-hero-card">
+        <div class="home-hero-top">
+          <div class="home-greeting-wrap">
+            <h1 class="home-greeting-title">Welcome back, ${escapeHtml(firstName)}!</h1>
+            <div class="home-greeting-meta">
+              <span class="home-pill-badge">${escapeHtml(progName)}</span>
+              <span class="home-greeting-date">${escapeHtml(todayFormatted)}</span>
+            </div>
+          </div>
+          <div class="home-actions-bar">
+            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+        ${nextStepHtml}
+      </div>
+
+      <!-- Needs Attention Section -->
+      <div>
+        <div class="home-section-title-row">
+          <h2 class="home-section-heading">Needs Your Attention</h2>
+        </div>
+        <div class="home-stat-grid">
+          <div class="home-attention-card" id="homeAttAnnouncements" role="button" tabindex="0">
+            <div class="home-attention-icon-box amber">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${unreadAnnouncements}</span>
+              <span class="home-attention-label">Unread Announcements</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeAttDocuments" role="button" tabindex="0">
+            <div class="home-attention-icon-box blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${unackDocs}</span>
+              <span class="home-attention-label">Pending Sign-offs</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeAttChat" role="button" tabindex="0">
+            <div class="home-attention-icon-box emerald">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${unreadChat}</span>
+              <span class="home-attention-label">Unread Messages</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeAttInstructorMsg" role="button" tabindex="0">
+            <div class="home-attention-icon-box purple">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${unansweredReplies}</span>
+              <span class="home-attention-label">Instructor Replies</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2-Column Content Grid -->
+      <div class="home-grid-2col">
+        <!-- Left: Programme Progress & Modules -->
+        <div class="home-card">
+          <div class="home-card-header">
+            <h3 class="home-card-title">Curriculum Progress</h3>
+            <span class="home-pill-badge">${compPct}% Complete</span>
+          </div>
+
+          <div class="home-progress-summary">
+            <div class="home-prog-stat-col">
+              <span class="home-prog-stat-num">${completedMods} / ${totalMods}</span>
+              <span class="home-prog-stat-lbl">Modules Completed</span>
+            </div>
+            <div class="home-prog-stat-col" style="text-align: right;">
+              <span class="home-prog-stat-num">${quizAvg}</span>
+              <span class="home-prog-stat-lbl">Quiz Average</span>
+            </div>
+          </div>
+
+          <div class="home-modules-list">
+            ${modules.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">No modules found for this programme.</p>' : modules.map(m => {
+              const statusClass = m.status === 'completed' ? 'completed' : (m.status === 'in_progress' ? 'in_progress' : 'locked');
+              const statusLabel = m.status === 'completed' ? 'Completed' : (m.status === 'in_progress' ? 'In Progress' : 'Locked');
+              const quizBadge = m.quiz_score !== null ? `<span style="font-size:11px; font-weight:700; color:var(--accent-primary);">${m.quiz_score}%</span>` : '';
+              return `
+                <div class="home-module-row ${statusClass}" data-module-num="${m.number}">
+                  <div class="home-module-left">
+                    <span class="home-module-num">${m.number}</span>
+                    <span class="home-module-title">${escapeHtml(m.title)}</span>
+                  </div>
+                  <div class="home-module-right">
+                    ${quizBadge}
+                    <span class="home-badge-tag ${statusClass}">${statusLabel}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Right: Recent Announcements & Instructors -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <!-- Recent Announcements Card -->
+          <div class="home-card">
+            <div class="home-card-header">
+              <h3 class="home-card-title">Recent Announcements</h3>
+              <button type="button" class="btn-change-rating" id="homeViewAllAnnouncementsBtn" style="font-size:11.5px; padding:3px 8px;">View all</button>
+            </div>
+            <div class="home-announcements-list">
+              ${recentAnnouncements.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">No announcements published yet.</p>' : recentAnnouncements.map(a => `
+                <div class="home-announcement-item" data-announcement-id="${a.id}">
+                  <div class="home-announcement-top">
+                    <span class="home-announcement-title">${escapeHtml(a.title)}</span>
+                    ${!a.is_read ? '<span style="width:7px; height:7px; border-radius:50%; background:var(--accent-primary); flex-shrink:0;"></span>' : ''}
+                  </div>
+                  <div class="home-announcement-meta">
+                    <span style="text-transform:capitalize;">${escapeHtml(a.category || 'General')}</span>
+                    <span>&bull;</span>
+                    <span>${formatHomeDate(a.publish_at)}</span>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <!-- Instructors Card -->
+          <div class="home-card">
+            <div class="home-card-header">
+              <h3 class="home-card-title">Programme Instructors</h3>
+            </div>
+            <div class="home-instructors-grid">
+              ${instructors.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">No instructors assigned to this programme yet.</p>' : instructors.map(inst => `
+                <div class="home-instructor-card">
+                  <div class="home-instructor-info">
+                    <div class="home-instructor-avatar">${escapeHtml((inst.name || 'I').substring(0, 2).toUpperCase())}</div>
+                    <span class="home-instructor-name">${escapeHtml(inst.name)}</span>
+                  </div>
+                  <button type="button" class="home-instructor-msg-btn" data-instructor-id="${inst.id}">Message</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Wire clicks
+    const nextStepBtn = container.querySelector('#homeNextStepBtn');
+    if (nextStepBtn && nextStep) {
+      nextStepBtn.addEventListener('click', () => {
+        if (nextStep.type === 'module') {
+          const prog = getCurrentProgramme();
+          const targetIndex = (prog.modules || []).findIndex(m => m.number == nextStep.module_number);
+          currentModuleIndex = targetIndex >= 0 ? targetIndex : 0;
+          expandedModules.add(currentModuleIndex);
+          switchScreen('module');
+        } else if (nextStep.type === 'take_exam' || nextStep.type === 'exam_waiting') {
+          switchScreen('exam');
+        } else if (nextStep.type === 'programme_complete') {
+          switchScreen('grade');
+        }
+      });
+    }
+
+    container.querySelectorAll('.home-module-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const modNum = row.dataset.moduleNum;
+        const prog = getCurrentProgramme();
+        const targetIndex = (prog.modules || []).findIndex(m => m.number == modNum);
+        if (targetIndex >= 0) {
+          currentModuleIndex = targetIndex;
+          expandedModules.add(targetIndex);
+          switchScreen('module');
+        }
+      });
+    });
+
+    const attAnnouncements = container.querySelector('#homeAttAnnouncements');
+    if (attAnnouncements) attAnnouncements.addEventListener('click', () => switchScreen('announcements'));
+
+    const attDocuments = container.querySelector('#homeAttDocuments');
+    if (attDocuments) attDocuments.addEventListener('click', () => switchScreen('companyResources'));
+
+    const attChat = container.querySelector('#homeAttChat');
+    if (attChat) attChat.addEventListener('click', () => switchScreen('chat'));
+
+    const attInstructorMsg = container.querySelector('#homeAttInstructorMsg');
+    if (attInstructorMsg) attInstructorMsg.addEventListener('click', () => switchScreen('messages'));
+
+    const viewAllAnnBtn = container.querySelector('#homeViewAllAnnouncementsBtn');
+    if (viewAllAnnBtn) viewAllAnnBtn.addEventListener('click', () => switchScreen('announcements'));
+
+    container.querySelectorAll('.home-announcement-item').forEach(item => {
+      item.addEventListener('click', () => switchScreen('announcements'));
+    });
+
+    container.querySelectorAll('.home-instructor-msg-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchScreen('messages'));
+    });
+  }
+
+  function renderInstructorHome(container, summary) {
+    const user = summary.user || {};
+    const firstName = user.first_name || 'Instructor';
+    const progName = user.programme_name || 'Human Resources';
+    const todayFormatted = new Date().toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const attention = summary.attention || {};
+    const ungradedExams = attention.ungraded_exams_count || 0;
+    const openThreads = attention.open_threads_count || 0;
+    const unreviewedFeedback = attention.unreviewed_feedback_count || 0;
+    const scheduledAnnouncements = attention.scheduled_announcements_count || 0;
+
+    const cohort = summary.cohort || {};
+    const activeLearners = cohort.active_learners_count || 0;
+    const avgCompletion = cohort.avg_completion_percentage || 0;
+    const quizAvg = cohort.quiz_average || 0;
+    const examCounts = cohort.exam_counts || {};
+    const inactiveLearners = cohort.inactive_learners || [];
+
+    container.innerHTML = `
+      <!-- Hero Card -->
+      <div class="home-hero-card">
+        <div class="home-hero-top">
+          <div class="home-greeting-wrap">
+            <h1 class="home-greeting-title">Welcome, ${escapeHtml(firstName)}!</h1>
+            <div class="home-greeting-meta">
+              <span class="home-pill-badge instructor-role">Instructor</span>
+              <span>&bull;</span>
+              <span>${escapeHtml(progName)}</span>
+              <span>&bull;</span>
+              <span class="home-greeting-date">${escapeHtml(todayFormatted)}</span>
+            </div>
+          </div>
+          <div class="home-actions-bar">
+            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Needs Attention Section -->
+      <div>
+        <div class="home-section-title-row">
+          <h2 class="home-section-heading">Needs Attention</h2>
+          <span class="home-section-subtitle">${escapeHtml(progName)} Cohort</span>
+        </div>
+        <div class="home-stat-grid">
+          <div class="home-attention-card" id="homeInstAttExams" role="button" tabindex="0">
+            <div class="home-attention-icon-box amber">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${ungradedExams}</span>
+              <span class="home-attention-label">Pending Written Exams</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeInstAttThreads" role="button" tabindex="0">
+            <div class="home-attention-icon-box blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${openThreads}</span>
+              <span class="home-attention-label">Open Learner Questions</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeInstAttFeedback" role="button" tabindex="0">
+            <div class="home-attention-icon-box purple">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${unreviewedFeedback}</span>
+              <span class="home-attention-label">Unreviewed Feedback</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeInstAttAnnouncements" role="button" tabindex="0">
+            <div class="home-attention-icon-box emerald">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${scheduledAnnouncements}</span>
+              <span class="home-attention-label">Scheduled Announcements</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cohort Snapshot & Inactive Learners -->
+      <div class="home-grid-2col">
+        <!-- Left: Cohort Metrics -->
+        <div class="home-card">
+          <div class="home-card-header">
+            <h3 class="home-card-title">Cohort Performance</h3>
+            <span class="home-pill-badge">${activeLearners} Active Learners</span>
+          </div>
+
+          <div class="home-progress-summary">
+            <div class="home-prog-stat-col">
+              <span class="home-prog-stat-num">${avgCompletion}%</span>
+              <span class="home-prog-stat-lbl">Avg Completion</span>
+            </div>
+            <div class="home-prog-stat-col" style="text-align: right;">
+              <span class="home-prog-stat-num">${quizAvg}%</span>
+              <span class="home-prog-stat-lbl">Quiz Average</span>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Written Exam Status</div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <div style="flex:1; min-width:100px; padding:10px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
+                <div style="font-size:18px; font-weight:800; color:var(--text-primary);">${examCounts.graded || 0}</div>
+                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Graded</div>
+              </div>
+              <div style="flex:1; min-width:100px; padding:10px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
+                <div style="font-size:18px; font-weight:800; color:var(--accent-primary);">${examCounts.submitted || 0}</div>
+                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Submitted</div>
+              </div>
+              <div style="flex:1; min-width:100px; padding:10px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
+                <div style="font-size:18px; font-weight:800; color:var(--text-muted);">${examCounts.not_submitted || 0}</div>
+                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Not Started</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Inactive Learners (no activity for 7+ days) -->
+        <div class="home-card">
+          <div class="home-card-header">
+            <h3 class="home-card-title">Learners Inactive &ge; 7 Days</h3>
+            <span style="font-size:11.5px; color:var(--text-muted);">Name &amp; Last Seen Only</span>
+          </div>
+          <div class="home-inactive-list">
+            ${inactiveLearners.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">All cohort learners have been active within the last 7 days.</p>' : inactiveLearners.map(l => `
+              <div class="home-inactive-row">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div class="home-instructor-avatar" style="background:rgba(239, 68, 68, 0.12); color:#ef4444;">
+                    ${escapeHtml((l.name || 'L').substring(0, 2).toUpperCase())}
+                  </div>
+                  <span style="font-size:13px; font-weight:700; color:var(--text-primary);">${escapeHtml(l.name)}</span>
+                </div>
+                <span style="font-size:12px; color:var(--text-muted); font-weight:600;">Last seen ${formatRelativeLastSeen(l.last_seen)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Wire clicks
+    const instExams = container.querySelector('#homeInstAttExams');
+    if (instExams) instExams.addEventListener('click', () => switchScreen('exam'));
+
+    const instThreads = container.querySelector('#homeInstAttThreads');
+    if (instThreads) instThreads.addEventListener('click', () => switchScreen('messages'));
+
+    const instFeedback = container.querySelector('#homeInstAttFeedback');
+    if (instFeedback) instFeedback.addEventListener('click', () => switchScreen('feedback'));
+
+    const instAnnouncements = container.querySelector('#homeInstAttAnnouncements');
+    if (instAnnouncements) instAnnouncements.addEventListener('click', () => switchScreen('announcements'));
+  }
+
+  function renderAdminHome(container, summary) {
+    const user = summary.user || {};
+    const firstName = user.first_name || 'Admin';
+    const todayFormatted = new Date().toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const attention = summary.attention || {};
+    const pendingApprovals = attention.pending_approval_count || 0;
+    const ungradedExams = attention.ungraded_exams_count || 0;
+    const openThreads = attention.open_threads_count || 0;
+    const unreviewedFeedback = attention.unreviewed_feedback_count || 0;
+    const draftItems = attention.draft_items_count || 0;
+
+    const programmesOverview = summary.programmes_overview || [];
+    const accessSnapshot = summary.access_snapshot || {};
+
+    container.innerHTML = `
+      <!-- Hero Card -->
+      <div class="home-hero-card">
+        <div class="home-hero-top">
+          <div class="home-greeting-wrap">
+            <h1 class="home-greeting-title">Welcome, ${escapeHtml(firstName)}!</h1>
+            <div class="home-greeting-meta">
+              <span class="home-pill-badge admin-role">System Admin</span>
+              <span>&bull;</span>
+              <span class="home-greeting-date">${escapeHtml(todayFormatted)}</span>
+            </div>
+          </div>
+          <div class="home-actions-bar">
+            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Needs Attention Section -->
+      <div>
+        <div class="home-section-title-row">
+          <h2 class="home-section-heading">Needs Attention Across All Programmes</h2>
+        </div>
+        <div class="home-stat-grid">
+          <div class="home-attention-card" id="homeAdminAttApprovals" role="button" tabindex="0">
+            <div class="home-attention-icon-box amber">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7.5" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${pendingApprovals}</span>
+              <span class="home-attention-label">Pending Account Requests</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeAdminAttExams" role="button" tabindex="0">
+            <div class="home-attention-icon-box emerald">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${ungradedExams}</span>
+              <span class="home-attention-label">Ungraded Written Exams</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeAdminAttThreads" role="button" tabindex="0">
+            <div class="home-attention-icon-box blue">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${openThreads}</span>
+              <span class="home-attention-label">Open Learner Questions</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeAdminAttFeedback" role="button" tabindex="0">
+            <div class="home-attention-icon-box purple">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${unreviewedFeedback}</span>
+              <span class="home-attention-label">Unreviewed Feedback</span>
+            </div>
+          </div>
+
+          <div class="home-attention-card" id="homeAdminAttDrafts" role="button" tabindex="0">
+            <div class="home-attention-icon-box amber">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+            </div>
+            <div class="home-attention-body">
+              <span class="home-attention-count">${draftItems}</span>
+              <span class="home-attention-label">Draft Docs &amp; Announcements</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Programmes Overview & Access Snapshot -->
+      <div class="home-grid-2col">
+        <!-- Left: Programmes Overview Table -->
+        <div class="home-card" style="grid-column: span 2;">
+          <div class="home-card-header">
+            <h3 class="home-card-title">Programmes Overview</h3>
+            <span style="font-size:12px; color:var(--text-muted);">All 5 Programmes</span>
+          </div>
+
+          <div class="home-table-wrap">
+            <table class="home-table">
+              <thead>
+                <tr>
+                  <th>Programme</th>
+                  <th style="text-align:center;">Active Learners</th>
+                  <th style="text-align:center;">Avg Completion</th>
+                  <th style="text-align:center;">Ungraded Exams</th>
+                  <th style="text-align:center;">Open Questions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${programmesOverview.length === 0 ? '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No programmes found.</td></tr>' : programmesOverview.map(p => `
+                  <tr class="home-table-row" data-prog-slug="${escapeHtml(p.programme_slug)}">
+                    <td style="font-weight:700; color:var(--text-primary);">${escapeHtml(p.programme_name)}</td>
+                    <td style="text-align:center;">${p.active_learners_count || 0}</td>
+                    <td style="text-align:center;">
+                      <span class="home-badge-tag in_progress">${p.avg_completion_percentage || 0}%</span>
+                    </td>
+                    <td style="text-align:center;">
+                      ${p.ungraded_exams_count > 0 ? `<span style="font-weight:700; color:var(--accent-primary);">${p.ungraded_exams_count}</span>` : '<span style="color:var(--text-muted);">0</span>'}
+                    </td>
+                    <td style="text-align:center;">
+                      ${p.open_threads_count > 0 ? `<span style="font-weight:700; color:#0284c7;">${p.open_threads_count}</span>` : '<span style="color:var(--text-muted);">0</span>'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Access Snapshot Card -->
+        <div class="home-card">
+          <div class="home-card-header">
+            <h3 class="home-card-title">User Accounts Snapshot</h3>
+            <button type="button" class="btn-change-rating" id="homeManageUsersBtn" style="font-size:11.5px; padding:3px 8px;">Manage</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;">
+            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
+              <div style="font-size:22px; font-weight:800; color:var(--accent-primary);">${accessSnapshot.active_users_count || 0}</div>
+              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Active</div>
+            </div>
+            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
+              <div style="font-size:22px; font-weight:800; color:#f59e0b;">${accessSnapshot.pending_users_count || 0}</div>
+              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Pending</div>
+            </div>
+            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
+              <div style="font-size:22px; font-weight:800; color:#0284c7;">${accessSnapshot.invited_users_count || 0}</div>
+              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Invited</div>
+            </div>
+            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
+              <div style="font-size:22px; font-weight:800; color:#ef4444;">${accessSnapshot.revoked_users_count || 0}</div>
+              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Revoked</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Admin Navigation Links -->
+        <div class="home-card">
+          <div class="home-card-header">
+            <h3 class="home-card-title">Admin Quick Actions</h3>
+          </div>
+          <div class="home-quick-links-strip">
+            <button type="button" class="home-quick-link-btn" id="homeQuickBtnUsers">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              Manage Users
+            </button>
+            <button type="button" class="home-quick-link-btn" id="homeQuickBtnAnnouncements">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              Announcements
+            </button>
+            <button type="button" class="home-quick-link-btn" id="homeQuickBtnDocuments">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              Company Documents
+            </button>
+            <button type="button" class="home-quick-link-btn" id="homeQuickBtnExams">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              Evaluation Inbox
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Wire clicks
+    const adminApprovals = container.querySelector('#homeAdminAttApprovals');
+    if (adminApprovals) adminApprovals.addEventListener('click', () => switchScreen('admin'));
+
+    const adminExams = container.querySelector('#homeAdminAttExams');
+    if (adminExams) adminExams.addEventListener('click', () => switchScreen('exam'));
+
+    const adminThreads = container.querySelector('#homeAdminAttThreads');
+    if (adminThreads) adminThreads.addEventListener('click', () => switchScreen('messages'));
+
+    const adminFeedback = container.querySelector('#homeAdminAttFeedback');
+    if (adminFeedback) adminFeedback.addEventListener('click', () => switchScreen('feedback'));
+
+    const adminDrafts = container.querySelector('#homeAdminAttDrafts');
+    if (adminDrafts) adminDrafts.addEventListener('click', () => switchScreen('companyResources'));
+
+    const manageUsersBtn = container.querySelector('#homeManageUsersBtn');
+    if (manageUsersBtn) manageUsersBtn.addEventListener('click', () => switchScreen('admin'));
+
+    const quickBtnUsers = container.querySelector('#homeQuickBtnUsers');
+    if (quickBtnUsers) quickBtnUsers.addEventListener('click', () => switchScreen('admin'));
+
+    const quickBtnAnn = container.querySelector('#homeQuickBtnAnnouncements');
+    if (quickBtnAnn) quickBtnAnn.addEventListener('click', () => switchScreen('announcements'));
+
+    const quickBtnDocs = container.querySelector('#homeQuickBtnDocuments');
+    if (quickBtnDocs) quickBtnDocs.addEventListener('click', () => switchScreen('companyResources'));
+
+    const quickBtnExams = container.querySelector('#homeQuickBtnExams');
+    if (quickBtnExams) quickBtnExams.addEventListener('click', () => switchScreen('exam'));
+  }
 
   function renderModulePage() {
     const prog = getCurrentProgramme();
@@ -14284,13 +15199,15 @@
     updateUserAvatarUI();
     if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
     renderSidebar();
-    if (activeScreen === 'module') {
+    if (activeScreen === 'home') {
+      renderHomeScreen();
+    } else if (activeScreen === 'module') {
       renderModulePage();
     } else if (activeScreen === 'jobDescriptions') {
       if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
         renderJobDescriptionsScreen();
       } else {
-        switchScreen('module');
+        switchScreen('home');
       }
     }
 
@@ -14363,12 +15280,13 @@
           updateUserAvatarUI();
           if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
           renderSidebar();
+          if (activeScreen === 'home') renderHomeScreen();
           if (activeScreen === 'module') renderModulePage();
           if (activeScreen === 'jobDescriptions') {
             if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
               renderJobDescriptionsScreen();
             } else {
-              switchScreen('module');
+              switchScreen('home');
             }
           }
         } catch (err) {
@@ -14506,12 +15424,13 @@
           updateUserAvatarUI();
           if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
           renderSidebar();
+          if (activeScreen === 'home') renderHomeScreen();
           if (activeScreen === 'module') renderModulePage();
           if (activeScreen === 'jobDescriptions') {
             if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
               renderJobDescriptionsScreen();
             } else {
-              switchScreen('module');
+              switchScreen('home');
             }
           }
         }
@@ -18753,9 +19672,14 @@
 
   // Re-sync presence and touch last seen whenever user returns to window tab
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && typeof GlobalPresence !== 'undefined') {
-      if (GlobalPresence.init) GlobalPresence.init();
-      if (GlobalPresence.touchLastSeen) GlobalPresence.touchLastSeen();
+    if (document.visibilityState === 'visible') {
+      if (typeof GlobalPresence !== 'undefined') {
+        if (GlobalPresence.init) GlobalPresence.init();
+        if (GlobalPresence.touchLastSeen) GlobalPresence.touchLastSeen();
+      }
+      if (activeScreen === 'home' && typeof renderHomeScreen === 'function') {
+        renderHomeScreen(false);
+      }
     }
   });
 

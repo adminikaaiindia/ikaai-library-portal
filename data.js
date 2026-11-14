@@ -279,6 +279,22 @@
     },
 
     // ------------------------------------------------------------------------
+    // HOME DASHBOARD SUMMARY
+    // ------------------------------------------------------------------------
+    async getDashboardSummary() {
+      const client = getClient();
+      if (!isLive() || !client || typeof client.rpc !== 'function') {
+        throw new Error('Supabase client unavailable.');
+      }
+      const { data, error } = await client.rpc('get_dashboard_summary');
+      if (error) {
+        console.error('[DataLayer] getDashboardSummary error:', error);
+        throw error;
+      }
+      return data;
+    },
+
+    // ------------------------------------------------------------------------
     // 5. WRITTEN EXAM
     // ------------------------------------------------------------------------
     async getExamQuestions(programmeId) {

@@ -12,7 +12,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap"
     rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261113_1530">
+  <link rel="stylesheet" href="styles.css?v=20261114_1200">
 
   <!-- Supabase JS Client v2 (Local bundle with CDN fallback) -->
   <script src="supabase.js"></script>
@@ -404,6 +404,20 @@
         </div>
 
         <div class="sidebar-scrollable">
+          <!-- Home Navigation Button (First Sidebar Item) -->
+          <div class="sidebar-section home-nav-section" style="padding-bottom: 2px;">
+            <button class="sidebar-nav-item active" id="navHome" data-screen="home">
+              <div class="nav-item-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+              </div>
+              <span class="nav-item-text">Home</span>
+            </button>
+          </div>
+
           <!-- Programme Selector Section -->
           <div class="sidebar-section programme-section">
             <span class="section-label">PROGRAMME</span>
@@ -710,9 +724,18 @@
             </section>
 
             <!-- ==========================================
+                 SCREEN 0: HOME DASHBOARD
+                 ========================================== -->
+            <div class="screen-view active" id="homeScreenView">
+              <div class="home-dashboard-container" id="homeDashboardContainer">
+                <!-- Dynamically populated by renderHomeScreen() -->
+              </div>
+            </div>
+
+            <!-- ==========================================
                  SCREEN 1: MODULE SCREEN (Two columns on Desktop)
                  ========================================== -->
-            <div class="screen-view active" id="moduleScreenView">
+            <div class="screen-view" id="moduleScreenView">
 
               <!-- Module Header Overview Card -->
               <section class="card module-overview-card">
@@ -4612,11 +4635,11 @@
           <!-- Structured JDs and Supabase Data Layer -->
           <script src="jspdf.umd.min.js"></script>
           <script>if (!window.jspdf) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'); }</script>
-          <script src="supabase-config.js?v=20261113_1530"></script>
-          <script src="supabase-client.js?v=20261113_1530"></script>
-          <script src="jd-data.js?v=20261113_1530"></script>
-          <script src="data.js?v=20261113_1530"></script>
-          <script src="app.js?v=20261113_1530"></script>
+          <script src="supabase-config.js?v=20261114_1200"></script>
+          <script src="supabase-client.js?v=20261114_1200"></script>
+          <script src="jd-data.js?v=20261114_1200"></script>
+          <script src="data.js?v=20261114_1200"></script>
+          <script src="app.js?v=20261114_1200"></script>
 </body>
 
 </html>
