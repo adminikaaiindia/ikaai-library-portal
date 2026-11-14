@@ -666,3 +666,4 @@ revoke all on function public.get_dashboard_summary() from public, anon;
 grant execute on function public.get_dashboard_summary() to authenticated;
 
 commit;
+
