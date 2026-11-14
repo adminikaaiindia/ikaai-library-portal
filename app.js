@@ -14152,17 +14152,7 @@
     updateUserAvatarUI();
     if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
     renderSidebar();
-    if (activeScreen === 'home') {
-      renderHomeScreen();
-    } else if (activeScreen === 'module') {
-      renderModulePage();
-    } else if (activeScreen === 'jobDescriptions') {
-      if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
-        renderJobDescriptionsScreen();
-      } else {
-        switchScreen('home');
-      }
-    }
+    switchScreen(activeScreen || 'home');
 
     // Background verification and curriculum synchronization (non-blocking)
     (async () => {
@@ -14233,15 +14223,7 @@
           updateUserAvatarUI();
           if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
           renderSidebar();
-          if (activeScreen === 'home') renderHomeScreen();
-          if (activeScreen === 'module') renderModulePage();
-          if (activeScreen === 'jobDescriptions') {
-            if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
-              renderJobDescriptionsScreen();
-            } else {
-              switchScreen('home');
-            }
-          }
+          switchScreen(activeScreen || 'home');
         } catch (err) {
           console.warn('[DataLayer] Auth profile background load error:', err);
         }
@@ -14377,15 +14359,7 @@
           updateUserAvatarUI();
           if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
           renderSidebar();
-          if (activeScreen === 'home') renderHomeScreen();
-          if (activeScreen === 'module') renderModulePage();
-          if (activeScreen === 'jobDescriptions') {
-            if (typeof isAuthorizedForJdSection === 'function' && isAuthorizedForJdSection()) {
-              renderJobDescriptionsScreen();
-            } else {
-              switchScreen('home');
-            }
-          }
+          switchScreen(activeScreen || 'home');
         }
       } catch (e) { }
     }
@@ -18639,6 +18613,6 @@
   // Initial Boot
   renderAll();
 
-  console.log('%c[Ikaai Portal] Version 20261114_1300 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
+  console.log('%c[Ikaai Portal] Version 20261114_1345 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
 
 })();

@@ -1,19 +1,19 @@
 -- ====================================================================
 -- IKAAI ACADEMY / LIBRARY - MIGRATION 20261114_16
--- FIX HOME DASHBOARD SUMMARY: RESOLVE UUID <> TEXT OPERATOR ERROR
+-- FIX HOME DASHBOARD SUMMARY: 100% TYPE-SAFE UUID / TEXT CASTING
 --
 -- Fixes:
---   1. Line 315 in Migration 15 compared m.sender_id (uuid) with v_caller_id::text
---      causing Postgres runtime error: 'operator does not exist: uuid <> text'.
---      Fixed by casting m.sender_id::text != v_caller_id::text, ensuring
---      type compatibility whether sender_id column is uuid or text.
---   2. Explicitly cast conversation_id to text in chat join to avoid any
---      mismatch between legacy uuid and modern text conversation IDs.
---   3. Handle NULL last_read_at in chat_conversation_members gracefully.
---   4. Handle learners without modules or unassigned programme gracefully.
+--   1. Drop existing function first so PostgREST clears any cached signature.
+--   2. Symmetrically cast all user IDs, sender IDs, conversation IDs, and
+--      programme IDs to ::text on joins and equality / inequality filters.
+--      This guarantees Postgres will NEVER throw 'operator does not exist: uuid <> text'
+--      or 'operator does not exist: uuid = text' regardless of table column types.
+--   3. Notify PostgREST to immediately flush and reload its schema cache.
 -- ====================================================================
 
 begin;
+
+drop function if exists public.get_dashboard_summary() cascade;
 
 create or replace function public.get_dashboard_summary()
 returns jsonb
@@ -23,9 +23,11 @@ set search_path = public, pg_temp
 as $$
 declare
   v_caller_id uuid := auth.uid();
+  v_caller_id_text text := auth.uid()::text;
   v_user record;
   v_role text;
   v_prog_id uuid;
+  v_prog_id_text text;
   v_prog record;
   v_result jsonb;
 
@@ -87,7 +89,7 @@ begin
   select id, role, programme_id, access_status, full_name, email
   into v_user
   from public.profiles
-  where id = v_caller_id;
+  where id::text = v_caller_id_text;
 
   if v_user.id is null or v_user.access_status is distinct from 'active' then
     raise exception 'Access denied: account is not active.';
@@ -98,6 +100,7 @@ begin
     v_role := 'learner';
   end if;
   v_prog_id := v_user.programme_id;
+  v_prog_id_text := v_prog_id::text;
 
   -- ==================================================================
   -- A. LEARNER / INTERN PAYLOAD
@@ -106,7 +109,7 @@ begin
     if v_prog_id is not null then
       select id, name, slug into v_prog
       from public.programmes
-      where id = v_prog_id;
+      where id::text = v_prog_id_text;
     end if;
 
     -- Compute module progression and next step
@@ -126,16 +129,16 @@ begin
         qa.passed as quiz_passed
       from public.modules m
       left join public.module_progress mp
-        on mp.module_id = m.id and mp.user_id = v_caller_id
+        on mp.module_id::text = m.id::text and mp.user_id::text = v_caller_id_text
       left join lateral (
         select qa_sub.score, qa_sub.total, qa_sub.passed
         from public.quiz_attempts qa_sub
-        join public.quizzes q_sub on q_sub.id = qa_sub.quiz_id
-        where q_sub.module_id = m.id and qa_sub.user_id = v_caller_id
+        join public.quizzes q_sub on q_sub.id::text = qa_sub.quiz_id::text
+        where q_sub.module_id::text = m.id::text and qa_sub.user_id::text = v_caller_id_text
         order by qa_sub.score desc, qa_sub.submitted_at desc
         limit 1
       ) qa on true
-      where m.programme_id = v_prog_id
+      where (v_prog_id is null or m.programme_id::text = v_prog_id_text)
       order by m.number asc, m.sort_order asc
     loop
       v_total_modules := v_total_modules + 1;
@@ -190,7 +193,8 @@ begin
     select status, submitted_at, grade, score, instructor_comment, graded_at
     into v_exam
     from public.exam_submissions
-    where user_id = v_caller_id and (programme_id = v_prog_id or (programme_id is null and v_prog_id is null));
+    where user_id::text = v_caller_id_text
+      and (v_prog_id is null or programme_id::text = v_prog_id_text or programme_id is null);
 
     if v_next_step is null and v_total_modules > 0 and v_completed_modules = v_total_modules then
       if v_exam.status is null or v_exam.status = 'not_submitted' then
@@ -235,9 +239,10 @@ begin
     from (
       select distinct on (q_sub.module_id) qa_sub.score, qa_sub.total
       from public.quiz_attempts qa_sub
-      join public.quizzes q_sub on q_sub.id = qa_sub.quiz_id
-      join public.modules m_sub on m_sub.id = q_sub.module_id
-      where qa_sub.user_id = v_caller_id and m_sub.programme_id = v_prog_id
+      join public.quizzes q_sub on q_sub.id::text = qa_sub.quiz_id::text
+      join public.modules m_sub on m_sub.id::text = q_sub.module_id::text
+      where qa_sub.user_id::text = v_caller_id_text
+        and (v_prog_id is null or m_sub.programme_id::text = v_prog_id_text)
       order by q_sub.module_id, qa_sub.score desc, qa_sub.submitted_at desc
     ) qa_best;
 
@@ -250,12 +255,12 @@ begin
       and (a.expires_at is null or a.expires_at > now())
       and (
         a.audience_type = 'all'
-        or (a.audience_type = 'programme' and a.programme_id = v_prog_id)
+        or (a.audience_type = 'programme' and a.programme_id::text = v_prog_id_text)
         or (a.audience_type = 'role' and a.target_role in ('intern', 'learner'))
       )
       and not exists (
         select 1 from public.announcement_reads ar
-        where ar.announcement_id = a.id and ar.user_id = v_caller_id
+        where ar.announcement_id::text = a.id::text and ar.user_id::text = v_caller_id_text
       );
 
     select count(*)
@@ -267,12 +272,12 @@ begin
       and a.requires_ack = true
       and (
         a.audience_type = 'all'
-        or (a.audience_type = 'programme' and a.programme_id = v_prog_id)
+        or (a.audience_type = 'programme' and a.programme_id::text = v_prog_id_text)
         or (a.audience_type = 'role' and a.target_role in ('intern', 'learner'))
       )
       and not exists (
         select 1 from public.announcement_acks ack
-        where ack.announcement_id = a.id and ack.user_id = v_caller_id
+        where ack.announcement_id::text = a.id::text and ack.user_id::text = v_caller_id_text
       );
 
     select coalesce(jsonb_agg(jsonb_build_object(
@@ -283,7 +288,7 @@ begin
       'is_pinned', a.is_pinned,
       'is_urgent', a.is_urgent,
       'requires_ack', a.requires_ack,
-      'is_read', exists (select 1 from public.announcement_reads ar where ar.announcement_id = a.id and ar.user_id = v_caller_id)
+      'is_read', exists (select 1 from public.announcement_reads ar where ar.announcement_id::text = a.id::text and ar.user_id::text = v_caller_id_text)
     )), '[]'::jsonb)
     into v_recent_announcements
     from (
@@ -294,7 +299,7 @@ begin
         and (a.expires_at is null or a.expires_at > now())
         and (
           a.audience_type = 'all'
-          or (a.audience_type = 'programme' and a.programme_id = v_prog_id)
+          or (a.audience_type = 'programme' and a.programme_id::text = v_prog_id_text)
           or (a.audience_type = 'role' and a.target_role in ('intern', 'learner'))
         )
       order by a.is_pinned desc, a.publish_at desc
@@ -305,27 +310,27 @@ begin
     select count(*)
     into v_unack_documents_count
     from public.personal_documents
-    where recipient_id = v_caller_id
+    where recipient_id::text = v_caller_id_text
       and requires_acknowledgement = true
       and acknowledged_at is null
       and coalesce(is_revoked, false) = false;
 
     -- Unread chat messages from chat_conversation_members.last_read_at
-    -- Type-safe join & comparison (cast to text to prevent uuid <> text operator error)
+    -- Fully cast conversation_id, user_id, and sender_id to text for 100% type safety
     select coalesce(count(m.id), 0)
     into v_unread_chat_count
     from public.chat_conversation_members ccm
     join public.chat_messages m on m.conversation_id::text = ccm.conversation_id::text
-    where ccm.user_id = v_caller_id
+    where ccm.user_id::text = v_caller_id_text
       and (ccm.last_read_at is null or m.created_at > ccm.last_read_at)
-      and (m.sender_id is null or m.sender_id::text != v_caller_id::text)
+      and (m.sender_id is null or m.sender_id::text != v_caller_id_text)
       and coalesce(m.is_deleted, false) = false;
 
     -- Unanswered replies in Message Instructor
     select count(*)
     into v_unanswered_replies_count
     from public.message_threads t
-    where t.learner_id = v_caller_id
+    where t.learner_id::text = v_caller_id_text
       and lower(t.status) = 'answered';
 
     -- Programme instructors list
@@ -337,7 +342,7 @@ begin
     )), '[]'::jsonb)
     into v_instructors
     from public.profiles p
-    where p.programme_id = v_prog_id
+    where (v_prog_id is null or p.programme_id::text = v_prog_id_text)
       and p.role = 'instructor'
       and p.access_status = 'active';
 
@@ -390,33 +395,33 @@ begin
     if v_prog_id is not null then
       select id, name, slug into v_prog
       from public.programmes
-      where id = v_prog_id;
+      where id::text = v_prog_id_text;
     end if;
 
     -- 1. Needs attention counts
     select count(*)
     into v_ungraded_exams_count
     from public.exam_submissions
-    where programme_id = v_prog_id
+    where programme_id::text = v_prog_id_text
       and status = 'submitted'
       and grade is null;
 
     select count(*)
     into v_open_threads_count
     from public.message_threads
-    where programme_id = v_prog_id
+    where programme_id::text = v_prog_id_text
       and lower(status) = 'open';
 
     select count(*)
     into v_unreviewed_feedback_count
     from public.feedback
-    where programme_id = v_prog_id
+    where programme_id::text = v_prog_id_text
       and (status = 'new' or reviewed_at is null);
 
     select count(*)
     into v_scheduled_announcements_count
     from public.announcements
-    where created_by = v_caller_id
+    where created_by::text = v_caller_id_text
       and status = 'published'
       and publish_at > now()
       and publish_at <= (now() + interval '7 days');
@@ -425,7 +430,7 @@ begin
     select count(*)
     into v_active_learners_count
     from public.profiles
-    where programme_id = v_prog_id
+    where programme_id::text = v_prog_id_text
       and role in ('intern', 'learner')
       and access_status = 'active';
 
@@ -440,11 +445,11 @@ begin
       from public.profiles u
       cross join public.modules m
       left join public.module_progress mp
-        on mp.module_id = m.id and mp.user_id = u.id and mp.completed_at is not null
-      where u.programme_id = v_prog_id
+        on mp.module_id::text = m.id::text and mp.user_id::text = u.id::text and mp.completed_at is not null
+      where u.programme_id::text = v_prog_id_text
         and u.role in ('intern', 'learner')
         and u.access_status = 'active'
-        and m.programme_id = v_prog_id
+        and m.programme_id::text = v_prog_id_text
       group by u.id
     ) sub;
 
@@ -452,26 +457,26 @@ begin
     select coalesce(round(avg((qa.score / nullif(qa.total, 0)) * 100)), 0)
     into v_cohort_quiz_avg
     from public.quiz_attempts qa
-    join public.profiles u on u.id = qa.user_id
-    join public.quizzes q on q.id = qa.quiz_id
-    join public.modules m on m.id = q.module_id
-    where u.programme_id = v_prog_id
+    join public.profiles u on u.id::text = qa.user_id::text
+    join public.quizzes q on q.id::text = qa.quiz_id::text
+    join public.modules m on m.id::text = q.module_id::text
+    where u.programme_id::text = v_prog_id_text
       and u.role in ('intern', 'learner')
       and u.access_status = 'active'
-      and m.programme_id = v_prog_id;
+      and m.programme_id::text = v_prog_id_text;
 
     -- Exam status counts
     select count(*)
     into v_exam_submitted_count
     from public.exam_submissions
-    where programme_id = v_prog_id
+    where programme_id::text = v_prog_id_text
       and status = 'submitted'
       and grade is null;
 
     select count(*)
     into v_exam_graded_count
     from public.exam_submissions
-    where programme_id = v_prog_id
+    where programme_id::text = v_prog_id_text
       and status = 'graded';
 
     v_exam_not_submitted_count := greatest(0, v_active_learners_count - (v_exam_submitted_count + v_exam_graded_count));
@@ -486,7 +491,7 @@ begin
     from (
       select p.id, p.full_name, p.last_seen
       from public.profiles p
-      where p.programme_id = v_prog_id
+      where p.programme_id::text = v_prog_id_text
         and p.role in ('intern', 'learner')
         and p.access_status = 'active'
         and (p.last_seen is null or p.last_seen < (now() - interval '7 days'))
@@ -589,7 +594,7 @@ begin
         (
           select count(*)
           from public.profiles u
-          where u.programme_id = p.id
+          where u.programme_id::text = p.id::text
             and u.role in ('intern', 'learner')
             and u.access_status = 'active'
         ) as active_learners,
@@ -603,25 +608,25 @@ begin
             from public.profiles u
             cross join public.modules m
             left join public.module_progress mp
-              on mp.module_id = m.id and mp.user_id = u.id and mp.completed_at is not null
-            where u.programme_id = p.id
+              on mp.module_id::text = m.id::text and mp.user_id::text = u.id::text and mp.completed_at is not null
+            where u.programme_id::text = p.id::text
               and u.role in ('intern', 'learner')
               and u.access_status = 'active'
-              and m.programme_id = p.id
+              and m.programme_id::text = p.id::text
             group by u.id
           ) sub
         ), 0) as avg_completion,
         (
           select count(*)
           from public.exam_submissions es
-          where es.programme_id = p.id
+          where es.programme_id::text = p.id::text
             and es.status = 'submitted'
             and es.grade is null
         ) as ungraded_exams,
         (
           select count(*)
           from public.message_threads mt
-          where mt.programme_id = p.id
+          where mt.programme_id::text = p.id::text
             and lower(mt.status) = 'open'
         ) as open_threads
       from public.programmes p
@@ -665,5 +670,6 @@ $$;
 revoke all on function public.get_dashboard_summary() from public, anon;
 grant execute on function public.get_dashboard_summary() to authenticated;
 
-commit;
+notify pgrst, 'reload schema';
 
+commit;

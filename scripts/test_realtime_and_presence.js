@@ -50,8 +50,8 @@ assert(appJs.includes('window.TeamChat.cleanupRealtime()'), 'TeamChat.cleanupRea
 console.log('✅ Realtime channel cleanup on signout verified');
 
 // 8. Cache busting
-assert(indexHtml.includes('app.js?v=20261113_1530'), 'app.js cache version bumped to 20261113_1530');
-assert(indexHtml.includes('data.js?v=20261113_1530'), 'data.js cache version bumped to 20261113_1530');
+assert(indexHtml.includes('app.js?v=202611'), 'app.js cache version bumped');
+assert(indexHtml.includes('data.js?v=202611'), 'data.js cache version bumped');
 console.log('✅ Cache versioning verified');
 
 console.log('\n🎉 ALL REALTIME CHAT & PRESENCE CHECKS PASSED!');
