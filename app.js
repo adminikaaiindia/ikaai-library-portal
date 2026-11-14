@@ -4608,7 +4608,7 @@
     const unansweredReplies = attention.unanswered_replies_count || 0;
 
     const progress = summary.progress || {};
-    const compPct = progress.completion_percentage || 0;
+    const compPct = (summary.exam && (summary.exam.status === 'graded' || summary.exam.grade)) ? 100 : (progress.completion_percentage || 0);
     const completedMods = progress.completed_modules || 0;
     const totalMods = progress.total_modules || 0;
     const quizAvg = progress.quiz_average !== null && progress.quiz_average !== undefined ? `${progress.quiz_average}%` : '--';
@@ -18613,6 +18613,6 @@
   // Initial Boot
   renderAll();
 
-  console.log('%c[Ikaai Portal] Version 20261114_1345 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
+  console.log('%c[Ikaai Portal] Version 20261114_1350 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
 
 })();

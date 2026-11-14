@@ -196,28 +196,27 @@ begin
     where user_id::text = v_caller_id_text
       and (v_prog_id is null or programme_id::text = v_prog_id_text or programme_id is null);
 
-    if v_next_step is null and v_total_modules > 0 and v_completed_modules = v_total_modules then
-      if v_exam.status is null or v_exam.status = 'not_submitted' then
-        v_next_step := jsonb_build_object(
-          'type', 'take_exam',
-          'title', 'Take your written exam',
-          'action_label', 'Start Written Exam'
-        );
-      elsif v_exam.status = 'submitted' and v_exam.grade is null then
-        v_next_step := jsonb_build_object(
-          'type', 'exam_waiting',
-          'title', 'Waiting for your instructor to grade your exam',
-          'action_label', 'View Submission'
-        );
-      elsif v_exam.status = 'graded' or v_exam.grade is not null then
-        v_next_step := jsonb_build_object(
-          'type', 'programme_complete',
-          'title', 'Programme complete',
-          'grade', v_exam.grade,
-          'score', v_exam.score,
-          'action_label', 'View Evaluation'
-        );
-      end if;
+    -- Determine next step based on exam status or module completion
+    if v_exam.status = 'graded' or v_exam.grade is not null then
+      v_next_step := jsonb_build_object(
+        'type', 'programme_complete',
+        'title', 'Programme complete',
+        'grade', v_exam.grade,
+        'score', v_exam.score,
+        'action_label', 'View Evaluation'
+      );
+    elsif v_exam.status = 'submitted' then
+      v_next_step := jsonb_build_object(
+        'type', 'exam_waiting',
+        'title', 'Waiting for your instructor to grade your exam',
+        'action_label', 'View Submission'
+      );
+    elsif v_next_step is null and v_total_modules > 0 and v_completed_modules = v_total_modules then
+      v_next_step := jsonb_build_object(
+        'type', 'take_exam',
+        'title', 'Take your written exam',
+        'action_label', 'Start Written Exam'
+      );
     elsif v_next_step is null and (v_prog_id is null or v_total_modules = 0) then
       v_next_step := jsonb_build_object(
         'type', 'pending_setup',
@@ -226,8 +225,10 @@ begin
       );
     end if;
 
-    -- Calculate completion percentage
-    if v_total_modules > 0 then
+    -- Calculate completion percentage (100% if exam is graded)
+    if v_exam.status = 'graded' or v_exam.grade is not null then
+      v_completion_pct := 100;
+    elsif v_total_modules > 0 then
       v_completion_pct := round((v_completed_modules::numeric / v_total_modules::numeric) * 100);
     else
       v_completion_pct := 0;
