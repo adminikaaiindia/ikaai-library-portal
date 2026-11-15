@@ -93,3 +93,4 @@ select bucket_id, count(*), pg_size_pretty(sum((metadata->>'size')::bigint)) as 
 from storage.objects
 group by bucket_id;
 ```
+

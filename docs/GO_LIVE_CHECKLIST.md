@@ -71,3 +71,4 @@ Every item must be reviewed and confirmed prior to inviting external users.
 - [ ] Instructor grades exam -> Grade and feedback appear on Learner Home screen.
 - [ ] Live chat message sent between two users -> Delivered in realtime without refresh.
 - [ ] User logs out -> Session cleared, redirects cleanly to login tab.
+

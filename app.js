@@ -14329,6 +14329,25 @@
           if (cachedUser.name) state.profile.name = cachedUser.name;
           if (cachedUser.email) state.profile.email = cachedUser.email;
           if (cachedUser.id) state.profile.id = cachedUser.id;
+          if (cachedUser.role) state.profile.role = cachedUser.role;
+
+          try { document.documentElement.classList.add('has-portal-session'); } catch (e) { }
+          if (el.authScreen) {
+            el.authScreen.style.removeProperty('display');
+            el.authScreen.style.display = 'none';
+          }
+          if (el.appShell) {
+            el.appShell.style.removeProperty('display');
+            el.appShell.style.display = 'flex';
+          }
+          updateUserAvatarUI();
+          if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
+          renderSidebar();
+          switchScreen(activeScreen || 'home');
+        }
+      } catch (e) { }
+    }
+
     const isConfigured = (typeof window.isSupabaseConfigured === 'function') && window.isSupabaseConfigured();
 
     if (!isConfigured) {
@@ -14634,9 +14653,8 @@
           el.loginSubmitBtn.textContent = 'Log In';
           showAuthError(err.message || 'Login failed. Please check your internet connection.');
         }
-      }
-    });
-  }
+      });
+    }
 
 
 
@@ -14712,9 +14730,8 @@
           el.signupSubmitBtn.textContent = 'Create Account';
           showAuthError(err.message || 'Failed to create account.');
         }
-      }
-    });
-  }
+      });
+    }
 
 
 

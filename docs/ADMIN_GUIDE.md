@@ -96,3 +96,4 @@ Instructors and Administrators can broadcast notices to the entire foundation or
 
 - Instructors and Administrators can delete inappropriate chat messages or comments.
 - Chat messages feature soft deletion (`is_deleted = true`), maintaining audit logs for compliance with the Foundation's Code of Conduct.
+

@@ -1278,7 +1278,6 @@
                         activated_at: new Date().toISOString()
                       }).eq('id', inv.id).then(() => { }).catch(() => { });
                     }
-                  }
                 } catch (invErr) {
                   console.warn('[DataLayer] Error checking invite in getProfile:', invErr);
                 }

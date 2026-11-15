@@ -48,3 +48,4 @@ This document records deliberate design trade-offs, hosting platform constraints
 ### Deliberate Design:
 - Administrators have no programme assignment (`profiles.programme_id = NULL`).
 - Any attempt to assign an admin account to a specific programme is intentionally rejected by the `invite_user` and `guard_profile_updates` database functions. This ensures administrators always retain global platform visibility across all 5 programmes.
+
