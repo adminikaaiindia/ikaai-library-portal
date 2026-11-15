@@ -3390,6 +3390,77 @@
     gradeTableBody: document.getElementById('gradeTableBody')
   };
 
+  const originalProgrammeSelectHTML = el.programmeSelect ? el.programmeSelect.innerHTML : '';
+
+  function applyRolePermissions(profile) {
+    const rawRole = (profile?.role || state.profile?.role || 'intern').toLowerCase().trim();
+    const cleanRole = (rawRole === 'learner') ? 'intern' : rawRole;
+    const isAdmin = (cleanRole === 'admin');
+
+    if (el.navAdmin) {
+      el.navAdmin.style.display = isAdmin ? 'flex' : 'none';
+    }
+
+    if (isAdmin) {
+      document.body.classList.add('is-admin');
+      if (el.programmeSelect) {
+        if (originalProgrammeSelectHTML && el.programmeSelect.innerHTML !== originalProgrammeSelectHTML) {
+          el.programmeSelect.innerHTML = originalProgrammeSelectHTML;
+        }
+        el.programmeSelect.disabled = false;
+        el.programmeSelect.style.cursor = 'pointer';
+        el.programmeSelect.title = 'Switch programme track (Admin access)';
+        if (currentProgrammeId) el.programmeSelect.value = currentProgrammeId;
+      }
+    } else {
+      document.body.classList.remove('is-admin');
+      // For Intern / Learner / Instructor: lock strictly to assigned programme
+      let assignedProgId = profile?.programme_id || state.profile?.programme_id;
+      let assignedKey = null;
+      if (assignedProgId) {
+        assignedKey = getProgrammeKey(assignedProgId);
+      } else if (profile?.position) {
+        const posLower = profile.position.toLowerCase();
+        for (const [k, v] of Object.entries(JD_PROGRAMME_MAP)) {
+          if (posLower.includes(v.title.toLowerCase()) || v.title.toLowerCase().includes(posLower)) {
+            assignedKey = k;
+            break;
+          }
+        }
+      }
+      if (!assignedKey) {
+        assignedKey = currentProgrammeId || 'data-analyst-intern';
+      }
+
+      currentProgrammeId = assignedKey;
+      localStorage.setItem('ikaai_active_programme', currentProgrammeId);
+
+      // Determine clean display title for the assigned role
+      let roleTitle = profile?.position || '';
+      if (!roleTitle && JD_PROGRAMME_MAP[assignedKey]) {
+        roleTitle = JD_PROGRAMME_MAP[assignedKey].title;
+      }
+      if (!roleTitle) {
+        const progMeta = getCurrentProgramme();
+        roleTitle = progMeta ? progMeta.title : 'Assigned Programme';
+      }
+
+      // Restrict programmeSelect so interns ONLY see their assigned role
+      if (el.programmeSelect) {
+        el.programmeSelect.innerHTML = `<option value="${escapeHtml(assignedKey)}" selected>${escapeHtml(roleTitle)}</option>`;
+        el.programmeSelect.disabled = true;
+        el.programmeSelect.style.cursor = 'default';
+        el.programmeSelect.title = `Assigned Role: ${roleTitle} (Managed by Admin)`;
+      }
+
+      // Synchronize role badge
+      if (el.sidebarRoleBadge) {
+        const roleTag = (JD_PROGRAMME_MAP[assignedKey] && JD_PROGRAMME_MAP[assignedKey].roleTag) || roleTitle;
+        el.sidebarRoleBadge.textContent = roleTag;
+      }
+    }
+  }
+
   // ==========================================
   // 4. TOAST NOTIFICATION UTILITY
   // ==========================================
@@ -3629,6 +3700,10 @@
   // ==========================================
 
   el.programmeSelect.addEventListener('change', (e) => {
+    if (!isCurrentUserAdmin()) {
+      e.preventDefault();
+      return;
+    }
     clearModuleTimer();
     currentProgrammeId = e.target.value;
     localStorage.setItem('ikaai_active_programme', currentProgrammeId);
@@ -11360,7 +11435,9 @@
     const params = new URLSearchParams(window.location.search);
     const progParam = params.get('prog') || params.get('programme');
     if (progParam && state.programmes[progParam]) {
-      currentProgrammeId = progParam;
+      if (isCurrentUserAdmin()) {
+        currentProgrammeId = progParam;
+      }
     }
     const themeParam = params.get('theme');
     if (themeParam && ['light', 'dark', 'system'].includes(themeParam)) {
@@ -11404,6 +11481,8 @@
       } else if (el.screens[screenParam]) {
         activeScreen = screenParam;
       }
+    } else {
+      activeScreen = 'home';
     }
 
     if (previewParam) {
@@ -11532,7 +11611,9 @@
     if (!el.jdsCardsGrid) return;
     if (!isAuthorizedForJdSection()) {
       if (el.jdsScreenView) el.jdsScreenView.style.display = 'none';
-      switchScreen('module');
+      if (activeScreen === 'jobDescriptions') {
+        switchScreen('home');
+      }
       return;
     }
     const availableJds = window.IKAAI_JOB_DESCRIPTIONS || [];
@@ -14135,6 +14216,7 @@
       el.appShell.style.removeProperty('display');
       el.appShell.style.display = 'flex';
     }
+    applyRolePermissions(userData);
     updateUserAvatarUI();
     if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
     renderSidebar();
@@ -14197,6 +14279,7 @@
             state.profile.position = profile.position || accessCheck.position || state.profile.position;
             state.profile.phone = profile.phone || state.profile.phone;
             state.profile.avatar_url = profile.avatar_url || state.profile.avatar_url;
+            if (profile.programme_id) state.profile.programme_id = profile.programme_id;
             if (profile.programme) state.profile.programmeName = profile.programme.name;
             applyRolePermissions(profile);
           } else if (accessCheck.role) {
@@ -14330,6 +14413,7 @@
           if (cachedUser.email) state.profile.email = cachedUser.email;
           if (cachedUser.id) state.profile.id = cachedUser.id;
           if (cachedUser.role) state.profile.role = cachedUser.role;
+          if (cachedUser.programme_id) state.profile.programme_id = cachedUser.programme_id;
 
           try { document.documentElement.classList.add('has-portal-session'); } catch (e) { }
           if (el.authScreen) {
@@ -14340,6 +14424,7 @@
             el.appShell.style.removeProperty('display');
             el.appShell.style.display = 'flex';
           }
+          applyRolePermissions(cachedUser);
           updateUserAvatarUI();
           if (typeof updateJdPermissionsUI === 'function') updateJdPermissionsUI();
           renderSidebar();
@@ -18545,9 +18630,11 @@
     initAuthentication();
     checkUrlParams();
     renderSidebar();
-    switchScreen(activeScreen);
+    switchScreen(activeScreen || 'home');
     updateUserAvatarUI();
-    renderJobDescriptionsScreen();
+    if (activeScreen === 'jobDescriptions') {
+      renderJobDescriptionsScreen();
+    }
     if (typeof GlobalPresence !== 'undefined' && GlobalPresence.init) {
       GlobalPresence.init();
     }
@@ -18569,6 +18656,6 @@
   // Initial Boot
   renderAll();
 
-  console.log('%c[Ikaai Portal] Version 20261114_1350 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
+  console.log('%c[Ikaai Portal] Version 20261115_1000 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
 
 })();
