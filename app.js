@@ -7155,12 +7155,16 @@
       if (isMcq) {
         const selectedOptId = savedAnswers[q.id]?.selected_option_id || (typeof savedAnswers[q.id] === 'string' ? savedAnswers[q.id] : '');
         let optionsHtml = '';
-        (q.options || []).forEach(opt => {
+        const sortedOptions = (q.options || []).slice().sort((a, b) =>
+          (a.sort_order ?? 0) - (b.sort_order ?? 0) || (a.option_label || '').localeCompare(b.option_label || '')
+        );
+        sortedOptions.forEach(opt => {
           const isChecked = (selectedOptId && selectedOptId === opt.id) ? 'checked' : '';
+          const optLabel = opt.option_label || opt.option_letter || '';
           optionsHtml += `
             <label class="exam-option-card ${isChecked ? 'selected' : ''}" for="opt_${opt.id}">
               <input type="radio" id="opt_${opt.id}" name="mcq_${q.id}" value="${opt.id}" ${isChecked} style="position: absolute; opacity: 0; pointer-events: none;">
-              <span class="exam-option-letter">${opt.option_letter}</span>
+              <span class="exam-option-letter">${escapeHtml(optLabel)}</span>
               <span class="exam-option-text">${escapeHtml(opt.option_text)}</span>
             </label>
           `;
@@ -15886,11 +15890,6 @@
             state.profile.role = 'admin';
           }
 
-          // Pre-approved by Admin -> immediately grant active access
-          if (accessCheck.preInvited || accessCheck.invite) {
-            accessStatus = 'active';
-          }
-
           // 1. Access Pending: Gating screen active until approved by Admin
           if (accessStatus === 'pending') {
             try { document.documentElement.classList.remove('has-portal-session'); } catch (e) { }
@@ -15934,21 +15933,13 @@
             state.profile.position = profile.position || accessCheck.position || state.profile.position;
             state.profile.phone = profile.phone || state.profile.phone;
             state.profile.avatar_url = profile.avatar_url || state.profile.avatar_url;
-            if (profile.job_id) state.profile.job_id = profile.job_id;
             if (profile.programme_id) state.profile.programme_id = profile.programme_id;
             if (profile.programme) state.profile.programmeName = profile.programme.name;
             applyRolePermissions(profile);
           } else if (accessCheck.role) {
             state.profile.role = accessCheck.role === 'learner' ? 'Intern' : accessCheck.role;
             if (accessCheck.position) state.profile.position = accessCheck.position;
-            if (accessCheck.jobId) state.profile.job_id = accessCheck.jobId;
-            if (accessCheck.programmeId) state.profile.programme_id = accessCheck.programmeId;
-            applyRolePermissions({
-              role: accessCheck.role,
-              position: accessCheck.position,
-              job_id: accessCheck.jobId,
-              programme_id: accessCheck.programmeId
-            });
+            applyRolePermissions({ role: accessCheck.role, position: accessCheck.position });
           }
 
           saveState();
