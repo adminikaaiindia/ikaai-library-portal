@@ -3410,7 +3410,7 @@
         el.navAdmin.style.display = 'flex';
       }
       if (activeScreen === 'home') {
-        activeScreen = 'admin';
+        activeScreen = 'module';
       }
 
       if (el.programmeSelect) {
@@ -3556,9 +3556,9 @@
     const rawRole = (state.profile?.role || '').toLowerCase().trim();
     const isAdmin = (rawRole === 'admin');
 
-    // For admins, remove dashboard: redirect any home navigation to admin portal
+    // For admins, remove dashboard: redirect any home navigation to curriculum (module)
     if (isAdmin && screenKey === 'home') {
-      screenKey = 'admin';
+      screenKey = 'module';
     }
 
     if (screenKey === 'jobDescriptions' && typeof isAuthorizedForJdSection === 'function' && !isAuthorizedForJdSection()) {
@@ -3742,7 +3742,20 @@
     localStorage.setItem('ikaai_active_programme', currentProgrammeId);
     currentModuleIndex = 0;
     expandedModules = new Set([0]);
-    renderAll();
+
+    // Keep the admin on the currently active screen instead of moving to admin portal
+    const targetScreen = activeScreen && activeScreen !== 'home' ? activeScreen : 'module';
+
+    renderSidebar();
+    switchScreen(targetScreen);
+
+    if (targetScreen === 'jobDescriptions' && typeof renderProgrammeJds === 'function') {
+      renderProgrammeJds(currentProgrammeId);
+    }
+    if (typeof syncCurriculumFromBackend === 'function') {
+      syncCurriculumFromBackend();
+    }
+
     if (window.innerWidth < 1024 && typeof closeSidebar === 'function') {
       closeSidebar();
     }
@@ -3821,7 +3834,7 @@
       updateSidebarExamBadge(pendingCount);
       if (typeof updateInstructorExamTabCounts === 'function') {
         const progId = isCurrentUserAdmin() ? null : getProgrammeDbId(currentProgrammeId);
-        updateInstructorExamTabCounts(progId).catch(() => {});
+        updateInstructorExamTabCounts(progId).catch(() => { });
       }
     } else if (currentExamSubmission?.status === 'graded') {
       if (el.sidebarExamBadge) {
@@ -4536,7 +4549,7 @@
   async function renderHomeScreen(force = false) {
     const rawRole = (state.profile?.role || '').toLowerCase().trim();
     if (rawRole === 'admin') {
-      switchScreen('admin');
+      switchScreen('module');
       return;
     }
     const container = el.homeDashboardContainer || document.getElementById('homeDashboardContainer');
@@ -4616,7 +4629,7 @@
     if (!summary) return;
     const role = (summary.role || 'learner').toLowerCase();
     if (role === 'admin' || (state.profile?.role || '').toLowerCase() === 'admin') {
-      switchScreen('admin');
+      switchScreen('module');
       return;
     } else if (role === 'instructor') {
       renderInstructorHome(container, summary);
@@ -4901,22 +4914,22 @@
                   <span class="home-empty-subtext">Coursework materials will appear once configured.</span>
                 </div>
               ` : modules.map((m, idx) => {
-                const isCompleted = m.status === 'completed';
-                const isInProgress = m.status === 'in_progress';
-                const statusClass = isCompleted ? 'completed' : (isInProgress ? 'in_progress' : 'locked');
-                const statusLabel = isCompleted ? 'Completed' : (isInProgress ? 'In Progress' : 'Locked');
-                const isCurrent = isInProgress || (!isCompleted && idx === 0);
+      const isCompleted = m.status === 'completed';
+      const isInProgress = m.status === 'in_progress';
+      const statusClass = isCompleted ? 'completed' : (isInProgress ? 'in_progress' : 'locked');
+      const statusLabel = isCompleted ? 'Completed' : (isInProgress ? 'In Progress' : 'Locked');
+      const isCurrent = isInProgress || (!isCompleted && idx === 0);
 
-                let nodeIcon = '';
-                if (isCompleted) {
-                  nodeIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-                } else if (isInProgress) {
-                  nodeIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle></svg>`;
-                } else {
-                  nodeIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
-                }
+      let nodeIcon = '';
+      if (isCompleted) {
+        nodeIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+      } else if (isInProgress) {
+        nodeIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle></svg>`;
+      } else {
+        nodeIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+      }
 
-                return `
+      return `
                   <div class="home-module-row home-stepper-item ${statusClass} ${isCurrent ? 'is-current' : ''}" data-module-num="${escapeHtml(m.number)}" role="button" tabindex="0" aria-label="Module ${escapeHtml(m.number)}: ${escapeHtml(m.title)}, ${statusLabel}">
                     <div class="home-module-left home-stepper-left">
                       <div class="home-module-num home-stepper-node">${nodeIcon}</div>
@@ -4931,7 +4944,7 @@
                     </div>
                   </div>
                 `;
-              }).join('')}
+    }).join('')}
             </div>
           </div>
 
@@ -4948,8 +4961,8 @@
             </div>
 
             ${(() => {
-              if (isExamGraded) {
-                return `
+        if (isExamGraded) {
+          return `
                   <div class="home-exam-grade-display">
                     <div>
                       <div class="home-exam-grade-val">${escapeHtml(exam.grade || 'Passed')}</div>
@@ -4972,8 +4985,8 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
                 `;
-              } else if (exam && exam.status === 'submitted') {
-                return `
+        } else if (exam && exam.status === 'submitted') {
+          return `
                   <div style="padding:14px 16px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px; display:flex; flex-direction:column; gap:6px;">
                     <div style="display:flex; align-items:center; gap:8px;">
                       <span style="width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span>
@@ -4986,8 +4999,8 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
                 `;
-              } else {
-                return `
+        } else {
+          return `
                   <div style="padding:14px 16px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px; display:flex; flex-direction:column; gap:6px;">
                     <span style="font-size:13px; font-weight:700; color:var(--text-primary);">End-of-Programme Evaluation</span>
                     <p style="font-size:12.5px; color:var(--text-secondary); margin:0; line-height:1.45;">The comprehensive written evaluation unlocks once all programme modules have been completed.</p>
@@ -4997,8 +5010,8 @@
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
                   </button>
                 `;
-              }
-            })()}
+        }
+      })()}
           </div>
         </div>
 
@@ -16035,34 +16048,34 @@
         el.loginSubmitBtn.disabled = false;
         el.loginSubmitBtn.textContent = 'Log In';
 
-          if (error) {
-            let msg = error.message || 'Login failed. Please check your credentials.';
-            if (msg.includes('Invalid login credentials')) {
-              msg = 'Invalid email or password.';
-            } else if (msg.includes('Email not confirmed')) {
-              msg = 'Please confirm your email address before logging in, or disable email confirmation in Supabase.';
-            }
-            showAuthError(msg);
-            return;
+        if (error) {
+          let msg = error.message || 'Login failed. Please check your credentials.';
+          if (msg.includes('Invalid login credentials')) {
+            msg = 'Invalid email or password.';
+          } else if (msg.includes('Email not confirmed')) {
+            msg = 'Please confirm your email address before logging in, or disable email confirmation in Supabase.';
           }
-
-          if (data && data.user) {
-            const u = data.user;
-            const name = u.user_metadata?.full_name || u.user_metadata?.name || email.split('@')[0];
-            handleSuccessfulAuth({
-              name,
-              email: u.email,
-              id: u.id
-            });
-            showToast(`Welcome back, ${name}!`);
-          }
-        } catch (err) {
-          el.loginSubmitBtn.disabled = false;
-          el.loginSubmitBtn.textContent = 'Log In';
-          showAuthError(err.message || 'Login failed. Please check your internet connection.');
+          showAuthError(msg);
+          return;
         }
-      });
-    }
+
+        if (data && data.user) {
+          const u = data.user;
+          const name = u.user_metadata?.full_name || u.user_metadata?.name || email.split('@')[0];
+          handleSuccessfulAuth({
+            name,
+            email: u.email,
+            id: u.id
+          });
+          showToast(`Welcome back, ${name}!`);
+        }
+      } catch (err) {
+        el.loginSubmitBtn.disabled = false;
+        el.loginSubmitBtn.textContent = 'Log In';
+        showAuthError(err.message || 'Login failed. Please check your internet connection.');
+      }
+    });
+  }
 
 
 
@@ -16112,34 +16125,34 @@
         el.signupSubmitBtn.disabled = false;
         el.signupSubmitBtn.textContent = 'Create Account';
 
-          if (error) {
-            let msg = error.message || 'Failed to create account.';
-            if (msg.includes('already registered')) {
-              msg = 'An account with this email already exists. Please log in.';
-            } else if (msg.includes('Password should be')) {
-              msg = 'Password is too weak. Please use at least 8 characters.';
-            }
-            showAuthError(msg);
-            return;
+        if (error) {
+          let msg = error.message || 'Failed to create account.';
+          if (msg.includes('already registered')) {
+            msg = 'An account with this email already exists. Please log in.';
+          } else if (msg.includes('Password should be')) {
+            msg = 'Password is too weak. Please use at least 8 characters.';
           }
-
-          if (data && data.session && data.user) {
-            const u = data.user;
-            handleSuccessfulAuth({ name, email: u.email, id: u.id });
-            showToast(`Welcome to Ikaai Academy, ${name}!`);
-          } else if (data && data.user) {
-            showToast(`Account created for ${name}!`);
-            if (el.tabLoginBtn) el.tabLoginBtn.click();
-            if (el.loginEmail) el.loginEmail.value = email;
-            showAuthError('Account registered! If email confirmation is enabled, check your inbox.');
-          }
-        } catch (err) {
-          el.signupSubmitBtn.disabled = false;
-          el.signupSubmitBtn.textContent = 'Create Account';
-          showAuthError(err.message || 'Failed to create account.');
+          showAuthError(msg);
+          return;
         }
-      });
-    }
+
+        if (data && data.session && data.user) {
+          const u = data.user;
+          handleSuccessfulAuth({ name, email: u.email, id: u.id });
+          showToast(`Welcome to Ikaai Academy, ${name}!`);
+        } else if (data && data.user) {
+          showToast(`Account created for ${name}!`);
+          if (el.tabLoginBtn) el.tabLoginBtn.click();
+          if (el.loginEmail) el.loginEmail.value = email;
+          showAuthError('Account registered! If email confirmation is enabled, check your inbox.');
+        }
+      } catch (err) {
+        el.signupSubmitBtn.disabled = false;
+        el.signupSubmitBtn.textContent = 'Create Account';
+        showAuthError(err.message || 'Failed to create account.');
+      }
+    });
+  }
 
 
 
@@ -16166,47 +16179,47 @@
           showAuthError('Authentication service is initializing. Please try again in a moment.');
           return;
         }
-          isGoogleAuthInProgress = true;
-          el.googleAuthBtn.style.pointerEvents = 'none';
-          el.googleAuthBtn.style.opacity = '0.7';
-          const btnSpan = el.googleAuthBtn.querySelector('span');
-          const originalText = btnSpan ? btnSpan.textContent : 'Continue with Google';
-          if (btnSpan) btnSpan.textContent = 'Redirecting to Google...';
+        isGoogleAuthInProgress = true;
+        el.googleAuthBtn.style.pointerEvents = 'none';
+        el.googleAuthBtn.style.opacity = '0.7';
+        const btnSpan = el.googleAuthBtn.querySelector('span');
+        const originalText = btnSpan ? btnSpan.textContent : 'Continue with Google';
+        if (btnSpan) btnSpan.textContent = 'Redirecting to Google...';
 
-          const redirectUrl = getOAuthRedirectUrl();
-          console.log('[Auth] Initiating Google Sign-In with redirect URL:', redirectUrl);
-          const { data, error } = await client.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo: redirectUrl,
-              queryParams: {
-                prompt: 'select_account',
-                access_type: 'offline'
-              }
+        const redirectUrl = getOAuthRedirectUrl();
+        console.log('[Auth] Initiating Google Sign-In with redirect URL:', redirectUrl);
+        const { data, error } = await client.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            queryParams: {
+              prompt: 'select_account',
+              access_type: 'offline'
             }
-          });
-          if (error) {
-            console.error('[Auth] Google sign-in error:', error);
-            isGoogleAuthInProgress = false;
-            el.googleAuthBtn.style.pointerEvents = '';
-            el.googleAuthBtn.style.opacity = '';
-            if (btnSpan) btnSpan.textContent = originalText;
-            showAuthError(error.message || 'Google sign-in was cancelled or failed.');
-          } else if (data && data.url) {
-            // Explicit navigation guarantee across all modern browsers
-            window.location.assign(data.url);
           }
-        } catch (err) {
-          console.error('[Auth] Google sign-in exception:', err);
+        });
+        if (error) {
+          console.error('[Auth] Google sign-in error:', error);
           isGoogleAuthInProgress = false;
           el.googleAuthBtn.style.pointerEvents = '';
           el.googleAuthBtn.style.opacity = '';
-          const btnSpan = el.googleAuthBtn.querySelector('span');
-          if (btnSpan) btnSpan.textContent = 'Continue with Google';
-          showAuthError(err.message || 'Google sign-in was cancelled or failed.');
+          if (btnSpan) btnSpan.textContent = originalText;
+          showAuthError(error.message || 'Google sign-in was cancelled or failed.');
+        } else if (data && data.url) {
+          // Explicit navigation guarantee across all modern browsers
+          window.location.assign(data.url);
         }
-      });
-    }
+      } catch (err) {
+        console.error('[Auth] Google sign-in exception:', err);
+        isGoogleAuthInProgress = false;
+        el.googleAuthBtn.style.pointerEvents = '';
+        el.googleAuthBtn.style.opacity = '';
+        const btnSpan = el.googleAuthBtn.querySelector('span');
+        if (btnSpan) btnSpan.textContent = 'Continue with Google';
+        showAuthError(err.message || 'Google sign-in was cancelled or failed.');
+      }
+    });
+  }
 
   // Forgot Password handler with dynamic origin redirect
   const forgotPwLink = document.getElementById('forgotPasswordLink');
@@ -19979,6 +19992,6 @@
   // Initial Boot
   renderAll();
 
-  console.log('%c[Ikaai Portal] Version 20261116_1025 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
+  console.log('%c[Ikaai Portal] Version 20261116_1200 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
 
 })();
