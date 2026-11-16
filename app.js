@@ -4773,8 +4773,8 @@
               <span class="home-prog-stat-lbl">Modules Completed</span>
             </div>
             <div class="home-prog-stat-col" style="text-align: right;">
-              <span class="home-prog-stat-num">${quizAvg}</span>
-              <span class="home-prog-stat-lbl">Quiz Average</span>
+              <span class="home-prog-stat-num">${exam && exam.status === 'graded' ? (exam.grade || 'Graded: 100%') : (exam && exam.status === 'submitted' ? 'Submitted' : 'Not submitted')}</span>
+              <span class="home-prog-stat-lbl">Written Exam</span>
             </div>
           </div>
 
@@ -5013,8 +5013,8 @@
               <span class="home-prog-stat-lbl">Avg Completion</span>
             </div>
             <div class="home-prog-stat-col" style="text-align: right;">
-              <span class="home-prog-stat-num">${quizAvg}%</span>
-              <span class="home-prog-stat-lbl">Quiz Average</span>
+              <span class="home-prog-stat-num">${examCounts.graded || 0}</span>
+              <span class="home-prog-stat-lbl">Exams Graded</span>
             </div>
           </div>
 
@@ -10394,34 +10394,10 @@
       }
     }
 
-    // Determine if learner has any completed quizzes or exam submissions
-    const completedQuizRows = (serverGrades || []).filter(g => g.score !== null && g.total > 0);
-    const hasAnyGrades = completedQuizRows.length > 0 || (examSubmission && (examSubmission.status === 'submitted' || examSubmission.status === 'graded'));
+    // Determine if learner has an exam submission
+    const hasAnyGrades = Boolean(examSubmission && (examSubmission.status === 'submitted' || examSubmission.status === 'graded'));
 
-    // A. Quiz Average Display
-    if (completedQuizRows.length > 0) {
-      let scoreSum = 0;
-      completedQuizRows.forEach(g => {
-        scoreSum += (g.score / g.total) * 100;
-      });
-      const avgPct = Math.round(scoreSum / completedQuizRows.length);
-      let letter = 'Fail';
-      if (avgPct >= 90) letter = 'A';
-      else if (avgPct >= 80) letter = 'B';
-      else if (avgPct >= 70) letter = 'C';
-
-      if (el.gradeAverageDisplay) {
-        el.gradeAverageDisplay.textContent = `${letter} (${avgPct}%)`;
-        el.gradeAverageDisplay.style.color = (avgPct >= 70) ? 'var(--accent-light)' : '#ef4444';
-      }
-    } else {
-      if (el.gradeAverageDisplay) {
-        el.gradeAverageDisplay.textContent = 'No quizzes taken';
-        el.gradeAverageDisplay.style.color = 'var(--text-secondary)';
-      }
-    }
-
-    // B. Written Exam Status Display
+    // A. Written Exam Status Display
     if (el.gradeExamDisplay) {
       if (examSubmission && examSubmission.status === 'graded') {
         const cleanGrade = (examSubmission.grade && examSubmission.grade.includes('%'))
@@ -10441,7 +10417,7 @@
       }
     }
 
-    // C. Programme Completion Display
+    // B. Programme Completion Display
     if (el.gradeCompletionDisplay) {
       let pct = progCompletion?.completion_percentage || 0;
       if (examSubmission && (examSubmission.status === 'graded' || examSubmission.grade)) {
@@ -10644,7 +10620,6 @@
             <span style="font-size: 12px; font-weight: 600; color: var(--text-primary); min-width: 35px;">${completionPct}%</span>
           </div>
         </td>
-        <td style="padding: 12px; font-weight: 700; font-size: 13px;">${quizAvgDisplay}</td>
         <td style="padding: 12px;">${examDisplay}</td>
       `;
       el.cohortRosterTableBody.appendChild(tr);
@@ -10671,7 +10646,7 @@
         return;
       }
 
-      const headers = ['Learner Name', 'Email', 'Programme', 'Completed Modules', 'Total Modules', 'Completion Percentage', 'Quiz Average', 'Exam Status', 'Exam Grade', 'Exam Score'];
+      const headers = ['Learner Name', 'Email', 'Programme', 'Completed Modules', 'Total Modules', 'Completion Percentage', 'Exam Status', 'Exam Grade', 'Exam Score'];
       const csvRows = [headers.join(',')];
 
       cohortGradeRosterData.forEach(r => {
@@ -10683,7 +10658,6 @@
           escape(r.completed_modules),
           escape(r.total_modules),
           escape(`${r.completion_percentage || 0}%`),
-          escape(r.quiz_average !== null ? `${r.quiz_average}%` : 'N/A'),
           escape(r.exam_status),
           escape(r.exam_grade || 'N/A'),
           escape(r.exam_score !== null ? r.exam_score : 'N/A')
@@ -19731,6 +19705,6 @@
   // Initial Boot
   renderAll();
 
-  console.log('%c[Ikaai Portal] Version 20261116_1015 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
+  console.log('%c[Ikaai Portal] Version 20261116_1025 live on GitHub Pages', 'color: #00a544; font-weight: bold; font-size: 13px;');
 
 })();

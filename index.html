@@ -2562,29 +2562,20 @@
                 <div class="screen-hero-header" style="margin-bottom: 18px;">
                   <div>
                     <h2 class="view-title">Academic Grade Report</h2>
-                    <p class="view-subtitle" id="gradeSummaryText">Official record of module quizzes, cohort average,
-                      and written examination status.</p>
+                    <p class="view-subtitle" id="gradeSummaryText">Official record of written examination and academic programme completion.</p>
                   </div>
                 </div>
 
                 <!-- Learner Grade Summary Cards -->
                 <div id="learnerGradeSummaryCards"
-                  style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 8px 0 24px;">
-                  <div
-                    style="padding: 18px 20px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-card);">
-                    <span
-                      style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Quiz
-                      Average</span>
-                    <div id="gradeAverageDisplay"
-                      style="font-size: 28px; font-weight: 800; color: var(--accent-light); margin-top: 6px;">--</div>
-                  </div>
+                  style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin: 8px 0 24px;">
                   <div
                     style="padding: 18px 20px; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--bg-card);">
                     <span
                       style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Written
-                      Exam</span>
+                      Exam Evaluation</span>
                     <div id="gradeExamDisplay"
-                      style="font-size: 22px; font-weight: 800; color: var(--text-secondary); margin-top: 8px;">Not
+                      style="font-size: 24px; font-weight: 800; color: var(--text-secondary); margin-top: 8px;">Not
                       submitted</div>
                   </div>
                   <div
@@ -2609,13 +2600,12 @@
                   </div>
                   <h4 style="font-size: 15px; font-weight: 700; margin-bottom: 4px;">No grades recorded yet</h4>
                   <p style="font-size: 13px; color: var(--text-secondary); max-width: 480px; margin: 0 auto;">As you
-                    complete module quizzes and submit your final written exam, your verified scores and grading
-                    feedback will appear here.</p>
+                    submit your final written exam, your verified score and grading feedback will appear here.</p>
                 </div>
 
-                <!-- Learner Quiz Breakdown -->
+                <!-- Academic Assessment Breakdown -->
                 <div id="learnerGradeTablesWrap">
-                  <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Module Quiz Breakdown</h3>
+                  <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Academic Assessment Breakdown</h3>
                   <div class="grade-modules-list" id="gradeModulesList"
                     style="display: flex; flex-direction: column; gap: 10px;"></div>
                   <div style="overflow-x: auto; margin-top: 20px;">
@@ -2687,7 +2677,6 @@
                           <th style="padding: 10px 12px;">Programme</th>
                           <th style="padding: 10px 12px;">Modules Completed</th>
                           <th style="padding: 10px 12px;">Completion %</th>
-                          <th style="padding: 10px 12px;">Quiz Average</th>
                           <th style="padding: 10px 12px;">Written Exam</th>
                         </tr>
                       </thead>
@@ -4616,10 +4605,10 @@
           <!-- Structured Supabase Data Layer & Core App -->
           <script src="jspdf.umd.min.js"></script>
           <script>if (!window.jspdf) { document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'); }</script>
-          <script src="supabase-config.js?v=20261116_1015"></script>
-          <script src="supabase-client.js?v=20261116_1015"></script>
-          <script src="data.js?v=20261116_1015"></script>
-          <script src="app.js?v=20261116_1015"></script>
+          <script src="supabase-config.js?v=20261116_1025"></script>
+          <script src="supabase-client.js?v=20261116_1025"></script>
+          <script src="data.js?v=20261116_1025"></script>
+          <script src="app.js?v=20261116_1025"></script>
 </body>
 
 </html>
