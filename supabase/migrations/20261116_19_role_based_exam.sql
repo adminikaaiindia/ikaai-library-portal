@@ -549,6 +549,24 @@ begin
   end if;
 
   if v_user.job_id is null then
+    -- Auto-resolve primary job for learner's programme if set
+    if v_user.programme_id is not null then
+      select id into v_user.job_id
+      from public.jobs
+      where programme_id = v_user.programme_id
+      order by sort_order asc
+      limit 1;
+
+      if v_user.job_id is not null then
+        update public.profiles
+        set job_id = v_user.job_id,
+            position = coalesce(position, (select title from public.jobs where id = v_user.job_id))
+        where id = v_user.id and job_id is null;
+      end if;
+    end if;
+  end if;
+
+  if v_user.job_id is null then
     raise exception 'Your role has not been assigned yet. Please contact your administrator.';
   end if;
 
@@ -645,6 +663,24 @@ begin
 
   if v_user.access_status is distinct from 'active' then
     raise exception 'Account access is not active.';
+  end if;
+
+  if v_user.job_id is null then
+    -- Auto-resolve primary job for learner's programme if set
+    if v_user.programme_id is not null then
+      select id into v_user.job_id
+      from public.jobs
+      where programme_id = v_user.programme_id
+      order by sort_order asc
+      limit 1;
+
+      if v_user.job_id is not null then
+        update public.profiles
+        set job_id = v_user.job_id,
+            position = coalesce(position, (select title from public.jobs where id = v_user.job_id))
+        where id = v_user.id and job_id is null;
+      end if;
+    end if;
   end if;
 
   if v_user.job_id is null then

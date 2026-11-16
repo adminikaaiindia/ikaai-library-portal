@@ -3441,10 +3441,18 @@
 
       // For Intern / Learner / Instructor: lock strictly to assigned programme
       let assignedProgId = profile?.programme_id || state.profile?.programme_id;
+      let assignedJobId = profile?.job_id || state.profile?.job_id;
       let assignedKey = null;
-      if (assignedProgId) {
-        assignedKey = getProgrammeKey(assignedProgId);
-      } else if (profile?.position) {
+
+      if (assignedJobId) {
+        for (const [k, v] of Object.entries(JD_ASSIGNMENT_MAP)) {
+          if (v.jobId === assignedJobId) {
+            assignedKey = k;
+            break;
+          }
+        }
+      }
+      if (!assignedKey && profile?.position) {
         const posLower = profile.position.toLowerCase();
         for (const [k, v] of Object.entries(JD_PROGRAMME_MAP)) {
           if (posLower.includes(v.title.toLowerCase()) || v.title.toLowerCase().includes(posLower)) {
@@ -3453,6 +3461,11 @@
           }
         }
       }
+      if (!assignedKey && assignedProgId) {
+        assignedKey = getProgrammeKey(assignedProgId);
+      }
+
+      const isUnassigned = !assignedProgId && !assignedJobId && !profile?.position;
       if (!assignedKey) {
         assignedKey = currentProgrammeId || 'data-analyst-intern';
       }
@@ -3472,16 +3485,24 @@
 
       // Restrict programmeSelect so interns ONLY see their assigned role
       if (el.programmeSelect) {
-        el.programmeSelect.innerHTML = `<option value="${escapeHtml(assignedKey)}" selected>${escapeHtml(roleTitle)}</option>`;
+        if (isUnassigned) {
+          el.programmeSelect.innerHTML = `<option value="" selected disabled>Role not assigned</option>`;
+        } else {
+          el.programmeSelect.innerHTML = `<option value="${escapeHtml(assignedKey)}" selected>${escapeHtml(roleTitle)}</option>`;
+        }
         el.programmeSelect.disabled = true;
         el.programmeSelect.style.cursor = 'default';
-        el.programmeSelect.title = `Assigned Role: ${roleTitle} (Managed by Admin)`;
+        el.programmeSelect.title = isUnassigned ? 'Role not assigned: Contact Administrator' : `Assigned Role: ${roleTitle} (Managed by Admin)`;
       }
 
       // Synchronize role badge
       if (el.sidebarRoleBadge) {
-        const roleTag = (JD_PROGRAMME_MAP[assignedKey] && JD_PROGRAMME_MAP[assignedKey].roleTag) || roleTitle;
-        el.sidebarRoleBadge.textContent = roleTag;
+        if (isUnassigned) {
+          el.sidebarRoleBadge.textContent = 'Role unassigned';
+        } else {
+          const roleTag = (JD_PROGRAMME_MAP[assignedKey] && JD_PROGRAMME_MAP[assignedKey].roleTag) || roleTitle;
+          el.sidebarRoleBadge.textContent = roleTag;
+        }
       }
     }
 
@@ -6944,10 +6965,12 @@
 
     // 1. Load Real Questions via getExamPaper() from DB
     let examPaper = null;
+    let examPaperError = null;
     if (window.DataLayer) {
       try {
         examPaper = await window.DataLayer.getExamPaper();
       } catch (err) {
+        examPaperError = err;
         console.warn('[DataLayer] Error loading exam paper:', err);
       }
     }
@@ -6957,15 +6980,28 @@
     const examInstructionsText = document.getElementById('examInstructionsText');
 
     if (!examPaper || examPaper.role_assigned === false) {
-      if (examMainTitle) examMainTitle.textContent = 'Role-Based Examination';
-      if (examInstructionsText) examInstructionsText.textContent = 'Please have an administrator assign your job role to access your assessment.';
-      if (el.examStatusPill) {
-        el.examStatusPill.textContent = 'Role unassigned';
-        el.examStatusPill.className = 'exam-pill';
-        el.examStatusPill.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
-        el.examStatusPill.style.color = '#f59e0b';
+      const isRevoked = examPaperError && examPaperError.message && examPaperError.message.includes('Account access is not active');
+      if (examMainTitle) examMainTitle.textContent = isRevoked ? 'Account Inactive' : 'Role-Based Examination';
+      if (examInstructionsText) {
+        examInstructionsText.textContent = isRevoked
+          ? 'Your portal account access is currently inactive or revoked. Please contact an administrator to activate your account.'
+          : 'Please have an administrator assign your job role to access your assessment.';
       }
-      if (unassignedNotice) unassignedNotice.style.display = 'block';
+      if (el.examStatusPill) {
+        el.examStatusPill.textContent = isRevoked ? 'Access Inactive' : 'Role unassigned';
+        el.examStatusPill.className = 'exam-pill';
+        el.examStatusPill.style.backgroundColor = isRevoked ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)';
+        el.examStatusPill.style.color = isRevoked ? '#ef4444' : '#f59e0b';
+      }
+      if (unassignedNotice) {
+        unassignedNotice.style.display = 'block';
+        const noticeDesc = unassignedNotice.querySelector('p');
+        if (noticeDesc) {
+          noticeDesc.textContent = isRevoked
+            ? 'Your account access is currently inactive or revoked. Please contact your administrator to reactivate your account.'
+            : 'Your role has not been assigned yet. Please contact your administrator to assign your specific job role so you can access your role-based examination.';
+        }
+      }
       if (el.examIntroSection) el.examIntroSection.style.display = 'none';
       if (el.examForm) el.examForm.style.display = 'none';
       if (el.examSubmittedNotice) el.examSubmittedNotice.style.display = 'none';
@@ -11389,10 +11425,29 @@
       };
     }
 
-    // Check canonical UUID or slug
-    const matchCanon = CANONICAL_PROGRAMMES.find(p => p.id === input || p.slug === norm);
-    if (matchCanon) {
-      return { progId: matchCanon.id, position: null, progName: matchCanon.name, jobId: null };
+    // Check canonical UUID or slug and map to corresponding primary role
+    const PROGRAMME_DEFAULT_JD = {
+      '10000000-0000-0000-0000-000000000001': 'hr-intern',
+      '10000000-0000-0000-0000-000000000002': 'data-analyst-intern',
+      '10000000-0000-0000-0000-000000000003': 'research-intern',
+      '10000000-0000-0000-0000-000000000004': 'social-media-design-intern',
+      '10000000-0000-0000-0000-000000000005': 'associate-partnerships-bd',
+      'human-resources': 'hr-intern',
+      'data-analyst': 'data-analyst-intern',
+      'social-research-policy': 'research-intern',
+      'design-social-media': 'social-media-design-intern',
+      'business-development': 'associate-partnerships-bd'
+    };
+    if (PROGRAMME_DEFAULT_JD[input] || PROGRAMME_DEFAULT_JD[norm]) {
+      const defKey = PROGRAMME_DEFAULT_JD[input] || PROGRAMME_DEFAULT_JD[norm];
+      if (JD_ASSIGNMENT_MAP[defKey]) {
+        return {
+          progId: JD_ASSIGNMENT_MAP[defKey].progId,
+          position: JD_ASSIGNMENT_MAP[defKey].title,
+          progName: JD_ASSIGNMENT_MAP[defKey].progName,
+          jobId: JD_ASSIGNMENT_MAP[defKey].jobId
+        };
+      }
     }
 
     // Check by title match, slug, or jobId match
@@ -12021,7 +12076,7 @@
     const isRootAdmin = userEmail === 'admin.ikaaiindia@gmail.com';
 
     const userIdEl = el.adminEditUserId || document.getElementById('adminEditUserId');
-    if (userIdEl) userIdEl.value = user.id || user.profile_id || user.invite_id || '';
+    if (userIdEl) userIdEl.value = user.profile_id || user.id || user.invite_id || '';
 
     const userNameEl = el.adminEditUserName || document.getElementById('adminEditUserName');
     if (userNameEl) userNameEl.textContent = user.full_name || (user.is_registered ? 'Registered User' : 'Invited Member');
@@ -12086,7 +12141,12 @@
     // Preselect Programme Assignment in progSelect
     if (progSelect) {
       let matchedProgOption = null;
-      if (user.position && !isCustomPosition) {
+      if (user.job_id) {
+        matchedProgOption = Array.from(progSelect.options).find(o =>
+          JD_ASSIGNMENT_MAP[o.value] && JD_ASSIGNMENT_MAP[o.value].jobId === user.job_id
+        );
+      }
+      if (!matchedProgOption && user.position && !isCustomPosition) {
         const normPos = user.position.toLowerCase().trim();
         matchedProgOption = Array.from(progSelect.options).find(o =>
           (o.value && o.value.toLowerCase() === normPos) ||
@@ -12095,7 +12155,9 @@
         );
       }
       if (!matchedProgOption && user.programme_id) {
-        matchedProgOption = Array.from(progSelect.options).find(o => o.value === user.programme_id);
+        matchedProgOption = Array.from(progSelect.options).find(o =>
+          JD_ASSIGNMENT_MAP[o.value] && JD_ASSIGNMENT_MAP[o.value].progId === user.programme_id
+        ) || Array.from(progSelect.options).find(o => o.value === user.programme_id);
       }
       if (matchedProgOption) {
         progSelect.value = matchedProgOption.value;
@@ -12426,6 +12488,7 @@
             if (cached) {
               cached.role = role;
               cached.position = position || null;
+              cached.job_id = jobId || cached.job_id || null;
               cached.programme_id = programmeId;
               cached.status = 'active';
               cached.is_pending_approval = false;

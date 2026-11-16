@@ -1297,6 +1297,27 @@
                 }
               }
 
+              // Auto-resolve job_id if missing for intern/learner with assigned programme
+              if (!data.job_id && data.programme_id && (data.role === 'intern' || data.role === 'learner')) {
+                try {
+                  const { data: jobRow } = await client
+                    .from('jobs')
+                    .select('id, title')
+                    .eq('programme_id', data.programme_id)
+                    .order('sort_order', { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
+                  if (jobRow) {
+                    data.job_id = jobRow.id;
+                    if (!data.position) data.position = jobRow.title;
+                    client.from('profiles').update({
+                      job_id: jobRow.id,
+                      position: data.position
+                    }).eq('id', uid).then(() => { }).catch(() => { });
+                  }
+                } catch (je) { }
+              }
+
               // Resolve programme details if programme_id exists
               if (data.programme_id) {
                 try {
@@ -1566,7 +1587,46 @@
         try {
           const { data, error } = await client.rpc('list_access_invites');
           if (!error && Array.isArray(data)) {
-            return data.map(normalizeAdminRecord).filter(r => r && !isDeleted(r));
+            // Enrich RPC results with live profiles & jobs data (job_id, position, access_status)
+            let profsMap = {};
+            try {
+              const { data: profs } = await client
+                .from('profiles')
+                .select('id, email, position, job_id, access_status, role, programme_id, jobs:job_id(id, title)');
+              (profs || []).forEach(p => {
+                if (p.email) profsMap[p.email.toLowerCase().trim()] = p;
+                if (p.id) profsMap[p.id] = p;
+              });
+            } catch (pe) { }
+
+            let invsMap = {};
+            try {
+              const { data: invs } = await client
+                .from('access_invites')
+                .select('id, email, job_id, status, role, programme_id, jobs:job_id(id, title)');
+              (invs || []).forEach(i => {
+                if (i.email) invsMap[i.email.toLowerCase().trim()] = i;
+                if (i.id) invsMap[i.id] = i;
+              });
+            } catch (ie) { }
+
+            return data.map(r => {
+              const em = (r.email || '').toLowerCase().trim();
+              const p = (r.profile_id && profsMap[r.profile_id]) || (em && profsMap[em]);
+              const inv = (r.invite_id && invsMap[r.invite_id]) || (em && invsMap[em]);
+
+              if (p) {
+                r.profile_id = p.id;
+                r.job_id = p.job_id || r.job_id || (inv ? inv.job_id : null);
+                r.position = p.position || p.jobs?.title || r.position || (inv ? inv.jobs?.title : null);
+                if (p.access_status) r.status = p.access_status;
+              } else if (inv) {
+                r.job_id = inv.job_id || r.job_id || null;
+                r.position = inv.jobs?.title || r.position || null;
+                if (inv.status) r.status = inv.status;
+              }
+              return normalizeAdminRecord(r);
+            }).filter(r => r && !isDeleted(r));
           }
           if (error) console.warn('[DataLayer] list_access_invites rpc note:', error);
         } catch (e) {
@@ -1610,6 +1670,7 @@
                 email: inv.email,
                 role: inv.role,
                 position: matchProfile?.position || null,
+                job_id: matchProfile?.job_id || inv.job_id || null,
                 programme_id: inv.programme_id,
                 programme_name: inv.programmes?.name || (inv.role === 'admin' ? 'All Programmes' : 'Unassigned'),
                 status: resolvedStatus,
@@ -1631,6 +1692,7 @@
                   email: p.email,
                   role: p.role,
                   position: p.position || null,
+                  job_id: p.job_id || null,
                   programme_id: p.programme_id,
                   programme_name: p.programmes?.name || (p.role === 'admin' ? 'All Programmes' : 'Unassigned'),
                   status: isUserActive ? 'active' : 'pending',
@@ -1800,11 +1862,20 @@
         } catch (e) { }
       }
 
+      // Look up profile ID by email in case userId was an invite_id
+      let resolvedProfileId = userId;
+      if (cleanEmail) {
+        try {
+          const { data: pLookup } = await client.from('profiles').select('id').ilike('email', cleanEmail).maybeSingle();
+          if (pLookup?.id) resolvedProfileId = pLookup.id;
+        } catch (e) { }
+      }
+
       // Attempt official RPC first (works when user is registered in profiles)
       try {
-        if (userId) {
+        if (resolvedProfileId) {
           const { data, error } = await client.rpc('update_user_access', {
-            p_user_id: userId,
+            p_user_id: resolvedProfileId,
             p_role: cleanRole,
             p_programme_id: cleanProg,
             p_job_id: cleanJobId
@@ -1812,17 +1883,18 @@
           if (!error) {
             if (position || cleanJobId) {
               try {
-                const patchObj = {};
+                const patchObj = { access_status: 'active' };
                 if (position) patchObj.position = position;
                 if (cleanJobId) patchObj.job_id = cleanJobId;
-                await client.from('profiles').update(patchObj).eq('id', userId);
+                await client.from('profiles').update(patchObj).eq('id', resolvedProfileId);
               } catch (e) { }
             }
             if (cleanEmail) {
               try {
                 const invPatch = {
                   role: cleanRole,
-                  programme_id: cleanProg
+                  programme_id: cleanProg,
+                  status: 'active'
                 };
                 if (cleanJobId) invPatch.job_id = cleanJobId;
                 await client.from('access_invites').update(invPatch).ilike('email', cleanEmail);
@@ -1988,22 +2060,21 @@
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
-      // Check profile role before deleting
-      if (userId) {
-        try {
-          const { data: prof } = await client
-            .from('profiles')
-            .select('role, email')
-            .eq('id', userId)
-            .maybeSingle();
+      const cleanEmail = (userEmail || '').trim().toLowerCase();
 
-          if (prof?.role === 'admin') {
-            throw new Error('Administrator accounts are protected and cannot be deleted.');
-          }
-        } catch (chkErr) {
-          if (chkErr.message && chkErr.message.includes('Administrator accounts are protected')) {
-            throw chkErr;
-          }
+      // Check profile role before deleting
+      try {
+        let profQuery = client.from('profiles').select('role, email');
+        if (userId) profQuery = profQuery.eq('id', userId);
+        else if (cleanEmail) profQuery = profQuery.ilike('email', cleanEmail);
+        const { data: prof } = await profQuery.maybeSingle();
+
+        if (prof?.role === 'admin') {
+          throw new Error('Administrator accounts are protected and cannot be deleted.');
+        }
+      } catch (chkErr) {
+        if (chkErr.message && chkErr.message.includes('Administrator accounts are protected')) {
+          throw chkErr;
         }
       }
 
@@ -2033,48 +2104,15 @@
       }
 
       // 4. Delete or deactivate from profiles
-      if (userId) {
-        try {
-          const { error: profDeleteErr } = await client
-            .from('profiles')
-            .delete()
-            .eq('id', userId);
-
-          if (profDeleteErr) {
-            await client
-              .from('profiles')
-              .update({
-                access_status: 'revoked',
-                full_name: '[Deleted User]',
-                email: 'deleted_' + Date.now() + '_' + cleanEmail,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', userId);
-          }
-        } catch (profE) {
-          console.warn('[DataLayer] profiles delete exception:', profE);
+      try {
+        if (userId) {
+          await client.from('profiles').delete().eq('id', userId);
         }
-      } else if (cleanEmail) {
-        try {
-          const { error: profDeleteErr } = await client
-            .from('profiles')
-            .delete()
-            .ilike('email', cleanEmail);
-
-          if (profDeleteErr) {
-            await client
-              .from('profiles')
-              .update({
-                access_status: 'revoked',
-                full_name: '[Deleted User]',
-                email: 'deleted_' + Date.now() + '_' + cleanEmail,
-                updated_at: new Date().toISOString()
-              })
-              .ilike('email', cleanEmail);
-          }
-        } catch (profE) {
-          console.warn('[DataLayer] profiles delete by email exception:', profE);
+        if (cleanEmail) {
+          await client.from('profiles').delete().ilike('email', cleanEmail);
         }
+      } catch (profE) {
+        console.warn('[DataLayer] profiles delete exception:', profE);
       }
 
       return { success: true, email: cleanEmail, id: userId };
@@ -2106,12 +2144,20 @@
         await client
           .from('access_invites')
           .update({ status: 'active', activated_at: new Date().toISOString() })
-          .eq('email', pData.email.toLowerCase());
+          .ilike('email', pData.email.toLowerCase());
       } else {
-        await client
+        const { data: invData } = await client
           .from('access_invites')
           .update({ status: 'active', activated_at: new Date().toISOString() })
-          .eq('id', userId);
+          .eq('id', userId)
+          .select('email')
+          .maybeSingle();
+        if (invData?.email) {
+          await client
+            .from('profiles')
+            .update({ access_status: 'active', updated_at: new Date().toISOString() })
+            .ilike('email', invData.email.toLowerCase());
+        }
       }
 
       return { success: true, user_id: userId, status: 'active' };
