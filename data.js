@@ -297,6 +297,19 @@
     // ------------------------------------------------------------------------
     // 5. WRITTEN EXAM
     // ------------------------------------------------------------------------
+    async getExamPaper() {
+      const client = getClient();
+      if (!isLive() || !client) {
+        throw new Error('Database connection is not available.');
+      }
+      const { data, error } = await client.rpc('get_exam_paper');
+      if (error) {
+        console.error('[DataLayer] get_exam_paper error:', error);
+        throw new Error(error.message || 'Failed to load exam paper.');
+      }
+      return data;
+    },
+
     async getExamQuestions(programmeId) {
       const client = getClient();
       if (isLive()) {
@@ -324,7 +337,7 @@
               .from('exam_submissions')
               .select(`
                 *,
-                exam_answers (question_id, answer_text, marks, comment)
+                exam_answers (question_id, selected_option_id, answer_text, marks, comment)
               `)
               .eq('user_id', user.id)
               .eq('programme_id', programmeId)
@@ -473,6 +486,7 @@
             id: row.id,
             user_id: null,
             programme_id: row.programme_id,
+            role_title: row.role_title || '',
             status: row.status,
             submitted_at: row.submitted_at,
             grade: row.grade,
@@ -1639,13 +1653,14 @@
       return [];
     },
 
-    async adminInviteUser({ email, role, programmeId, position }) {
+    async adminInviteUser({ email, role, programmeId, position, jobId }) {
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
       const cleanEmail = (email || '').trim().toLowerCase();
       const cleanRole = (role || '').trim().toLowerCase();
       const cleanProg = cleanRole === 'admin' ? null : (programmeId || '10000000-0000-0000-0000-000000000001');
+      const cleanJobId = cleanRole === 'admin' ? null : (jobId || null);
 
       if (!cleanEmail) throw new Error('Please enter a valid email address.');
 
@@ -1671,11 +1686,12 @@
         const { data, error } = await client.rpc('invite_user', {
           p_email: cleanEmail,
           p_role: cleanRole,
-          p_programme_id: cleanProg
+          p_programme_id: cleanProg,
+          p_job_id: cleanJobId
         });
 
         if (!error) {
-          if (position) {
+          if (position || cleanJobId) {
             try {
               const { data: p } = await client
                 .from('profiles')
@@ -1683,7 +1699,10 @@
                 .ilike('email', cleanEmail)
                 .maybeSingle();
               if (p && p.id) {
-                await client.from('profiles').update({ position: position }).eq('id', p.id);
+                const patchObj = {};
+                if (position) patchObj.position = position;
+                if (cleanJobId) patchObj.job_id = cleanJobId;
+                await client.from('profiles').update(patchObj).eq('id', p.id);
               }
             } catch (e) { }
           }
@@ -1708,6 +1727,7 @@
             .update({
               role: cleanRole,
               programme_id: cleanProg,
+              job_id: cleanJobId,
               status: existingInv.status === 'revoked' ? 'invited' : existingInv.status,
               invited_by: (await window.DataLayer.getCurrentUser())?.id || null
             })
@@ -1721,6 +1741,7 @@
               email: cleanEmail,
               role: cleanRole,
               programme_id: cleanProg,
+              job_id: cleanJobId,
               status: 'invited',
               invited_by: (await window.DataLayer.getCurrentUser())?.id || null,
               created_at: new Date().toISOString()
@@ -1742,6 +1763,7 @@
           const profPayload = {
             role: cleanRole === 'intern' ? 'learner' : cleanRole,
             programme_id: cleanProg,
+            job_id: cleanJobId,
             access_status: 'active',
             updated_at: new Date().toISOString()
           };
@@ -1753,19 +1775,20 @@
             .eq('id', prof.id);
         }
 
-        return { success: true, email: cleanEmail, role: cleanRole, programme_id: cleanProg };
+        return { success: true, email: cleanEmail, role: cleanRole, programme_id: cleanProg, job_id: cleanJobId };
       } catch (fallbackErr) {
         console.error('[DataLayer] adminInviteUser fallback error:', fallbackErr);
         throw fallbackErr;
       }
     },
 
-    async adminUpdateUserAccess(userId, { role, programmeId, position, email }) {
+    async adminUpdateUserAccess(userId, { role, programmeId, position, email, jobId }) {
       const client = getClient();
       if (!isLive() || !client) throw new Error('Backend connection required.');
 
       const cleanRole = (role || '').trim().toLowerCase();
       const cleanProg = cleanRole === 'admin' ? null : (programmeId || '10000000-0000-0000-0000-000000000001');
+      const cleanJobId = cleanRole === 'admin' ? null : (jobId || null);
       const cleanEmail = (email || '').trim().toLowerCase();
 
       // Persist custom position locally if provided
@@ -1783,20 +1806,26 @@
           const { data, error } = await client.rpc('update_user_access', {
             p_user_id: userId,
             p_role: cleanRole,
-            p_programme_id: cleanProg
+            p_programme_id: cleanProg,
+            p_job_id: cleanJobId
           });
           if (!error) {
-            if (position) {
+            if (position || cleanJobId) {
               try {
-                await client.from('profiles').update({ position: position }).eq('id', userId);
+                const patchObj = {};
+                if (position) patchObj.position = position;
+                if (cleanJobId) patchObj.job_id = cleanJobId;
+                await client.from('profiles').update(patchObj).eq('id', userId);
               } catch (e) { }
             }
             if (cleanEmail) {
               try {
-                await client.from('access_invites').update({
+                const invPatch = {
                   role: cleanRole,
                   programme_id: cleanProg
-                }).ilike('email', cleanEmail);
+                };
+                if (cleanJobId) invPatch.job_id = cleanJobId;
+                await client.from('access_invites').update(invPatch).ilike('email', cleanEmail);
               } catch (e) { }
             }
             return data;
@@ -1813,6 +1842,7 @@
         const profUpdatePayload = {
           role: cleanRole === 'intern' ? 'learner' : cleanRole,
           programme_id: cleanProg,
+          job_id: cleanJobId,
           access_status: 'active',
           updated_at: new Date().toISOString()
         };
@@ -1880,6 +1910,7 @@
           role: cleanRole,
           programme_id: cleanProg
         };
+        if (cleanJobId) invUpdate.job_id = cleanJobId;
         let invQuery = client.from('access_invites').update(invUpdate);
         if (userId) {
           invQuery = invQuery.eq('id', userId);

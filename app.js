@@ -3038,6 +3038,10 @@
     gradeLearnerName: document.getElementById('gradeLearnerName'),
     gradeLearnerMeta: document.getElementById('gradeLearnerMeta'),
     gradeSubmissionDatePill: document.getElementById('gradeSubmissionDatePill'),
+    gradeLearnerRole: document.getElementById('gradeLearnerRole'),
+    gradeLiveScorePreview: document.getElementById('gradeLiveScorePreview'),
+    gradeLiveTotalScore: document.getElementById('gradeLiveTotalScore'),
+    gradeLiveBreakdown: document.getElementById('gradeLiveBreakdown'),
     gradeQuestionsList: document.getElementById('gradeQuestionsList'),
     gradeOverallMarks: document.getElementById('gradeOverallMarks'),
     gradeOverallComment: document.getElementById('gradeOverallComment'),
@@ -6938,30 +6942,51 @@
       el.instructorExamReviewSection.style.display = 'none';
     }
 
-    // 1. Load Real Questions from DB
+    // 1. Load Real Questions via getExamPaper() from DB
+    let examPaper = null;
     if (window.DataLayer) {
       try {
-        const dbQuestions = await window.DataLayer.getExamQuestions(dbProgId);
-        if (dbQuestions && dbQuestions.length > 0) {
-          currentExamQuestions = dbQuestions.map(q => ({
-            id: q.id,
-            title: q.question,
-            prompt: q.prompt,
-            max_marks: q.max_marks || 25,
-            placeholder: 'Type your detailed analysis and response here...'
-          }));
-        } else if (prog.exam && prog.exam.questions) {
-          currentExamQuestions = prog.exam.questions;
-        }
+        examPaper = await window.DataLayer.getExamPaper();
       } catch (err) {
-        console.warn('[DataLayer] Error loading exam questions:', err);
+        console.warn('[DataLayer] Error loading exam paper:', err);
       }
     }
+
+    const unassignedNotice = document.getElementById('examUnassignedNotice');
+    const examMainTitle = document.getElementById('examMainTitle');
+    const examInstructionsText = document.getElementById('examInstructionsText');
+
+    if (!examPaper || examPaper.role_assigned === false) {
+      if (examMainTitle) examMainTitle.textContent = 'Role-Based Examination';
+      if (examInstructionsText) examInstructionsText.textContent = 'Please have an administrator assign your job role to access your assessment.';
+      if (el.examStatusPill) {
+        el.examStatusPill.textContent = 'Role unassigned';
+        el.examStatusPill.className = 'exam-pill';
+        el.examStatusPill.style.backgroundColor = 'rgba(245, 158, 11, 0.15)';
+        el.examStatusPill.style.color = '#f59e0b';
+      }
+      if (unassignedNotice) unassignedNotice.style.display = 'block';
+      if (el.examIntroSection) el.examIntroSection.style.display = 'none';
+      if (el.examForm) el.examForm.style.display = 'none';
+      if (el.examSubmittedNotice) el.examSubmittedNotice.style.display = 'none';
+      if (el.examGradedDetails) el.examGradedDetails.style.display = 'none';
+      return;
+    }
+
+    if (unassignedNotice) unassignedNotice.style.display = 'none';
+
+    const roleTitle = examPaper.job_title || prog.title;
+    if (examMainTitle) examMainTitle.textContent = `${roleTitle} — Final Examination`;
+    if (examInstructionsText) {
+      examInstructionsText.textContent = `This 100-mark assessment comprises 10 questions customized for the ${roleTitle} role: 6 multiple-choice questions (5 marks each, automarked) and 4 written analysis questions (70 marks, evaluated by your instructor).`;
+    }
+
+    currentExamQuestions = examPaper.questions || [];
 
     // 2. Load Learner's Submission from DB
     if (window.DataLayer) {
       try {
-        currentExamSubmission = await window.DataLayer.getExamSubmission(dbProgId);
+        currentExamSubmission = await window.DataLayer.getExamSubmission(examPaper.programme_id || dbProgId);
       } catch (err) {
         console.warn('[DataLayer] getExamSubmission error:', err);
       }
@@ -7055,40 +7080,105 @@
     if (el.examSubmittedNotice) el.examSubmittedNotice.style.display = 'none';
     el.examForm.style.display = 'flex';
 
+    const counterWrap = document.getElementById('examAnsweredCounter');
+    if (counterWrap) counterWrap.style.display = 'flex';
+
     if (el.submitExamBtn) el.submitExamBtn.style.display = 'inline-flex';
     if (el.saveDraftExamBtn) el.saveDraftExamBtn.style.display = 'inline-flex';
     if (el.cancelExamBtn) el.cancelExamBtn.textContent = 'Back to Overview';
 
     el.examQuestionsContainer.innerHTML = '';
+
+    function updateAnsweredCounter() {
+      let count = 0;
+      (currentExamQuestions || []).forEach(q => {
+        if (q.question_type === 'mcq') {
+          const checked = el.examQuestionsContainer.querySelector(`input[name="mcq_${q.id}"]:checked`);
+          if (checked) count++;
+        } else {
+          const field = document.getElementById(`ans_${q.id}`);
+          if (field && field.value.trim().length > 0) count++;
+        }
+      });
+      const counterEl = document.getElementById('examAnsweredCountText');
+      if (counterEl) {
+        counterEl.textContent = `Answered ${count} of ${currentExamQuestions.length}`;
+      }
+    }
+
     (currentExamQuestions || []).forEach((q, idx) => {
       const qDiv = document.createElement('div');
       qDiv.className = 'exam-question-item';
-      qDiv.style.marginBottom = '20px';
+      qDiv.style.marginBottom = '24px';
 
-      const existingVal = savedAnswers[q.id] || '';
-      const charCount = existingVal.length;
+      const isMcq = q.question_type === 'mcq';
+      const maxM = q.max_marks || (isMcq ? 5 : 15);
+      const qNum = idx + 1;
 
-      qDiv.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-          <label class="exam-q-title" for="ans_${q.id}" style="font-weight: 700; font-size: 14.5px;">Question ${idx + 1}: ${q.title}</label>
-          <span style="font-size: 11.5px; color: var(--accent-light); font-weight: 600;">Max Marks: ${q.max_marks}</span>
-        </div>
-        <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 8px;">${q.prompt}</p>
-        <textarea id="ans_${q.id}" class="exam-textarea form-text-input" rows="6" maxlength="2000" placeholder="${q.placeholder || 'Type your detailed response here (max 2000 chars)...'}" required style="resize: vertical; width: 100%;">${existingVal}</textarea>
-        <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
-          <span class="field-char-counter" id="counter_ans_${q.id}" style="font-size: 11px; color: var(--text-muted);">${charCount} / 2000</span>
-        </div>
-      `;
-      el.examQuestionsContainer.appendChild(qDiv);
-
-      const textarea = qDiv.querySelector(`#ans_${q.id}`);
-      const counter = qDiv.querySelector(`#counter_ans_${q.id}`);
-      if (textarea && counter) {
-        textarea.addEventListener('input', () => {
-          counter.textContent = `${textarea.value.length} / 2000`;
+      if (isMcq) {
+        const selectedOptId = savedAnswers[q.id]?.selected_option_id || (typeof savedAnswers[q.id] === 'string' ? savedAnswers[q.id] : '');
+        let optionsHtml = '';
+        (q.options || []).forEach(opt => {
+          const isChecked = (selectedOptId && selectedOptId === opt.id) ? 'checked' : '';
+          optionsHtml += `
+            <label class="exam-option-card ${isChecked ? 'selected' : ''}" for="opt_${opt.id}">
+              <input type="radio" id="opt_${opt.id}" name="mcq_${q.id}" value="${opt.id}" ${isChecked} style="position: absolute; opacity: 0; pointer-events: none;">
+              <span class="exam-option-letter">${opt.option_letter}</span>
+              <span class="exam-option-text">${escapeHtml(opt.option_text)}</span>
+            </label>
+          `;
         });
+
+        qDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <label class="exam-q-title" style="font-weight: 700; font-size: 14.5px;">Question ${qNum}: Multiple Choice</label>
+            <span style="font-size: 11.5px; color: var(--accent-light); font-weight: 600;">${maxM} Marks · Automarked</span>
+          </div>
+          <p style="font-size: 13.5px; color: var(--text-primary); line-height: 1.5; margin-bottom: 12px; font-weight: 500;">${escapeHtml(q.question)}</p>
+          <div class="exam-mcq-grid">${optionsHtml}</div>
+        `;
+        el.examQuestionsContainer.appendChild(qDiv);
+
+        qDiv.querySelectorAll(`input[name="mcq_${q.id}"]`).forEach(radio => {
+          radio.addEventListener('change', () => {
+            qDiv.querySelectorAll('.exam-option-card').forEach(c => c.classList.remove('selected'));
+            const card = radio.closest('.exam-option-card');
+            if (card) card.classList.add('selected');
+            updateAnsweredCounter();
+          });
+        });
+      } else {
+        // Written Question
+        const existingVal = (typeof savedAnswers[q.id] === 'string')
+          ? savedAnswers[q.id]
+          : (savedAnswers[q.id]?.answer_text || '');
+        const charCount = existingVal.length;
+
+        qDiv.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+            <label class="exam-q-title" for="ans_${q.id}" style="font-weight: 700; font-size: 14.5px;">Question ${qNum}: Written Analysis</label>
+            <span style="font-size: 11.5px; color: var(--accent-light); font-weight: 600;">Max Marks: ${maxM}</span>
+          </div>
+          <p style="font-size: 13.5px; color: var(--text-primary); line-height: 1.5; margin-bottom: 12px; font-weight: 500;">${escapeHtml(q.question)}</p>
+          <textarea id="ans_${q.id}" class="exam-textarea form-text-input" rows="7" maxlength="4000" placeholder="Type your detailed, structured analysis here (max 4000 characters)..." required style="resize: vertical; width: 100%;">${existingVal}</textarea>
+          <div style="display: flex; justify-content: flex-end; margin-top: 4px;">
+            <span class="field-char-counter" id="counter_ans_${q.id}" style="font-size: 11px; color: var(--text-muted);">${charCount} / 4000</span>
+          </div>
+        `;
+        el.examQuestionsContainer.appendChild(qDiv);
+
+        const textarea = qDiv.querySelector(`#ans_${q.id}`);
+        const counter = qDiv.querySelector(`#counter_ans_${q.id}`);
+        if (textarea && counter) {
+          textarea.addEventListener('input', () => {
+            counter.textContent = `${textarea.value.length} / 4000`;
+            updateAnsweredCounter();
+          });
+        }
       }
     });
+
+    updateAnsweredCounter();
   }
 
 
@@ -7099,7 +7189,10 @@
       const savedAnswers = {};
       if (currentExamSubmission?.exam_answers) {
         currentExamSubmission.exam_answers.forEach(a => {
-          savedAnswers[a.question_id] = a.answer_text;
+          savedAnswers[a.question_id] = {
+            selected_option_id: a.selected_option_id,
+            answer_text: a.answer_text
+          };
         });
       }
       openExamFormForEditing(savedAnswers);
@@ -7123,9 +7216,16 @@
       const dbProgId = getProgrammeDbId(currentProgrammeId);
       const answersMap = {};
       (currentExamQuestions || []).forEach(q => {
-        const field = document.getElementById(`ans_${q.id}`);
-        if (field) {
-          answersMap[q.id] = field.value.trim();
+        if (q.question_type === 'mcq') {
+          const checked = el.examQuestionsContainer.querySelector(`input[name="mcq_${q.id}"]:checked`);
+          if (checked) {
+            answersMap[q.id] = checked.value;
+          }
+        } else {
+          const field = document.getElementById(`ans_${q.id}`);
+          if (field) {
+            answersMap[q.id] = field.value.trim();
+          }
         }
       });
 
@@ -7157,28 +7257,42 @@
       e.preventDefault();
       const dbProgId = getProgrammeDbId(currentProgrammeId);
 
-      let allFilled = true;
-      let missingQuestion = null;
-      const answersMap = {};
+      const answersPayload = [];
+      let unansweredCount = 0;
 
-      (currentExamQuestions || []).forEach((q, idx) => {
-        const field = document.getElementById(`ans_${q.id}`);
-        if (field) {
-          const val = field.value.trim();
-          answersMap[q.id] = val;
-          if (!val && !missingQuestion) {
-            allFilled = false;
-            missingQuestion = idx + 1;
+      (currentExamQuestions || []).forEach(q => {
+        if (q.question_type === 'mcq') {
+          const checked = el.examQuestionsContainer.querySelector(`input[name="mcq_${q.id}"]:checked`);
+          if (checked && checked.value) {
+            answersPayload.push({
+              question_id: q.id,
+              selected_option_id: checked.value,
+              answer_text: null
+            });
+          } else {
+            unansweredCount++;
+          }
+        } else {
+          const field = document.getElementById(`ans_${q.id}`);
+          const val = field ? field.value.trim() : '';
+          if (val) {
+            answersPayload.push({
+              question_id: q.id,
+              selected_option_id: null,
+              answer_text: val
+            });
+          } else {
+            unansweredCount++;
           }
         }
       });
 
-      if (!allFilled) {
-        alert(`Please complete Question ${missingQuestion} before submitting your exam.`);
+      if (unansweredCount > 0) {
+        alert(`All 10 questions must be completed before submission. You have ${unansweredCount} unanswered question(s).`);
         return;
       }
 
-      if (!confirm('Are you sure you want to submit your final written exam? You cannot modify answers after submission.')) {
+      if (!confirm('Are you sure you want to submit your final examination? You cannot modify answers after submission.')) {
         return;
       }
 
@@ -7189,16 +7303,15 @@
         }
 
         if (window.DataLayer) {
-          await window.DataLayer.submitExam(dbProgId, answersMap);
+          await window.DataLayer.submitExam(dbProgId, answersPayload);
         }
 
-        showToast('✓ Written Exam submitted successfully! Under Review.');
+        showToast('✓ Examination submitted successfully! Under Review.');
         await renderExamScreen();
         if (typeof renderSidebar === 'function') renderSidebar();
       } catch (err) {
         console.error('submitExam error:', err);
-        alert(`Submission failed, please retry: ${err.message || 'Database error'}`);
-        // Keep learner's answers in the form - do not reset or hide!
+        alert(`Submission failed: ${err.message || 'Database error'}`);
       } finally {
         if (el.submitExamBtn) {
           el.submitExamBtn.disabled = false;
@@ -7220,11 +7333,15 @@
       const answersMap = {};
       const marksMap = {};
       const commentsMap = {};
+      const selectedOptionMap = {};
       if (currentExamSubmission?.exam_answers) {
         currentExamSubmission.exam_answers.forEach(a => {
           answersMap[a.question_id] = a.answer_text;
           marksMap[a.question_id] = a.marks;
           commentsMap[a.question_id] = a.comment;
+          if (a.selected_option_id) {
+            selectedOptionMap[a.question_id] = a.selected_option_id;
+          }
         });
       }
 
@@ -7234,18 +7351,55 @@
         qDiv.className = 'exam-question-item';
         qDiv.style.marginBottom = '20px';
 
-        const awardedMarks = marksMap[q.id] !== undefined && marksMap[q.id] !== null ? `${marksMap[q.id]} / ${q.max_marks} marks` : `Max Marks: ${q.max_marks}`;
+        const isMcq = q.question_type === 'mcq';
+        const hasAwardedMarks = marksMap[q.id] !== undefined && marksMap[q.id] !== null;
+        const awardedMarksText = hasAwardedMarks ? `${marksMap[q.id]} / ${q.max_marks || (isMcq ? 5 : 25)} marks` : `Max Marks: ${q.max_marks || (isMcq ? 5 : 25)}`;
         const questionComment = commentsMap[q.id];
 
-        qDiv.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-            <label class="exam-q-title" style="font-weight: 700; font-size: 14.5px;">Question ${idx + 1}: ${q.title}</label>
-            <span style="font-size: 12px; color: var(--accent-light); font-weight: 700;">${awardedMarks}</span>
-          </div>
-          <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 8px;">${q.prompt}</p>
-          <div class="exam-answer-box" style="background: var(--bg-card-alt, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; color: var(--text-primary, #0f172a); white-space: pre-wrap; line-height: 1.6; font-weight: 450;">${escapeHtml(answersMap[q.id]) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
-          ${questionComment ? `<div style="margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); background: rgba(0, 165, 68, 0.08); border-left: 3px solid var(--accent-light); font-size: 12px; color: var(--accent-light);"><strong>Instructor Note:</strong> ${escapeHtml(questionComment)}</div>` : ''}
-        `;
+        if (isMcq) {
+          const selOptId = selectedOptionMap[q.id];
+          const isCorrect = hasAwardedMarks && Number(marksMap[q.id]) > 0;
+          const statusBadge = hasAwardedMarks
+            ? (isCorrect
+              ? `<span class="exam-status-tag submitted" style="color: #059669; background: rgba(5, 150, 105, 0.1); font-weight: 700; font-size: 11px;">✓ Correct (+${marksMap[q.id]} marks)</span>`
+              : `<span class="exam-status-tag" style="color: #dc2626; background: rgba(220, 38, 38, 0.1); font-weight: 700; font-size: 11px;">✗ Incorrect (0 marks)</span>`)
+            : `<span style="font-size: 12px; color: var(--accent-light); font-weight: 700;">${awardedMarksText}</span>`;
+
+          let optionsHtml = '';
+          (q.options || []).forEach(opt => {
+            const isSelected = (opt.id === selOptId);
+            const cardClass = isSelected ? 'exam-option-card selected' : 'exam-option-card';
+            optionsHtml += `
+              <div class="${cardClass}" style="pointer-events: none; opacity: ${isSelected ? '1' : '0.65'};">
+                <div class="exam-option-letter">${escapeHtml(opt.option_label)}</div>
+                <div style="flex: 1; font-size: 13px;">${escapeHtml(opt.option_text)}</div>
+                ${isSelected ? '<span style="font-size: 11px; font-weight: 700; color: var(--accent-light); text-transform: uppercase;">Your Selection</span>' : ''}
+              </div>
+            `;
+          });
+
+          qDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+              <label class="exam-q-title" style="font-weight: 700; font-size: 14.5px;">Question ${idx + 1}: ${escapeHtml(q.title)} <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(0, 165, 68, 0.1); color: var(--accent-light); font-weight: 700; margin-left: 6px;">MCQ</span></label>
+              ${statusBadge}
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 12px;">${escapeHtml(q.prompt)}</p>
+            <div class="exam-mcq-grid" style="margin-bottom: 8px;">
+              ${optionsHtml}
+            </div>
+            ${questionComment ? `<div style="margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); background: rgba(0, 165, 68, 0.08); border-left: 3px solid var(--accent-light); font-size: 12px; color: var(--accent-light);"><strong>Instructor Note:</strong> ${escapeHtml(questionComment)}</div>` : ''}
+          `;
+        } else {
+          qDiv.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+              <label class="exam-q-title" style="font-weight: 700; font-size: 14.5px;">Question ${idx + 1}: ${escapeHtml(q.title)} <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-weight: 700; margin-left: 6px;">Written</span></label>
+              <span style="font-size: 12px; color: var(--accent-light); font-weight: 700;">${awardedMarksText}</span>
+            </div>
+            <p style="font-size: 12.5px; color: var(--text-secondary); line-height: 1.45; margin-bottom: 8px;">${escapeHtml(q.prompt)}</p>
+            <div class="exam-answer-box" style="background: var(--bg-card-alt, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; color: var(--text-primary, #0f172a); white-space: pre-wrap; line-height: 1.6; font-weight: 450;">${escapeHtml(answersMap[q.id]) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
+            ${questionComment ? `<div style="margin-top: 6px; padding: 8px 12px; border-radius: var(--radius-sm); background: rgba(0, 165, 68, 0.08); border-left: 3px solid var(--accent-light); font-size: 12px; color: var(--accent-light);"><strong>Instructor Note:</strong> ${escapeHtml(questionComment)}</div>` : ''}
+          `;
+        }
         el.examQuestionsContainer.appendChild(qDiv);
       });
 
@@ -7574,6 +7728,40 @@
 
   // Open Grade Exam Modal
   let activeGradingSub = null;
+
+  function recalcLiveScore() {
+    if (!activeGradingSub || !el.gradeQuestionsList) return;
+    let mcqScore = 0;
+    let writtenScore = 0;
+
+    const questions = activeGradingSub.questions || [];
+    questions.forEach(q => {
+      if (q.question_type === 'mcq') {
+        const m = (q.marks !== null && q.marks !== undefined) ? Number(q.marks) : (q.is_correct ? Number(q.max_marks || 5) : 0);
+        mcqScore += m;
+      }
+    });
+
+    const marksInputs = el.gradeQuestionsList.querySelectorAll('.q-marks-input');
+    marksInputs.forEach(input => {
+      const val = parseFloat(input.value.trim());
+      if (!isNaN(val) && val >= 0) {
+        writtenScore += val;
+      }
+    });
+
+    const totalScore = Math.min(100, Math.round((mcqScore + writtenScore) * 10) / 10);
+    if (el.gradeLiveTotalScore) {
+      el.gradeLiveTotalScore.textContent = `Calculated: ${totalScore} / 100 (${Math.round(totalScore)}%)`;
+    }
+    if (el.gradeLiveBreakdown) {
+      el.gradeLiveBreakdown.textContent = `MCQ: ${mcqScore}/30 | Written: ${writtenScore}/70`;
+    }
+    if (el.gradeOverallMarks) {
+      el.gradeOverallMarks.value = totalScore;
+    }
+  }
+
   async function openGradeExamModal(submissionId) {
     if (!el.gradeExamModal) return;
 
@@ -7589,6 +7777,7 @@
       if (el.gradeSubId) el.gradeSubId.value = detail.id;
       if (el.gradeLearnerName) el.gradeLearnerName.textContent = detail.learner_name || 'Learner';
       if (el.gradeLearnerMeta) el.gradeLearnerMeta.textContent = `${detail.learner_email || ''} • ${detail.programme_name || ''}`;
+      if (el.gradeLearnerRole) el.gradeLearnerRole.textContent = detail.job_title ? `Role: ${detail.job_title}` : 'Role: Unassigned / Legacy Exam';
       if (el.gradeSubmissionDatePill) {
         el.gradeSubmissionDatePill.textContent = detail.submitted_at
           ? `Submitted: ${new Date(detail.submitted_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
@@ -7617,30 +7806,60 @@
             qItem.style.background = 'var(--bg-surface)';
             qItem.style.marginBottom = '12px';
 
-            const maxM = q.max_marks || 25;
-            qItem.innerHTML = `
-              <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
-                <strong style="font-size: 13.5px; color: var(--text-primary);">Q${idx + 1}: ${escapeHtml(q.question_title || 'Question ' + (idx + 1))}</strong>
-                <span style="font-size: 12px; color: var(--accent-light); font-weight: 600;">Max Marks: ${maxM}</span>
-              </div>
-              ${q.prompt ? `<p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">${escapeHtml(q.prompt)}</p>` : ''}
-              <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Learner's Submitted Response:</div>
-              <div class="exam-answer-box" style="background: var(--bg-card-alt, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: var(--text-primary, #0f172a); margin-bottom: 12px; font-weight: 450;">${escapeHtml(q.answer_text) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
-              <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
-                <div class="modal-form-group">
-                  <label class="modal-field-label" style="font-size: 11.5px;">Awarded Marks (0–${maxM})</label>
-                  <input type="number" class="form-text-input q-marks-input" data-q-id="${q.question_id}" min="0" max="${maxM}" step="0.5" value="${q.marks !== undefined && q.marks !== null ? q.marks : ''}" placeholder="0 - ${maxM}">
+            const maxM = q.max_marks || (q.question_type === 'mcq' ? 5 : 25);
+
+            if (q.question_type === 'mcq') {
+              const selText = q.selected_option_label
+                ? `Option ${q.selected_option_label}: ${escapeHtml(q.selected_option_text || '')}`
+                : '<em style="color: var(--text-muted);">(No option selected)</em>';
+              const isCorrect = q.is_correct || Number(q.marks) > 0;
+              const awardedM = q.marks !== null && q.marks !== undefined ? q.marks : (isCorrect ? maxM : 0);
+
+              qItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                  <strong style="font-size: 13.5px; color: var(--text-primary);">Q${idx + 1}: ${escapeHtml(q.question_title || 'Question ' + (idx + 1))} <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(0, 165, 68, 0.1); color: var(--accent-light); font-weight: 700; margin-left: 6px;">MCQ (Auto-Graded)</span></strong>
+                  <span style="font-size: 12px; color: var(--accent-light); font-weight: 600;">Marks: ${awardedM} / ${maxM}</span>
                 </div>
-                <div class="modal-form-group">
-                  <label class="modal-field-label" style="font-size: 11.5px;">Question Feedback</label>
-                  <input type="text" class="form-text-input q-comment-input" data-q-id="${q.question_id}" maxlength="1000" value="${escapeHtml(q.comment || '')}" placeholder="Specific feedback for this answer...">
+                ${q.prompt ? `<p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">${escapeHtml(q.prompt)}</p>` : ''}
+                <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+                  <div style="font-size: 12px;"><strong>Learner's Choice:</strong> <span style="font-weight: 500;">${selText}</span> ${isCorrect ? '<span style="color: #059669; font-weight: 700; margin-left: 6px;">✓ Correct (+5)</span>' : '<span style="color: #dc2626; font-weight: 700; margin-left: 6px;">✗ Incorrect (0)</span>'}</div>
+                  <div style="font-size: 12px; color: var(--text-muted);"><strong>Correct Key:</strong> Option ${escapeHtml(q.correct_option_label || '')}: ${escapeHtml(q.correct_option_text || '')}</div>
                 </div>
-              </div>
-            `;
+              `;
+            } else {
+              // Written question or legacy question
+              qItem.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                  <strong style="font-size: 13.5px; color: var(--text-primary);">Q${idx + 1}: ${escapeHtml(q.question_title || 'Question ' + (idx + 1))} <span style="font-size: 11px; padding: 2px 7px; border-radius: 4px; background: rgba(59, 130, 246, 0.1); color: #3b82f6; font-weight: 700; margin-left: 6px;">Written Evaluation</span></strong>
+                  <span style="font-size: 12px; color: var(--accent-light); font-weight: 600;">Max Marks: ${maxM}</span>
+                </div>
+                ${q.prompt ? `<p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">${escapeHtml(q.prompt)}</p>` : ''}
+                ${q.marking_guide ? `<div class="exam-marking-guide-box" style="margin-bottom: 8px; padding: 10px 12px; background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; border-radius: var(--radius-sm); font-size: 12px; color: var(--text-secondary);"><strong style="color: #b45309;">Instructor Rubric / Marking Guide:</strong><div style="margin-top: 4px; line-height: 1.5;">${escapeHtml(q.marking_guide)}</div></div>` : ''}
+                <div style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Learner's Submitted Response:</div>
+                <div class="exam-answer-box" style="background: var(--bg-card-alt, #f8fafc); border: 1px solid var(--border-subtle, #e2e8f0); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: var(--text-primary, #0f172a); margin-bottom: 12px; font-weight: 450;">${escapeHtml(q.answer_text) || '<em style="color: var(--text-muted);">(No response recorded)</em>'}</div>
+                <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
+                  <div class="modal-form-group">
+                    <label class="modal-field-label" style="font-size: 11.5px;">Awarded Marks (0–${maxM})</label>
+                    <input type="number" class="form-text-input q-marks-input" data-q-id="${q.question_id}" min="0" max="${maxM}" step="0.5" value="${q.marks !== undefined && q.marks !== null ? q.marks : ''}" placeholder="0 - ${maxM}">
+                  </div>
+                  <div class="modal-form-group">
+                    <label class="modal-field-label" style="font-size: 11.5px;">Question Feedback</label>
+                    <input type="text" class="form-text-input q-comment-input" data-q-id="${q.question_id}" maxlength="1000" value="${escapeHtml(q.comment || '')}" placeholder="Specific feedback for this answer...">
+                  </div>
+                </div>
+              `;
+            }
             el.gradeQuestionsList.appendChild(qItem);
+          });
+
+          // Attach input listener to each marks input for live total calculation
+          const marksInputs = el.gradeQuestionsList.querySelectorAll('.q-marks-input');
+          marksInputs.forEach(inp => {
+            inp.addEventListener('input', recalcLiveScore);
           });
         }
       }
+      recalcLiveScore();
     } catch (err) {
       console.error('[EvaluationInbox] openGradeExamModal error:', err);
       alert('Failed to load submission details: ' + (err.message || 'Unknown database error'));
@@ -11066,6 +11285,7 @@
       category: 'Human Resources & Admin',
       progId: '10000000-0000-0000-0000-000000000001',
       progName: 'Human Resources',
+      jobId: '90000000-0000-0000-0000-000000000002',
       baseTrack: 'hr'
     },
     'hr-and-admin': {
@@ -11073,6 +11293,7 @@
       category: 'Human Resources & Admin',
       progId: '10000000-0000-0000-0000-000000000001',
       progName: 'Human Resources',
+      jobId: '90000000-0000-0000-0000-000000000003',
       baseTrack: 'hr'
     },
     'data-analyst-intern': {
@@ -11080,6 +11301,7 @@
       category: 'Data & Analytics',
       progId: '10000000-0000-0000-0000-000000000002',
       progName: 'Data Analyst',
+      jobId: '90000000-0000-0000-0000-000000000001',
       baseTrack: 'data'
     },
     'research-intern': {
@@ -11087,6 +11309,7 @@
       category: 'Social Research & Policy',
       progId: '10000000-0000-0000-0000-000000000003',
       progName: 'Social Research & Policy',
+      jobId: '90000000-0000-0000-0000-000000000005',
       baseTrack: 'research'
     },
     'research-trainee': {
@@ -11094,6 +11317,7 @@
       category: 'Social Research & Policy',
       progId: '10000000-0000-0000-0000-000000000003',
       progName: 'Social Research & Policy',
+      jobId: '90000000-0000-0000-0000-000000000006',
       baseTrack: 'research'
     },
     'research-assistant': {
@@ -11101,6 +11325,7 @@
       category: 'Social Research & Policy',
       progId: '10000000-0000-0000-0000-000000000003',
       progName: 'Social Research & Policy',
+      jobId: '90000000-0000-0000-0000-000000000007',
       baseTrack: 'research'
     },
     'research-associate': {
@@ -11108,6 +11333,7 @@
       category: 'Social Research & Policy',
       progId: '10000000-0000-0000-0000-000000000003',
       progName: 'Social Research & Policy',
+      jobId: '90000000-0000-0000-0000-000000000008',
       baseTrack: 'research'
     },
     'research-executive': {
@@ -11115,6 +11341,7 @@
       category: 'Social Research & Policy',
       progId: '10000000-0000-0000-0000-000000000003',
       progName: 'Social Research & Policy',
+      jobId: '90000000-0000-0000-0000-000000000009',
       baseTrack: 'research'
     },
     'sr-research-associate': {
@@ -11122,6 +11349,7 @@
       category: 'Social Research & Policy',
       progId: '10000000-0000-0000-0000-000000000003',
       progName: 'Social Research & Policy',
+      jobId: '90000000-0000-0000-0000-000000000010',
       baseTrack: 'research'
     },
     'social-media-design-intern': {
@@ -11129,6 +11357,7 @@
       category: 'Design & Social Media',
       progId: '10000000-0000-0000-0000-000000000004',
       progName: 'Design & Social Media',
+      jobId: '90000000-0000-0000-0000-000000000011',
       baseTrack: 'design'
     },
     'associate-partnerships-bd': {
@@ -11136,17 +11365,18 @@
       category: 'Business Development & Partnerships',
       progId: '10000000-0000-0000-0000-000000000005',
       progName: 'Business Development',
+      jobId: '90000000-0000-0000-0000-000000000004',
       baseTrack: 'bd'
     }
   };
 
   function resolveProgrammeAssignment(input) {
     if (!input) {
-      return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: CANONICAL_PROGRAMMES[0].name };
+      return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: CANONICAL_PROGRAMMES[0].name, jobId: null };
     }
     const norm = String(input).trim().toLowerCase();
     if (norm === 'custom') {
-      return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: null, isCustom: true };
+      return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: null, jobId: null, isCustom: true };
     }
 
     // Check direct key in JD_ASSIGNMENT_MAP
@@ -11154,28 +11384,30 @@
       return {
         progId: JD_ASSIGNMENT_MAP[norm].progId,
         position: JD_ASSIGNMENT_MAP[norm].title,
-        progName: JD_ASSIGNMENT_MAP[norm].progName
+        progName: JD_ASSIGNMENT_MAP[norm].progName,
+        jobId: JD_ASSIGNMENT_MAP[norm].jobId
       };
     }
 
     // Check canonical UUID or slug
     const matchCanon = CANONICAL_PROGRAMMES.find(p => p.id === input || p.slug === norm);
     if (matchCanon) {
-      return { progId: matchCanon.id, position: null, progName: matchCanon.name };
+      return { progId: matchCanon.id, position: null, progName: matchCanon.name, jobId: null };
     }
 
-    // Check by title match
+    // Check by title match, slug, or jobId match
     for (const [slug, item] of Object.entries(JD_ASSIGNMENT_MAP)) {
-      if (item.title.toLowerCase() === norm || norm.includes(slug) || slug.includes(norm)) {
+      if (item.title.toLowerCase() === norm || norm.includes(slug) || slug.includes(norm) || (item.jobId && item.jobId === input)) {
         return {
           progId: item.progId,
           position: item.title,
-          progName: item.progName
+          progName: item.progName,
+          jobId: item.jobId
         };
       }
     }
 
-    return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: CANONICAL_PROGRAMMES[0].name };
+    return { progId: CANONICAL_PROGRAMMES[0].id, position: null, progName: CANONICAL_PROGRAMMES[0].name, jobId: null };
   }
 
   function resolveRoleDetails(roleInput) {
@@ -11592,8 +11824,11 @@
 
       // Programme assignment name
       let progName = u.programme_name || '--';
+      const isIntern = (u.role === 'intern' || u.role === 'learner');
       if (u.role === 'admin') {
         progName = `<span style="color: var(--accent-light); font-weight: 600;">All Programmes</span>`;
+      } else if (isIntern && !u.job_id && !u.position) {
+        progName = `<span style="color: #f59e0b; font-style: italic; font-weight: 600;">Role not assigned</span>`;
       } else if (u.position && isCustomPos) {
         progName = `<span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(u.position)}</span>${u.programme_name ? ` <span style="font-size: 11px; color: var(--text-muted);">(${escapeHtml(u.programme_name)})</span>` : ''}`;
       } else if (u.position) {
@@ -11990,11 +12225,12 @@
         const isAdmin = roleDetails.baseRole === 'admin';
 
         const progAssignment = isCustomProg
-          ? { progId: CANONICAL_PROGRAMMES[0].id, position: customProgVal || customRoleVal, progName: null }
+          ? { progId: CANONICAL_PROGRAMMES[0].id, position: customProgVal || customRoleVal, progName: null, jobId: null }
           : resolveProgrammeAssignment(rawProg);
 
         const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId || CANONICAL_PROGRAMMES[0].id);
         const position = isAdmin ? 'Administrator' : (customRoleVal || customProgVal || progAssignment.position || roleDetails.position);
+        const jobId = isAdmin ? null : (progAssignment.jobId || null);
 
         if (!email) {
           alert('Please enter a valid email address.');
@@ -12009,7 +12245,8 @@
             email,
             role: roleDetails.baseRole,
             position: position,
-            programmeId
+            programmeId,
+            jobId
           });
           showToast(`Access approved/invited for ${email} (${position || roleDetails.baseRole})`);
           el.adminInviteEmail.value = '';
@@ -12080,7 +12317,8 @@
               email: entry.email,
               role: entry.role,
               position: entry.position,
-              programmeId: entry.programmeId
+              programmeId: entry.programmeId,
+              jobId: entry.jobId || null
             });
             successCount++;
           } catch (err) {
@@ -12160,11 +12398,12 @@
         const isAdmin = role === 'admin';
 
         const progAssignment = isCustomProg
-          ? { progId: CANONICAL_PROGRAMMES[0].id, position: customProgVal || customRoleVal, progName: null }
+          ? { progId: CANONICAL_PROGRAMMES[0].id, position: customProgVal || customRoleVal, progName: null, jobId: null }
           : resolveProgrammeAssignment(rawProg);
 
         const programmeId = isAdmin ? null : (progAssignment.progId || roleDetails.progId || CANONICAL_PROGRAMMES[0].id);
         const position = isAdmin ? 'Administrator' : (customRoleVal || customProgVal || progAssignment.position || roleDetails.position);
+        const jobId = isAdmin ? null : (progAssignment.jobId || null);
 
         el.adminSaveEditUserBtn.disabled = true;
         el.adminSaveEditUserBtn.textContent = 'Saving...';
@@ -12174,7 +12413,8 @@
             role,
             position: position,
             programmeId,
-            email: targetEmail
+            email: targetEmail,
+            jobId
           });
 
           // Immediately reflect update in cached user list
@@ -12299,8 +12539,9 @@
       if (!emailValid) {
         error = 'Invalid email syntax';
       } else if (role !== 'admin') {
+        let progAssign = null;
         if (progRaw) {
-          const progAssign = resolveProgrammeAssignment(progRaw);
+          progAssign = resolveProgrammeAssignment(progRaw);
           if (progAssign && progAssign.progId) {
             programmeId = progAssign.progId;
             programmeName = progAssign.position || progAssign.progName;
@@ -12317,6 +12558,7 @@
           programmeId = CANONICAL_PROGRAMMES[0].id;
           programmeName = CANONICAL_PROGRAMMES[0].name;
         }
+        var entryJobId = (role === 'admin') ? null : (progAssign?.jobId || null);
       }
 
       bulkParsedEntries.push({
@@ -12326,6 +12568,7 @@
         position,
         programmeId,
         programmeName,
+        jobId: entryJobId || null,
         isValid: !error,
         error
       });
