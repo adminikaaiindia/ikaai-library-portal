@@ -4487,6 +4487,19 @@
     }
   }
 
+  function attachAccessibleAction(element, onClick) {
+    if (!element) return;
+    element.setAttribute('tabindex', '0');
+    element.setAttribute('role', 'button');
+    element.addEventListener('click', onClick);
+    element.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onClick(e);
+      }
+    });
+  }
+
   async function renderHomeScreen(force = false) {
     const container = el.homeDashboardContainer || document.getElementById('homeDashboardContainer');
     if (!container) return;
@@ -4500,18 +4513,30 @@
 
     if (isFetchingHomeSummary) return;
 
-    // Show skeleton shimmer
+    // Show refined skeleton shimmer matching new layout with 0 layout shift
     container.innerHTML = `
-      <div class="home-skeleton-card home-skeleton-shimmer" style="height: 140px; margin-bottom: 20px;"></div>
-      <div class="home-stat-grid" style="margin-bottom: 20px;">
-        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
-        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
-        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
-        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 90px;"></div>
+      <div class="home-hero-card" style="padding: 24px 28px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div class="home-skeleton-shimmer" style="height: 24px; width: 220px;"></div>
+            <div class="home-skeleton-shimmer" style="height: 14px; width: 160px;"></div>
+          </div>
+          <div class="home-skeleton-shimmer" style="height: 34px; width: 90px; border-radius: 8px;"></div>
+        </div>
+        <div class="home-hero-content-grid">
+          <div class="home-skeleton-shimmer" style="height: 100px;"></div>
+          <div class="home-skeleton-shimmer" style="height: 100px;"></div>
+        </div>
+      </div>
+      <div class="home-stat-grid">
+        <div class="home-skeleton-shimmer" style="height: 84px;"></div>
+        <div class="home-skeleton-shimmer" style="height: 84px;"></div>
+        <div class="home-skeleton-shimmer" style="height: 84px;"></div>
+        <div class="home-skeleton-shimmer" style="height: 84px;"></div>
       </div>
       <div class="home-grid-2col">
-        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 280px;"></div>
-        <div class="home-skeleton-card home-skeleton-shimmer" style="height: 280px;"></div>
+        <div class="home-skeleton-shimmer" style="height: 320px;"></div>
+        <div class="home-skeleton-shimmer" style="height: 320px;"></div>
       </div>
     `;
 
@@ -4529,9 +4554,15 @@
       console.error('[HomeDashboard] Error loading summary:', err);
       container.innerHTML = `
         <div class="home-error-card">
-          <div class="home-error-title">Unable to load dashboard</div>
-          <div class="home-error-desc">${escapeHtml(err.message || 'Please check your connection and try again.')}</div>
-          <button type="button" class="home-retry-btn" id="homeRetryBtn">Retry</button>
+          <div class="home-empty-icon" style="color:var(--color-error); background:rgba(239, 68, 68, 0.12);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <h2 class="home-error-title">Unable to Load Dashboard</h2>
+          <p class="home-error-desc">${escapeHtml(err.message || 'Please check your connection and try again.')}</p>
+          <button type="button" class="home-retry-btn" id="homeRetryBtn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            Retry
+          </button>
         </div>
       `;
       const retryBtn = container.querySelector('#homeRetryBtn');
@@ -4584,16 +4615,16 @@
           <div class="home-next-step-box">
             <div class="home-next-step-info">
               <span class="home-next-step-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 Your Next Step &bull; Module ${escapeHtml(nextStep.module_number)}
               </span>
               <h2 class="home-next-step-title">Module ${escapeHtml(nextStep.module_number)}: ${escapeHtml(nextStep.title)}</h2>
-              <p class="home-next-step-desc">Pick up where you left off. Read through the core material and complete the knowledge check.</p>
+              <p class="home-next-step-desc">Pick up where you left off. Read through core coursework and prepare for your final written evaluation.</p>
             </div>
             <div class="home-next-step-action">
               <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
                 ${escapeHtml(nextStep.action_label || 'Continue Module')}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
           </div>
@@ -4603,16 +4634,16 @@
           <div class="home-next-step-box">
             <div class="home-next-step-info">
               <span class="home-next-step-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                Final Assessment Unlocked
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                Final Written Exam Unlocked
               </span>
               <h2 class="home-next-step-title">${escapeHtml(nextStep.title)}</h2>
-              <p class="home-next-step-desc">Congratulations on completing all modules! You are now eligible to complete your comprehensive written evaluation.</p>
+              <p class="home-next-step-desc">All curriculum modules completed! You are now eligible to complete your comprehensive written evaluation.</p>
             </div>
             <div class="home-next-step-action">
               <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
                 Start Written Exam
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
           </div>
@@ -4622,7 +4653,7 @@
           <div class="home-next-step-box">
             <div class="home-next-step-info">
               <span class="home-next-step-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                 Evaluation in Progress
               </span>
               <h2 class="home-next-step-title">${escapeHtml(nextStep.title)}</h2>
@@ -4631,7 +4662,7 @@
             <div class="home-next-step-action">
               <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
                 View Submission
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
           </div>
@@ -4641,7 +4672,7 @@
           <div class="home-next-step-box">
             <div class="home-next-step-info">
               <span class="home-next-step-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                 Curriculum Completed
               </span>
               <h2 class="home-next-step-title">${escapeHtml(nextStep.title)} &bull; Final Grade: ${escapeHtml(nextStep.grade || 'Pass')}</h2>
@@ -4650,7 +4681,7 @@
             <div class="home-next-step-action">
               <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
                 View Grade Report
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
           </div>
@@ -4671,6 +4702,22 @@
           </div>
         `;
       }
+    } else {
+      nextStepHtml = `
+        <div class="home-next-step-box">
+          <div class="home-next-step-info">
+            <span class="home-next-step-label">Ready to Learn</span>
+            <h2 class="home-next-step-title">Welcome to ${escapeHtml(progName)}</h2>
+            <p class="home-next-step-desc">Begin your learning journey by exploring your curriculum modules.</p>
+          </div>
+          <div class="home-next-step-action">
+            <button type="button" class="home-next-step-btn" id="homeNextStepBtn">
+              Explore Modules
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        </div>
+      `;
     }
 
     const attention = summary.attention || {};
@@ -4680,17 +4727,20 @@
     const unansweredReplies = attention.unanswered_replies_count || 0;
 
     const progress = summary.progress || {};
-    const compPct = (summary.exam && (summary.exam.status === 'graded' || summary.exam.grade)) ? 100 : (progress.completion_percentage || 0);
+    const exam = summary.exam || {};
+    const isExamGraded = Boolean(exam && (exam.status === 'graded' || exam.grade));
+    const compPct = isExamGraded ? 100 : (progress.completion_percentage || 0);
     const completedMods = progress.completed_modules || 0;
     const totalMods = progress.total_modules || 0;
-    const quizAvg = progress.quiz_average !== null && progress.quiz_average !== undefined ? `${progress.quiz_average}%` : '--';
     const modules = progress.modules || [];
+
+    const strokeDashoffset = Math.max(0, Math.min(301.59, 301.59 - (compPct / 100) * 301.59));
 
     const recentAnnouncements = attention.recent_announcements || [];
     const instructors = summary.instructors || [];
 
     container.innerHTML = `
-      <!-- Hero Card -->
+      <!-- Hero Card with Greeting, Next Step & Progress Ring -->
       <div class="home-hero-card">
         <div class="home-hero-top">
           <div class="home-greeting-wrap">
@@ -4701,13 +4751,34 @@
             </div>
           </div>
           <div class="home-actions-bar">
-            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard" aria-label="Refresh dashboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
               Refresh
             </button>
           </div>
         </div>
-        ${nextStepHtml}
+
+        <div class="home-hero-content-grid">
+          ${nextStepHtml}
+
+          <!-- SVG Circular Progress Ring -->
+          <div class="home-progress-ring-card">
+            <div class="home-progress-ring-wrap" role="progressbar" aria-valuenow="${compPct}" aria-valuemin="0" aria-valuemax="100" aria-label="Overall curriculum completion: ${compPct}%">
+              <svg class="home-progress-ring-svg" width="92" height="92" viewBox="0 0 120 120" aria-hidden="true">
+                <circle class="home-progress-ring-bg" cx="60" cy="60" r="48" />
+                <circle class="home-progress-ring-circle" cx="60" cy="60" r="48" style="stroke-dasharray: 301.59; stroke-dashoffset: ${strokeDashoffset};" />
+              </svg>
+              <div class="home-progress-ring-inner">
+                <span class="home-progress-ring-num">${compPct}%</span>
+                <span class="home-progress-ring-label">Complete</span>
+              </div>
+            </div>
+            <div class="home-progress-ring-meta">
+              <span class="home-progress-ring-title">Programme Progress</span>
+              <span class="home-progress-ring-desc">${completedMods} of ${totalMods} modules completed</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Needs Attention Section -->
@@ -4716,42 +4787,54 @@
           <h2 class="home-section-heading">Needs Your Attention</h2>
         </div>
         <div class="home-stat-grid">
-          <div class="home-attention-card" id="homeAttAnnouncements" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAttAnnouncements" role="button" tabindex="0" aria-label="${unreadAnnouncements} unread announcements. Click to view.">
             <div class="home-attention-icon-box amber">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${unreadAnnouncements}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${unreadAnnouncements}</span>
+                <span class="home-attention-badge ${unreadAnnouncements > 0 ? 'amber' : 'subtle'}">${unreadAnnouncements > 0 ? 'New' : 'Up to date'}</span>
+              </div>
               <span class="home-attention-label">Unread Announcements</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeAttDocuments" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAttDocuments" role="button" tabindex="0" aria-label="${unackDocs} pending document sign-offs. Click to view.">
             <div class="home-attention-icon-box blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${unackDocs}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${unackDocs}</span>
+                <span class="home-attention-badge ${unackDocs > 0 ? 'blue' : 'subtle'}">${unackDocs > 0 ? 'Required' : 'Signed'}</span>
+              </div>
               <span class="home-attention-label">Pending Sign-offs</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeAttChat" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAttChat" role="button" tabindex="0" aria-label="${unreadChat} unread chat messages. Click to view.">
             <div class="home-attention-icon-box emerald">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${unreadChat}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${unreadChat}</span>
+                <span class="home-attention-badge ${unreadChat > 0 ? 'emerald' : 'subtle'}">${unreadChat > 0 ? 'Unread' : 'No new'}</span>
+              </div>
               <span class="home-attention-label">Unread Messages</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeAttInstructorMsg" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAttInstructorMsg" role="button" tabindex="0" aria-label="${unansweredReplies} instructor replies. Click to view.">
             <div class="home-attention-icon-box purple">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 17 4 12 9 7"></polyline><path d="M20 18v-2a4 4 0 0 0-4-4H4"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${unansweredReplies}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${unansweredReplies}</span>
+                <span class="home-attention-badge ${unansweredReplies > 0 ? 'purple' : 'subtle'}">${unansweredReplies > 0 ? 'Reply' : 'Current'}</span>
+              </div>
               <span class="home-attention-label">Instructor Replies</span>
             </div>
           </div>
@@ -4760,59 +4843,148 @@
 
       <!-- 2-Column Content Grid -->
       <div class="home-grid-2col">
-        <!-- Left: Programme Progress & Modules -->
-        <div class="home-card">
-          <div class="home-card-header">
-            <h3 class="home-card-title">Curriculum Progress</h3>
-            <span class="home-pill-badge">${compPct}% Complete</span>
-          </div>
-
-          <div class="home-progress-summary">
-            <div class="home-prog-stat-col">
-              <span class="home-prog-stat-num">${completedMods} / ${totalMods}</span>
-              <span class="home-prog-stat-lbl">Modules Completed</span>
+        <!-- Left Column: Learning Path Stepper & Exam Status Card -->
+        <div style="display:flex; flex-direction:column; gap:20px;">
+          <!-- Curriculum Progress & Learning Path Stepper -->
+          <div class="home-card">
+            <div class="home-card-header">
+              <h3 class="home-card-title">Learning Path</h3>
+              <span class="home-pill-badge">${completedMods} / ${totalMods} Modules</span>
             </div>
-            <div class="home-prog-stat-col" style="text-align: right;">
-              <span class="home-prog-stat-num">${exam && exam.status === 'graded' ? (exam.grade || 'Graded: 100%') : (exam && exam.status === 'submitted' ? 'Submitted' : 'Not submitted')}</span>
-              <span class="home-prog-stat-lbl">Written Exam</span>
-            </div>
-          </div>
 
-          <div class="home-modules-list">
-            ${modules.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">No modules found for this programme.</p>' : modules.map(m => {
-              const statusClass = m.status === 'completed' ? 'completed' : (m.status === 'in_progress' ? 'in_progress' : 'locked');
-              const statusLabel = m.status === 'completed' ? 'Completed' : (m.status === 'in_progress' ? 'In Progress' : 'Locked');
-              const quizBadge = m.quiz_score !== null ? `<span style="font-size:11px; font-weight:700; color:var(--accent-primary);">${m.quiz_score}%</span>` : '';
-              return `
-                <div class="home-module-row ${statusClass}" data-module-num="${m.number}">
-                  <div class="home-module-left">
-                    <span class="home-module-num">${m.number}</span>
-                    <span class="home-module-title">${escapeHtml(m.title)}</span>
+            <div class="home-stepper-list">
+              ${modules.length === 0 ? `
+                <div class="home-empty-state">
+                  <div class="home-empty-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
                   </div>
-                  <div class="home-module-right">
-                    ${quizBadge}
-                    <span class="home-badge-tag ${statusClass}">${statusLabel}</span>
-                  </div>
+                  <p class="home-empty-text">No curriculum modules found</p>
+                  <span class="home-empty-subtext">Coursework materials will appear once configured.</span>
                 </div>
-              `;
-            }).join('')}
+              ` : modules.map((m, idx) => {
+                const isCompleted = m.status === 'completed';
+                const isInProgress = m.status === 'in_progress';
+                const statusClass = isCompleted ? 'completed' : (isInProgress ? 'in_progress' : 'locked');
+                const statusLabel = isCompleted ? 'Completed' : (isInProgress ? 'In Progress' : 'Locked');
+                const isCurrent = isInProgress || (!isCompleted && idx === 0);
+
+                let nodeIcon = '';
+                if (isCompleted) {
+                  nodeIcon = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                } else if (isInProgress) {
+                  nodeIcon = `<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="6"></circle></svg>`;
+                } else {
+                  nodeIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>`;
+                }
+
+                return `
+                  <div class="home-module-row home-stepper-item ${statusClass} ${isCurrent ? 'is-current' : ''}" data-module-num="${escapeHtml(m.number)}" role="button" tabindex="0" aria-label="Module ${escapeHtml(m.number)}: ${escapeHtml(m.title)}, ${statusLabel}">
+                    <div class="home-module-left home-stepper-left">
+                      <div class="home-module-num home-stepper-node">${nodeIcon}</div>
+                      <div class="home-stepper-info">
+                        <span class="home-stepper-sub">Module ${escapeHtml(m.number)}</span>
+                        <span class="home-module-title home-stepper-title">${escapeHtml(m.title)}</span>
+                      </div>
+                    </div>
+                    <div class="home-module-right home-stepper-right">
+                      ${isCurrent && isInProgress ? '<span class="home-badge-tag in_progress" style="font-size:10px;">Current</span>' : ''}
+                      <span class="home-badge-tag ${statusClass}">${statusLabel}</span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Exam Status Card -->
+          <div class="home-card home-exam-card">
+            <div class="home-card-header">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent-primary);" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                <h3 class="home-card-title">Written Examination</h3>
+              </div>
+              <span class="home-badge-tag ${isExamGraded ? 'completed' : (exam && exam.status === 'submitted' ? 'in_progress' : 'locked')}">
+                ${isExamGraded ? 'Graded' : (exam && exam.status === 'submitted' ? 'Submitted' : 'Not Started')}
+              </span>
+            </div>
+
+            ${(() => {
+              if (isExamGraded) {
+                return `
+                  <div class="home-exam-grade-display">
+                    <div>
+                      <div class="home-exam-grade-val">${escapeHtml(exam.grade || 'Passed')}</div>
+                      <div class="home-exam-grade-lbl">Evaluation Grade</div>
+                    </div>
+                    <div style="text-align:right;">
+                      <div style="font-size:13px; font-weight:700; color:var(--text-primary);">${formatHomeDate(exam.graded_at)}</div>
+                      <div class="home-exam-grade-lbl">Graded Date</div>
+                    </div>
+                  </div>
+                  <div class="home-exam-feedback-quote">
+                    <div class="home-quote-icon" aria-hidden="true">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z"/></svg>
+                    </div>
+                    <p class="home-quote-text">"${escapeHtml(exam.instructor_comment || 'No written remarks provided.')}"</p>
+                    <span class="home-quote-author">&mdash; Instructor Evaluation Feedback</span>
+                  </div>
+                  <button type="button" class="home-exam-btn" id="homeViewGradeBtn">
+                    View Academic Grade Report
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                `;
+              } else if (exam && exam.status === 'submitted') {
+                return `
+                  <div style="padding:14px 16px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px; display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="width:8px; height:8px; border-radius:50%; background:#f59e0b;"></span>
+                      <span style="font-size:13.5px; font-weight:700; color:var(--text-primary);">Awaiting Evaluation</span>
+                    </div>
+                    <p style="font-size:12.5px; color:var(--text-secondary); margin:0; line-height:1.45;">Your written examination was submitted on ${formatHomeDate(exam.submitted_at)} and is queued for instructor review.</p>
+                  </div>
+                  <button type="button" class="home-exam-btn" id="homeViewExamBtn">
+                    View Exam Submission
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                `;
+              } else {
+                return `
+                  <div style="padding:14px 16px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px; display:flex; flex-direction:column; gap:6px;">
+                    <span style="font-size:13px; font-weight:700; color:var(--text-primary);">End-of-Programme Evaluation</span>
+                    <p style="font-size:12.5px; color:var(--text-secondary); margin:0; line-height:1.45;">The comprehensive written evaluation unlocks once all programme modules have been completed.</p>
+                  </div>
+                  <button type="button" class="home-exam-btn" id="homeViewExamBtn" style="background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-subtle);">
+                    Go to Written Exam
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                `;
+              }
+            })()}
           </div>
         </div>
 
-        <!-- Right: Recent Announcements & Instructors -->
+        <!-- Right Column: Recent Announcements & Instructors -->
         <div style="display:flex; flex-direction:column; gap:20px;">
           <!-- Recent Announcements Card -->
           <div class="home-card">
             <div class="home-card-header">
               <h3 class="home-card-title">Recent Announcements</h3>
-              <button type="button" class="btn-change-rating" id="homeViewAllAnnouncementsBtn" style="font-size:11.5px; padding:3px 8px;">View all</button>
+              <button type="button" class="btn-change-rating" id="homeViewAllAnnouncementsBtn" style="font-size:11.5px; padding:3px 10px; border-radius:6px;">View all</button>
             </div>
             <div class="home-announcements-list">
-              ${recentAnnouncements.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">No announcements published yet.</p>' : recentAnnouncements.map(a => `
-                <div class="home-announcement-item" data-announcement-id="${a.id}">
+              ${recentAnnouncements.length === 0 ? `
+                <div class="home-empty-state">
+                  <div class="home-empty-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                  </div>
+                  <p class="home-empty-text">No announcements published yet</p>
+                  <span class="home-empty-subtext">You're all caught up with current updates.</span>
+                </div>
+              ` : recentAnnouncements.map(a => `
+                <div class="home-announcement-item" data-announcement-id="${a.id}" role="button" tabindex="0" aria-label="Announcement: ${escapeHtml(a.title)}">
                   <div class="home-announcement-top">
                     <span class="home-announcement-title">${escapeHtml(a.title)}</span>
-                    ${!a.is_read ? '<span style="width:7px; height:7px; border-radius:50%; background:var(--accent-primary); flex-shrink:0;"></span>' : ''}
+                    ${!a.is_read ? '<span style="width:7px; height:7px; border-radius:50%; background:var(--accent-primary); flex-shrink:0;" title="Unread"></span>' : ''}
                   </div>
                   <div class="home-announcement-meta">
                     <span style="text-transform:capitalize;">${escapeHtml(a.category || 'General')}</span>
@@ -4830,7 +5002,15 @@
               <h3 class="home-card-title">Programme Instructors</h3>
             </div>
             <div class="home-instructors-grid">
-              ${instructors.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">No instructors assigned to this programme yet.</p>' : instructors.map(inst => `
+              ${instructors.length === 0 ? `
+                <div class="home-empty-state">
+                  <div class="home-empty-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                  </div>
+                  <p class="home-empty-text">No instructors assigned</p>
+                  <span class="home-empty-subtext">Faculty contacts will appear here once assigned.</span>
+                </div>
+              ` : instructors.map(inst => `
                 <div class="home-instructor-card">
                   <div class="home-instructor-info">
                     <div class="home-instructor-avatar">${escapeHtml((inst.name || 'I').substring(0, 2).toUpperCase())}</div>
@@ -4845,7 +5025,7 @@
       </div>
     `;
 
-    // Wire clicks
+    // Wire clicks & keyboard support
     const nextStepBtn = container.querySelector('#homeNextStepBtn');
     if (nextStepBtn && nextStep) {
       nextStepBtn.addEventListener('click', () => {
@@ -4866,7 +5046,7 @@
     }
 
     container.querySelectorAll('.home-module-row').forEach(row => {
-      row.addEventListener('click', () => {
+      attachAccessibleAction(row, () => {
         const modNum = row.dataset.moduleNum;
         const prog = getCurrentProgramme();
         const targetIndex = (prog.modules || []).findIndex(m => m.number == modNum);
@@ -4879,27 +5059,33 @@
     });
 
     const attAnnouncements = container.querySelector('#homeAttAnnouncements');
-    if (attAnnouncements) attAnnouncements.addEventListener('click', () => switchScreen('announcements'));
+    if (attAnnouncements) attachAccessibleAction(attAnnouncements, () => switchScreen('announcements'));
 
     const attDocuments = container.querySelector('#homeAttDocuments');
-    if (attDocuments) attDocuments.addEventListener('click', () => switchScreen('companyResources'));
+    if (attDocuments) attachAccessibleAction(attDocuments, () => switchScreen('companyResources'));
 
     const attChat = container.querySelector('#homeAttChat');
-    if (attChat) attChat.addEventListener('click', () => switchScreen('chat'));
+    if (attChat) attachAccessibleAction(attChat, () => switchScreen('chat'));
 
     const attInstructorMsg = container.querySelector('#homeAttInstructorMsg');
-    if (attInstructorMsg) attInstructorMsg.addEventListener('click', () => switchScreen('messages'));
+    if (attInstructorMsg) attachAccessibleAction(attInstructorMsg, () => switchScreen('messages'));
 
     const viewAllAnnBtn = container.querySelector('#homeViewAllAnnouncementsBtn');
     if (viewAllAnnBtn) viewAllAnnBtn.addEventListener('click', () => switchScreen('announcements'));
 
     container.querySelectorAll('.home-announcement-item').forEach(item => {
-      item.addEventListener('click', () => switchScreen('announcements'));
+      attachAccessibleAction(item, () => switchScreen('announcements'));
     });
 
     container.querySelectorAll('.home-instructor-msg-btn').forEach(btn => {
       btn.addEventListener('click', () => switchScreen('messages'));
     });
+
+    const viewGradeBtn = container.querySelector('#homeViewGradeBtn');
+    if (viewGradeBtn) viewGradeBtn.addEventListener('click', () => switchScreen('grade'));
+
+    const viewExamBtn = container.querySelector('#homeViewExamBtn');
+    if (viewExamBtn) viewExamBtn.addEventListener('click', () => switchScreen('exam'));
   }
 
   function renderInstructorHome(container, summary) {
@@ -4921,9 +5107,11 @@
 
     const cohort = summary.cohort || {};
     const activeLearners = cohort.active_learners_count || 0;
-    const avgCompletion = cohort.avg_completion_percentage || 0;
-    const quizAvg = cohort.quiz_average || 0;
-    const examCounts = cohort.exam_counts || {};
+    const avgCompletion = cohort.average_completion_percentage || cohort.avg_completion_percentage || 0;
+    const examBreakdown = cohort.exam_breakdown || cohort.exam_counts || {};
+    const gradedCount = examBreakdown.graded || 0;
+    const submittedCount = examBreakdown.submitted || 0;
+    const notSubmittedCount = examBreakdown.not_submitted || 0;
     const inactiveLearners = cohort.inactive_learners || [];
 
     container.innerHTML = `
@@ -4935,14 +5123,14 @@
             <div class="home-greeting-meta">
               <span class="home-pill-badge instructor-role">Instructor</span>
               <span>&bull;</span>
-              <span>${escapeHtml(progName)}</span>
+              <span>${escapeHtml(progName)} Track</span>
               <span>&bull;</span>
               <span class="home-greeting-date">${escapeHtml(todayFormatted)}</span>
             </div>
           </div>
           <div class="home-actions-bar">
-            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard" aria-label="Refresh dashboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
               Refresh
             </button>
           </div>
@@ -4956,42 +5144,54 @@
           <span class="home-section-subtitle">${escapeHtml(progName)} Cohort</span>
         </div>
         <div class="home-stat-grid">
-          <div class="home-attention-card" id="homeInstAttExams" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeInstAttExams" role="button" tabindex="0" aria-label="${ungradedExams} pending written exams. Click to view.">
             <div class="home-attention-icon-box amber">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${ungradedExams}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${ungradedExams}</span>
+                <span class="home-attention-badge ${ungradedExams > 0 ? 'amber' : 'subtle'}">${ungradedExams > 0 ? 'To Grade' : 'Cleared'}</span>
+              </div>
               <span class="home-attention-label">Pending Written Exams</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeInstAttThreads" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeInstAttThreads" role="button" tabindex="0" aria-label="${openThreads} open learner questions. Click to view.">
             <div class="home-attention-icon-box blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${openThreads}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${openThreads}</span>
+                <span class="home-attention-badge ${openThreads > 0 ? 'blue' : 'subtle'}">${openThreads > 0 ? 'Open' : 'Resolved'}</span>
+              </div>
               <span class="home-attention-label">Open Learner Questions</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeInstAttFeedback" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeInstAttFeedback" role="button" tabindex="0" aria-label="${unreviewedFeedback} unreviewed feedback items. Click to view.">
             <div class="home-attention-icon-box purple">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${unreviewedFeedback}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${unreviewedFeedback}</span>
+                <span class="home-attention-badge ${unreviewedFeedback > 0 ? 'purple' : 'subtle'}">${unreviewedFeedback > 0 ? 'New' : 'Reviewed'}</span>
+              </div>
               <span class="home-attention-label">Unreviewed Feedback</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeInstAttAnnouncements" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeInstAttAnnouncements" role="button" tabindex="0" aria-label="${scheduledAnnouncements} scheduled announcements. Click to view.">
             <div class="home-attention-icon-box emerald">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${scheduledAnnouncements}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${scheduledAnnouncements}</span>
+                <span class="home-attention-badge ${scheduledAnnouncements > 0 ? 'emerald' : 'subtle'}">${scheduledAnnouncements > 0 ? 'Queued' : 'None'}</span>
+              </div>
               <span class="home-attention-label">Scheduled Announcements</span>
             </div>
           </div>
@@ -5000,7 +5200,7 @@
 
       <!-- Cohort Snapshot & Inactive Learners -->
       <div class="home-grid-2col">
-        <!-- Left: Cohort Metrics -->
+        <!-- Left: Cohort Performance -->
         <div class="home-card">
           <div class="home-card-header">
             <h3 class="home-card-title">Cohort Performance</h3>
@@ -5008,43 +5208,54 @@
           </div>
 
           <div class="home-progress-summary">
-            <div class="home-prog-stat-col">
+            <div class="home-prog-stat-col" style="flex:1;">
               <span class="home-prog-stat-num">${avgCompletion}%</span>
-              <span class="home-prog-stat-lbl">Avg Completion</span>
+              <span class="home-prog-stat-lbl">Avg Completion Rate</span>
+              <div class="home-mini-bar-track" style="margin-top:6px;">
+                <div class="home-mini-bar-fill" style="width: ${avgCompletion}%;"></div>
+              </div>
             </div>
-            <div class="home-prog-stat-col" style="text-align: right;">
-              <span class="home-prog-stat-num">${examCounts.graded || 0}</span>
+            <div class="home-prog-stat-col" style="text-align: right; margin-left: 20px;">
+              <span class="home-prog-stat-num">${gradedCount}</span>
               <span class="home-prog-stat-lbl">Exams Graded</span>
             </div>
           </div>
 
-          <div style="display:flex; flex-direction:column; gap:8px;">
-            <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Written Exam Status</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Written Exam Breakdown</div>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <div style="flex:1; min-width:100px; padding:10px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
-                <div style="font-size:18px; font-weight:800; color:var(--text-primary);">${examCounts.graded || 0}</div>
-                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Graded</div>
+              <div style="flex:1; min-width:100px; padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px;">
+                <div style="font-size:20px; font-weight:800; color:var(--text-primary);">${gradedCount}</div>
+                <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px;">Graded</div>
               </div>
-              <div style="flex:1; min-width:100px; padding:10px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
-                <div style="font-size:18px; font-weight:800; color:var(--accent-primary);">${examCounts.submitted || 0}</div>
-                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Submitted</div>
+              <div style="flex:1; min-width:100px; padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px;">
+                <div style="font-size:20px; font-weight:800; color:var(--accent-primary);">${submittedCount}</div>
+                <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px;">Submitted</div>
               </div>
-              <div style="flex:1; min-width:100px; padding:10px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
-                <div style="font-size:18px; font-weight:800; color:var(--text-muted);">${examCounts.not_submitted || 0}</div>
-                <div style="font-size:11px; color:var(--text-muted); font-weight:700;">Not Started</div>
+              <div style="flex:1; min-width:100px; padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px;">
+                <div style="font-size:20px; font-weight:800; color:var(--text-muted);">${notSubmittedCount}</div>
+                <div style="font-size:11px; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-top:2px;">Not Started</div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Right: Inactive Learners (no activity for 7+ days) -->
+        <!-- Right: Inactive Learners -->
         <div class="home-card">
           <div class="home-card-header">
             <h3 class="home-card-title">Learners Inactive &ge; 7 Days</h3>
-            <span style="font-size:11.5px; color:var(--text-muted);">Name &amp; Last Seen Only</span>
+            <span style="font-size:11.5px; color:var(--text-muted);">Name &amp; Last Seen</span>
           </div>
           <div class="home-inactive-list">
-            ${inactiveLearners.length === 0 ? '<p style="color:var(--text-muted); font-size:13px; margin:0;">All cohort learners have been active within the last 7 days.</p>' : inactiveLearners.map(l => `
+            ${inactiveLearners.length === 0 ? `
+              <div class="home-empty-state">
+                <div class="home-empty-icon" style="color:var(--accent-primary); background:rgba(0, 165, 68, 0.12);">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </div>
+                <p class="home-empty-text">All cohort learners are active</p>
+                <span class="home-empty-subtext">Every learner has signed in within the past 7 days.</span>
+              </div>
+            ` : inactiveLearners.map(l => `
               <div class="home-inactive-row">
                 <div style="display:flex; align-items:center; gap:10px;">
                   <div class="home-instructor-avatar" style="background:rgba(239, 68, 68, 0.12); color:#ef4444;">
@@ -5060,18 +5271,18 @@
       </div>
     `;
 
-    // Wire clicks
+    // Wire clicks & keyboard support
     const instExams = container.querySelector('#homeInstAttExams');
-    if (instExams) instExams.addEventListener('click', () => switchScreen('exam'));
+    if (instExams) attachAccessibleAction(instExams, () => switchScreen('exam'));
 
     const instThreads = container.querySelector('#homeInstAttThreads');
-    if (instThreads) instThreads.addEventListener('click', () => switchScreen('messages'));
+    if (instThreads) attachAccessibleAction(instThreads, () => switchScreen('messages'));
 
     const instFeedback = container.querySelector('#homeInstAttFeedback');
-    if (instFeedback) instFeedback.addEventListener('click', () => switchScreen('feedback'));
+    if (instFeedback) attachAccessibleAction(instFeedback, () => switchScreen('feedback'));
 
     const instAnnouncements = container.querySelector('#homeInstAttAnnouncements');
-    if (instAnnouncements) instAnnouncements.addEventListener('click', () => switchScreen('announcements'));
+    if (instAnnouncements) attachAccessibleAction(instAnnouncements, () => switchScreen('announcements'));
   }
 
   function renderAdminHome(container, summary) {
@@ -5089,10 +5300,20 @@
     const ungradedExams = attention.ungraded_exams_count || 0;
     const openThreads = attention.open_threads_count || 0;
     const unreviewedFeedback = attention.unreviewed_feedback_count || 0;
-    const draftItems = attention.draft_items_count || 0;
+    const draftItems = attention.draft_items_count !== undefined ? attention.draft_items_count : ((attention.draft_documents_count || 0) + (attention.draft_announcements_count || 0));
 
     const programmesOverview = summary.programmes_overview || [];
     const accessSnapshot = summary.access_snapshot || {};
+    const activeUsers = accessSnapshot.active_users_count || 0;
+    const pendingUsers = accessSnapshot.pending_users_count || 0;
+    const invitedUsers = accessSnapshot.invited_users_count || 0;
+    const revokedUsers = accessSnapshot.revoked_users_count || 0;
+    const totalUsers = activeUsers + pendingUsers + invitedUsers + revokedUsers;
+
+    const activePct = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0;
+    const pendingPct = totalUsers > 0 ? Math.round((pendingUsers / totalUsers) * 100) : 0;
+    const invitedPct = totalUsers > 0 ? Math.round((invitedUsers / totalUsers) * 100) : 0;
+    const revokedPct = totalUsers > 0 ? Math.max(0, 100 - activePct - pendingPct - invitedPct) : 0;
 
     container.innerHTML = `
       <!-- Hero Card -->
@@ -5107,8 +5328,8 @@
             </div>
           </div>
           <div class="home-actions-bar">
-            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <button type="button" class="home-refresh-btn" id="homeRefreshBtn" title="Refresh dashboard" aria-label="Refresh dashboard">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
               Refresh
             </button>
           </div>
@@ -5121,52 +5342,67 @@
           <h2 class="home-section-heading">Needs Attention Across All Programmes</h2>
         </div>
         <div class="home-stat-grid">
-          <div class="home-attention-card" id="homeAdminAttApprovals" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAdminAttApprovals" role="button" tabindex="0" aria-label="${pendingApprovals} pending account requests. Click to view.">
             <div class="home-attention-icon-box amber">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7.5" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7.5" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${pendingApprovals}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${pendingApprovals}</span>
+                <span class="home-attention-badge ${pendingApprovals > 0 ? 'amber' : 'subtle'}">${pendingApprovals > 0 ? 'Review' : 'None'}</span>
+              </div>
               <span class="home-attention-label">Pending Account Requests</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeAdminAttExams" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAdminAttExams" role="button" tabindex="0" aria-label="${ungradedExams} ungraded written exams. Click to view.">
             <div class="home-attention-icon-box emerald">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${ungradedExams}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${ungradedExams}</span>
+                <span class="home-attention-badge ${ungradedExams > 0 ? 'emerald' : 'subtle'}">${ungradedExams > 0 ? 'To Grade' : 'Cleared'}</span>
+              </div>
               <span class="home-attention-label">Ungraded Written Exams</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeAdminAttThreads" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAdminAttThreads" role="button" tabindex="0" aria-label="${openThreads} open learner questions. Click to view.">
             <div class="home-attention-icon-box blue">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${openThreads}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${openThreads}</span>
+                <span class="home-attention-badge ${openThreads > 0 ? 'blue' : 'subtle'}">${openThreads > 0 ? 'Open' : 'Resolved'}</span>
+              </div>
               <span class="home-attention-label">Open Learner Questions</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeAdminAttFeedback" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAdminAttFeedback" role="button" tabindex="0" aria-label="${unreviewedFeedback} unreviewed feedback items. Click to view.">
             <div class="home-attention-icon-box purple">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${unreviewedFeedback}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${unreviewedFeedback}</span>
+                <span class="home-attention-badge ${unreviewedFeedback > 0 ? 'purple' : 'subtle'}">${unreviewedFeedback > 0 ? 'New' : 'Reviewed'}</span>
+              </div>
               <span class="home-attention-label">Unreviewed Feedback</span>
             </div>
           </div>
 
-          <div class="home-attention-card" id="homeAdminAttDrafts" role="button" tabindex="0">
+          <div class="home-attention-card" id="homeAdminAttDrafts" role="button" tabindex="0" aria-label="${draftItems} draft documents and announcements. Click to view.">
             <div class="home-attention-icon-box amber">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </div>
             <div class="home-attention-body">
-              <span class="home-attention-count">${draftItems}</span>
+              <div class="home-attention-count-row">
+                <span class="home-attention-count">${draftItems}</span>
+                <span class="home-attention-badge ${draftItems > 0 ? 'amber' : 'subtle'}">${draftItems > 0 ? 'Drafts' : 'Published'}</span>
+              </div>
               <span class="home-attention-label">Draft Docs &amp; Announcements</span>
             </div>
           </div>
@@ -5175,31 +5411,47 @@
 
       <!-- Programmes Overview & Access Snapshot -->
       <div class="home-grid-2col">
-        <!-- Left: Programmes Overview Table -->
+        <!-- Programmes Overview Table -->
         <div class="home-card" style="grid-column: span 2;">
           <div class="home-card-header">
             <h3 class="home-card-title">Programmes Overview</h3>
-            <span style="font-size:12px; color:var(--text-muted);">All 5 Programmes</span>
+            <span style="font-size:12px; color:var(--text-muted);">All Available Tracks</span>
           </div>
 
           <div class="home-table-wrap">
-            <table class="home-table">
+            <table class="home-table" role="table" aria-label="Programmes Overview">
               <thead>
                 <tr>
-                  <th>Programme</th>
-                  <th style="text-align:center;">Active Learners</th>
-                  <th style="text-align:center;">Avg Completion</th>
-                  <th style="text-align:center;">Ungraded Exams</th>
-                  <th style="text-align:center;">Open Questions</th>
+                  <th scope="col">Programme</th>
+                  <th scope="col" style="text-align:center;">Active Learners</th>
+                  <th scope="col" style="min-width:160px;">Avg Completion</th>
+                  <th scope="col" style="text-align:center;">Ungraded Exams</th>
+                  <th scope="col" style="text-align:center;">Open Questions</th>
                 </tr>
               </thead>
               <tbody>
-                ${programmesOverview.length === 0 ? '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:20px;">No programmes found.</td></tr>' : programmesOverview.map(p => `
-                  <tr class="home-table-row" data-prog-slug="${escapeHtml(p.programme_slug)}">
+                ${programmesOverview.length === 0 ? `
+                  <tr>
+                    <td colspan="5" style="text-align:center; padding:32px 16px;">
+                      <div class="home-empty-state">
+                        <div class="home-empty-icon">
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                        </div>
+                        <p class="home-empty-text">No programmes configured</p>
+                      </div>
+                    </td>
+                  </tr>
+                ` : programmesOverview.map(p => `
+                  <tr class="home-table-row" data-prog-slug="${escapeHtml(p.programme_slug)}" role="button" tabindex="0" aria-label="Programme: ${escapeHtml(p.programme_name)}">
                     <td style="font-weight:700; color:var(--text-primary);">${escapeHtml(p.programme_name)}</td>
-                    <td style="text-align:center;">${p.active_learners_count || 0}</td>
-                    <td style="text-align:center;">
-                      <span class="home-badge-tag in_progress">${p.avg_completion_percentage || 0}%</span>
+                    <td style="text-align:center; font-weight:600;">${p.active_learners_count || 0}</td>
+                    <td>
+                      <div class="home-mini-bar-wrap">
+                        <div class="home-mini-bar-track" aria-hidden="true">
+                          <div class="home-mini-bar-fill" style="width: ${p.avg_completion_percentage || 0}%;"></div>
+                        </div>
+                        <span class="home-mini-bar-val">${p.avg_completion_percentage || 0}%</span>
+                      </div>
                     </td>
                     <td style="text-align:center;">
                       ${p.ungraded_exams_count > 0 ? `<span style="font-weight:700; color:var(--accent-primary);">${p.ungraded_exams_count}</span>` : '<span style="color:var(--text-muted);">0</span>'}
@@ -5214,28 +5466,66 @@
           </div>
         </div>
 
-        <!-- Access Snapshot Card -->
+        <!-- Access Snapshot Card with Stacked Bar -->
         <div class="home-card">
           <div class="home-card-header">
             <h3 class="home-card-title">User Accounts Snapshot</h3>
-            <button type="button" class="btn-change-rating" id="homeManageUsersBtn" style="font-size:11.5px; padding:3px 8px;">Manage</button>
+            <button type="button" class="btn-change-rating" id="homeManageUsersBtn" style="font-size:11.5px; padding:3px 10px; border-radius:6px;">Manage</button>
           </div>
-          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;">
-            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
-              <div style="font-size:22px; font-weight:800; color:var(--accent-primary);">${accessSnapshot.active_users_count || 0}</div>
-              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Active</div>
+
+          <div class="home-stacked-bar-container">
+            <div class="home-stacked-bar-track" role="img" aria-label="Account distribution: ${activePct}% active, ${pendingPct}% pending, ${invitedPct}% invited, ${revokedPct}% revoked">
+              ${activeUsers > 0 ? `<div class="home-stacked-segment active" style="width: ${activePct}%;" title="Active: ${activeUsers} (${activePct}%)"></div>` : ''}
+              ${pendingUsers > 0 ? `<div class="home-stacked-segment pending" style="width: ${pendingPct}%;" title="Pending: ${pendingUsers} (${pendingPct}%)"></div>` : ''}
+              ${invitedUsers > 0 ? `<div class="home-stacked-segment invited" style="width: ${invitedPct}%;" title="Invited: ${invitedUsers} (${invitedPct}%)"></div>` : ''}
+              ${revokedUsers > 0 ? `<div class="home-stacked-segment revoked" style="width: ${revokedPct}%;" title="Revoked: ${revokedUsers} (${revokedPct}%)"></div>` : ''}
+              ${totalUsers === 0 ? '<div class="home-stacked-segment" style="width: 100%; background: var(--border-subtle);" title="No accounts recorded"></div>' : ''}
             </div>
-            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
-              <div style="font-size:22px; font-weight:800; color:#f59e0b;">${accessSnapshot.pending_users_count || 0}</div>
-              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Pending</div>
-            </div>
-            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
-              <div style="font-size:22px; font-weight:800; color:#0284c7;">${accessSnapshot.invited_users_count || 0}</div>
-              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Invited</div>
-            </div>
-            <div style="padding:12px 14px; background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:8px;">
-              <div style="font-size:22px; font-weight:800; color:#ef4444;">${accessSnapshot.revoked_users_count || 0}</div>
-              <div style="font-size:11.5px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Revoked</div>
+
+            <div class="home-stacked-legend">
+              <div class="home-stacked-legend-item">
+                <div class="home-stacked-legend-left">
+                  <span class="home-stacked-legend-dot active" aria-hidden="true"></span>
+                  <span class="home-stacked-legend-name">Active</span>
+                </div>
+                <div class="home-stacked-legend-right">
+                  <span class="home-stacked-legend-count">${activeUsers}</span>
+                  <span class="home-stacked-legend-pct">(${activePct}%)</span>
+                </div>
+              </div>
+
+              <div class="home-stacked-legend-item">
+                <div class="home-stacked-legend-left">
+                  <span class="home-stacked-legend-dot pending" aria-hidden="true"></span>
+                  <span class="home-stacked-legend-name">Pending</span>
+                </div>
+                <div class="home-stacked-legend-right">
+                  <span class="home-stacked-legend-count">${pendingUsers}</span>
+                  <span class="home-stacked-legend-pct">(${pendingPct}%)</span>
+                </div>
+              </div>
+
+              <div class="home-stacked-legend-item">
+                <div class="home-stacked-legend-left">
+                  <span class="home-stacked-legend-dot invited" aria-hidden="true"></span>
+                  <span class="home-stacked-legend-name">Invited</span>
+                </div>
+                <div class="home-stacked-legend-right">
+                  <span class="home-stacked-legend-count">${invitedUsers}</span>
+                  <span class="home-stacked-legend-pct">(${invitedPct}%)</span>
+                </div>
+              </div>
+
+              <div class="home-stacked-legend-item">
+                <div class="home-stacked-legend-left">
+                  <span class="home-stacked-legend-dot revoked" aria-hidden="true"></span>
+                  <span class="home-stacked-legend-name">Revoked</span>
+                </div>
+                <div class="home-stacked-legend-right">
+                  <span class="home-stacked-legend-count">${revokedUsers}</span>
+                  <span class="home-stacked-legend-pct">(${revokedPct}%)</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -5247,19 +5537,19 @@
           </div>
           <div class="home-quick-links-strip">
             <button type="button" class="home-quick-link-btn" id="homeQuickBtnUsers">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
               Manage Users
             </button>
             <button type="button" class="home-quick-link-btn" id="homeQuickBtnAnnouncements">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
               Announcements
             </button>
             <button type="button" class="home-quick-link-btn" id="homeQuickBtnDocuments">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
               Company Documents
             </button>
             <button type="button" class="home-quick-link-btn" id="homeQuickBtnExams">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
               Evaluation Inbox
             </button>
           </div>
@@ -5267,24 +5557,28 @@
       </div>
     `;
 
-    // Wire clicks
+    // Wire clicks & keyboard support
     const adminApprovals = container.querySelector('#homeAdminAttApprovals');
-    if (adminApprovals) adminApprovals.addEventListener('click', () => switchScreen('admin'));
+    if (adminApprovals) attachAccessibleAction(adminApprovals, () => switchScreen('admin'));
 
     const adminExams = container.querySelector('#homeAdminAttExams');
-    if (adminExams) adminExams.addEventListener('click', () => switchScreen('exam'));
+    if (adminExams) attachAccessibleAction(adminExams, () => switchScreen('exam'));
 
     const adminThreads = container.querySelector('#homeAdminAttThreads');
-    if (adminThreads) adminThreads.addEventListener('click', () => switchScreen('messages'));
+    if (adminThreads) attachAccessibleAction(adminThreads, () => switchScreen('messages'));
 
     const adminFeedback = container.querySelector('#homeAdminAttFeedback');
-    if (adminFeedback) adminFeedback.addEventListener('click', () => switchScreen('feedback'));
+    if (adminFeedback) attachAccessibleAction(adminFeedback, () => switchScreen('feedback'));
 
     const adminDrafts = container.querySelector('#homeAdminAttDrafts');
-    if (adminDrafts) adminDrafts.addEventListener('click', () => switchScreen('companyResources'));
+    if (adminDrafts) attachAccessibleAction(adminDrafts, () => switchScreen('companyResources'));
 
     const manageUsersBtn = container.querySelector('#homeManageUsersBtn');
     if (manageUsersBtn) manageUsersBtn.addEventListener('click', () => switchScreen('admin'));
+
+    container.querySelectorAll('.home-table-row').forEach(row => {
+      attachAccessibleAction(row, () => switchScreen('admin'));
+    });
 
     const quickBtnUsers = container.querySelector('#homeQuickBtnUsers');
     if (quickBtnUsers) quickBtnUsers.addEventListener('click', () => switchScreen('admin'));
