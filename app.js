@@ -15886,6 +15886,11 @@
             state.profile.role = 'admin';
           }
 
+          // Pre-approved by Admin -> immediately grant active access
+          if (accessCheck.preInvited || accessCheck.invite) {
+            accessStatus = 'active';
+          }
+
           // 1. Access Pending: Gating screen active until approved by Admin
           if (accessStatus === 'pending') {
             try { document.documentElement.classList.remove('has-portal-session'); } catch (e) { }
@@ -15929,13 +15934,21 @@
             state.profile.position = profile.position || accessCheck.position || state.profile.position;
             state.profile.phone = profile.phone || state.profile.phone;
             state.profile.avatar_url = profile.avatar_url || state.profile.avatar_url;
+            if (profile.job_id) state.profile.job_id = profile.job_id;
             if (profile.programme_id) state.profile.programme_id = profile.programme_id;
             if (profile.programme) state.profile.programmeName = profile.programme.name;
             applyRolePermissions(profile);
           } else if (accessCheck.role) {
             state.profile.role = accessCheck.role === 'learner' ? 'Intern' : accessCheck.role;
             if (accessCheck.position) state.profile.position = accessCheck.position;
-            applyRolePermissions({ role: accessCheck.role, position: accessCheck.position });
+            if (accessCheck.jobId) state.profile.job_id = accessCheck.jobId;
+            if (accessCheck.programmeId) state.profile.programme_id = accessCheck.programmeId;
+            applyRolePermissions({
+              role: accessCheck.role,
+              position: accessCheck.position,
+              job_id: accessCheck.jobId,
+              programme_id: accessCheck.programmeId
+            });
           }
 
           saveState();

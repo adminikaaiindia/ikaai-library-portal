@@ -33,6 +33,15 @@ alter table public.access_invites
 
 create index if not exists idx_access_invites_job_id on public.access_invites(job_id);
 
+-- Allow users to read their own invite so client can immediately verify pre-approval
+drop policy if exists "access_invites_read_own" on public.access_invites;
+create policy "access_invites_read_own" on public.access_invites
+for select to authenticated
+using (
+  lower(trim(email)) = lower(trim(auth.jwt()->>'email'))
+  or lower(trim(email)) = (select lower(trim(email)) from auth.users where id = auth.uid())
+);
+
 -- C. exam_questions extensions
 alter table public.exam_questions
   add column if not exists job_id uuid references public.jobs(id) on delete cascade;
@@ -241,8 +250,11 @@ begin
       full_name = coalesce(public.profiles.full_name, excluded.full_name),
       email = excluded.email,
       avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url),
-      job_id = coalesce(public.profiles.job_id, excluded.job_id),
-      position = coalesce(public.profiles.position, excluded.position),
+      role = coalesce(excluded.role, public.profiles.role),
+      programme_id = coalesce(excluded.programme_id, public.profiles.programme_id),
+      job_id = coalesce(excluded.job_id, public.profiles.job_id),
+      position = coalesce(excluded.position, public.profiles.position),
+      access_status = case when public.profiles.access_status = 'revoked' then 'revoked' else coalesce(excluded.access_status, 'active') end,
       updated_at = now();
   exception when others then
     -- Resilient fallback
@@ -344,16 +356,17 @@ begin
       role = clean_role,
       programme_id = p_programme_id,
       job_id = p_job_id,
-      status = case when status = 'revoked' then 'invited' else status end,
+      status = 'active',
+      activated_at = coalesce(activated_at, now()),
       invited_by = auth.uid()
     where id = existing_invite_id
     returning id into invite_id;
   else
     insert into public.access_invites (
-      email, role, programme_id, job_id, status, invited_by, created_at
+      email, role, programme_id, job_id, status, invited_by, created_at, activated_at
     )
     values (
-      clean_email, clean_role, p_programme_id, p_job_id, 'invited', auth.uid(), now()
+      clean_email, clean_role, p_programme_id, p_job_id, 'active', auth.uid(), now(), now()
     )
     returning id into invite_id;
   end if;

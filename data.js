@@ -1802,7 +1802,8 @@
               role: cleanRole,
               programme_id: cleanProg,
               job_id: cleanJobId,
-              status: existingInv.status === 'revoked' ? 'invited' : existingInv.status,
+              status: 'active',
+              activated_at: new Date().toISOString(),
               invited_by: (await window.DataLayer.getCurrentUser())?.id || null
             })
             .eq('id', existingInv.id);
@@ -1816,7 +1817,8 @@
               role: cleanRole,
               programme_id: cleanProg,
               job_id: cleanJobId,
-              status: 'invited',
+              status: 'active',
+              activated_at: new Date().toISOString(),
               invited_by: (await window.DataLayer.getCurrentUser())?.id || null,
               created_at: new Date().toISOString()
             });
