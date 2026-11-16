@@ -1297,8 +1297,8 @@
                 }
               }
 
-              // Auto-resolve job_id if missing for intern/learner with assigned programme
-              if (!data.job_id && data.programme_id && (data.role === 'intern' || data.role === 'learner')) {
+              // Auto-resolve job_id if missing or generic 'Intern' for learner with assigned programme
+              if ((!data.job_id || !data.position || data.position.toLowerCase() === 'intern' || data.position.toLowerCase() === 'learner') && data.programme_id && (data.role === 'intern' || data.role === 'learner')) {
                 try {
                   const { data: jobRow } = await client
                     .from('jobs')
@@ -1309,10 +1309,10 @@
                     .maybeSingle();
                   if (jobRow) {
                     data.job_id = jobRow.id;
-                    if (!data.position) data.position = jobRow.title;
+                    data.position = jobRow.title;
                     client.from('profiles').update({
                       job_id: jobRow.id,
-                      position: data.position
+                      position: jobRow.title
                     }).eq('id', uid).then(() => { }).catch(() => { });
                   }
                 } catch (je) { }

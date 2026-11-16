@@ -11880,14 +11880,21 @@
       // Programme assignment name
       let progName = u.programme_name || '--';
       const isIntern = (u.role === 'intern' || u.role === 'learner');
+      const isGenericPos = !u.position || u.position.toLowerCase() === 'intern' || u.position.toLowerCase() === 'learner';
       if (u.role === 'admin') {
         progName = `<span style="color: var(--accent-light); font-weight: 600;">All Programmes</span>`;
-      } else if (isIntern && !u.job_id && !u.position) {
+      } else if (isIntern && !u.job_id && isGenericPos) {
         progName = `<span style="color: #f59e0b; font-style: italic; font-weight: 600;">Role not assigned</span>`;
-      } else if (u.position && isCustomPos) {
+      } else if (u.position && !isGenericPos && isCustomPos) {
         progName = `<span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(u.position)}</span>${u.programme_name ? ` <span style="font-size: 11px; color: var(--text-muted);">(${escapeHtml(u.programme_name)})</span>` : ''}`;
-      } else if (u.position) {
+      } else if (u.position && !isGenericPos) {
         progName = `<span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(u.position)}</span>`;
+      } else if (u.job_id) {
+        let jt = null;
+        for (const it of Object.values(JD_ASSIGNMENT_MAP)) {
+          if (it.jobId === u.job_id) { jt = it.title; break; }
+        }
+        progName = `<span style="font-weight: 600; color: var(--text-primary);">${escapeHtml(jt || u.programme_name || 'Role Assigned')}</span>`;
       } else if (!u.programme_id) {
         progName = `<span style="color: var(--text-muted); font-style: italic;">(Unassigned)</span>`;
       }
