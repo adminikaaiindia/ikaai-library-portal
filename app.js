@@ -3397,12 +3397,22 @@
     const cleanRole = (rawRole === 'learner') ? 'intern' : rawRole;
     const isAdmin = (cleanRole === 'admin');
 
-    if (el.navAdmin) {
-      el.navAdmin.style.display = isAdmin ? 'flex' : 'none';
-    }
-
     if (isAdmin) {
-      document.body.classList.add('is-admin');
+      if (profile) profile.role = 'admin';
+      state.profile.role = 'admin';
+      try { document.body.classList.add('is-admin'); } catch (e) { }
+
+      // For Admins, remove dashboard from navigation and active view
+      if (el.navHome) {
+        el.navHome.style.display = 'none';
+      }
+      if (el.navAdmin) {
+        el.navAdmin.style.display = 'flex';
+      }
+      if (activeScreen === 'home') {
+        activeScreen = 'admin';
+      }
+
       if (el.programmeSelect) {
         if (originalProgrammeSelectHTML && el.programmeSelect.innerHTML !== originalProgrammeSelectHTML) {
           el.programmeSelect.innerHTML = originalProgrammeSelectHTML;
@@ -3413,7 +3423,18 @@
         if (currentProgrammeId) el.programmeSelect.value = currentProgrammeId;
       }
     } else {
-      document.body.classList.remove('is-admin');
+      try { document.body.classList.remove('is-admin'); } catch (e) { }
+      if (profile && profile.role !== 'instructor') profile.role = 'intern';
+      if (state.profile.role !== 'instructor') state.profile.role = 'Intern';
+
+      // Keep Dashboard visible for non-admins (Learners, Interns, Instructors)
+      if (el.navHome) {
+        el.navHome.style.display = 'flex';
+      }
+      if (el.navAdmin) {
+        el.navAdmin.style.display = 'none';
+      }
+
       // For Intern / Learner / Instructor: lock strictly to assigned programme
       let assignedProgId = profile?.programme_id || state.profile?.programme_id;
       let assignedKey = null;
@@ -3458,6 +3479,10 @@
         const roleTag = (JD_PROGRAMME_MAP[assignedKey] && JD_PROGRAMME_MAP[assignedKey].roleTag) || roleTitle;
         el.sidebarRoleBadge.textContent = roleTag;
       }
+    }
+
+    if (typeof updateJdPermissionsUI === 'function') {
+      updateJdPermissionsUI();
     }
   }
 
@@ -3528,9 +3553,17 @@
   // ==========================================
 
   function switchScreen(screenKey) {
+    const rawRole = (state.profile?.role || '').toLowerCase().trim();
+    const isAdmin = (rawRole === 'admin');
+
+    // For admins, remove dashboard: redirect any home navigation to admin portal
+    if (isAdmin && screenKey === 'home') {
+      screenKey = 'admin';
+    }
+
     if (screenKey === 'jobDescriptions' && typeof isAuthorizedForJdSection === 'function' && !isAuthorizedForJdSection()) {
       showToast('Access restricted: Only Admins, HR, and HR Interns can view Job Descriptions.');
-      screenKey = 'home';
+      screenKey = isAdmin ? 'admin' : 'home';
     }
     clearModuleTimer();
     activeScreen = screenKey;
@@ -4501,6 +4534,11 @@
   }
 
   async function renderHomeScreen(force = false) {
+    const rawRole = (state.profile?.role || '').toLowerCase().trim();
+    if (rawRole === 'admin') {
+      switchScreen('admin');
+      return;
+    }
     const container = el.homeDashboardContainer || document.getElementById('homeDashboardContainer');
     if (!container) return;
 
@@ -4577,8 +4615,9 @@
   function renderHomeSummaryData(container, summary) {
     if (!summary) return;
     const role = (summary.role || 'learner').toLowerCase();
-    if (role === 'admin') {
-      renderAdminHome(container, summary);
+    if (role === 'admin' || (state.profile?.role || '').toLowerCase() === 'admin') {
+      switchScreen('admin');
+      return;
     } else if (role === 'instructor') {
       renderInstructorHome(container, summary);
     } else {
@@ -12298,66 +12337,7 @@
     el.adminBulkPreviewBox.style.display = 'block';
   }
 
-  function applyRolePermissions(profile) {
-    const email = (profile?.email || state.profile?.email || '').trim().toLowerCase();
-    const isAdmin = profile?.role === 'admin' ||
-      state.profile?.role === 'admin' ||
-      email === 'admin.ikaaiindia@gmail.com';
-
-    if (isAdmin) {
-      if (profile) profile.role = 'admin';
-      state.profile.role = 'admin';
-      try { document.body.classList.add('is-admin'); } catch (e) { }
-    } else {
-      try { document.body.classList.remove('is-admin'); } catch (e) { }
-      if (profile && profile.role !== 'instructor') profile.role = 'intern';
-      if (state.profile.role !== 'instructor') state.profile.role = 'Intern';
-    }
-
-    if (el.navAdmin) {
-      el.navAdmin.style.display = isAdmin ? 'flex' : 'none';
-    }
-
-    if (typeof updateJdPermissionsUI === 'function') {
-      updateJdPermissionsUI();
-    }
-
-    if (el.programmeSelect) {
-      if (isAdmin) {
-        el.programmeSelect.disabled = false;
-        el.programmeSelect.title = 'Switch cohort programme (Admin access)';
-      } else {
-        // Intern or Instructor locked to their assigned programme
-        el.programmeSelect.disabled = true;
-        el.programmeSelect.title = 'Assigned cohort programme (managed by Admin)';
-        let matchedKey = null;
-        if (profile?.position && profile.position.toLowerCase() !== 'intern') {
-          const normPos = profile.position.toLowerCase().trim();
-          matchedKey = Object.keys(JD_PROGRAMME_MAP).find(k =>
-            JD_PROGRAMME_MAP[k].title.toLowerCase() === normPos ||
-            normPos.includes(k) ||
-            k.includes(normPos)
-          );
-        }
-        if (!matchedKey && profile?.programme_id) {
-          matchedKey = getProgrammeKey(profile.programme_id);
-        }
-        if (!matchedKey && profile?.programme) {
-          matchedKey = getProgrammeKey(profile.programme);
-        }
-        if (!matchedKey && state.profile?.programmeName) {
-          matchedKey = getProgrammeKey(state.profile.programmeName);
-        }
-        if (matchedKey) {
-          currentProgrammeId = matchedKey;
-          el.programmeSelect.value = matchedKey;
-          localStorage.setItem('ikaai_active_programme', matchedKey);
-        }
-      }
-    }
-    renderJobDescriptionsScreen();
-    renderProgrammeJds(currentProgrammeId);
-  }
+  // (Duplicate applyRolePermissions removed; authoritative definition at line ~3395)
 
   async function syncCurriculumFromBackend() {
     if (typeof window.DataLayer === 'undefined') return;

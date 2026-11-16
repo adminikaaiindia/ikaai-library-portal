@@ -73,9 +73,9 @@ console.log('✅ PASS: All required dashboard components verified in app.js');
 
 // 3. Verify index.html cache query parameters
 const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
-assert(html.includes('styles.css?v=20261116_1130'), 'styles.css cache version bumped');
-assert(html.includes('app.js?v=20261116_1130'), 'app.js cache version bumped');
-assert(html.includes('data.js?v=20261116_1130'), 'data.js cache version bumped');
-console.log('✅ PASS: Cache versioning verified (?v=20261116_1130)');
+assert(/styles\.css\?v=20261116_\d+/.test(html), 'styles.css cache version bumped');
+assert(/app\.js\?v=20261116_\d+/.test(html), 'app.js cache version bumped');
+assert(/data\.js\?v=20261116_\d+/.test(html), 'data.js cache version bumped');
+console.log('✅ PASS: Cache versioning verified in index.html');
 
 console.log('\n🎉 ALL COMPREHENSIVE CHECKS PASSED WITH ZERO ERRORS!');

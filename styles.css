@@ -12858,11 +12858,15 @@ html, body {
 }
 
 /* ==========================================================================
-   ADMIN MODULE ACCESS (Bypass and hide module review timers for Admins)
+   ADMIN ACCESS (Bypass module review timers and remove dashboard for Admins)
    ========================================================================== */
 body.is-admin #moduleTimerCard,
 body.is-admin .module-timer-card,
 body.is-admin .resource-timer-bar-wrap {
+  display: none !important;
+}
+
+body.is-admin #navHome {
   display: none !important;
 }
 
