@@ -3713,7 +3713,8 @@
         const sessionUser = await window.DataLayer.getCurrentUser();
         if (sessionUser && sessionUser.id) {
           const userEmail = (sessionUser.email || '').trim().toLowerCase();
-          const accessCheck = await window.DataLayer.resolveUserAccess(sessionUser.id, userEmail);
+          try { sessionStorage.removeItem(`ikaai_acc_${userEmail}`); } catch (e) { }
+          const accessCheck = await window.DataLayer.resolveUserAccess(sessionUser.id, userEmail, true);
           if (accessCheck.accessStatus === 'active') {
             showToast('Access approved! Welcome to Ikaai Academy.');
             await handleSuccessfulAuth({ id: sessionUser.id, email: sessionUser.email, name: sessionUser.name });

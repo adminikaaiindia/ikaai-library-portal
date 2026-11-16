@@ -358,18 +358,36 @@ begin
     returning id into invite_id;
   end if;
 
-  -- If matching profile already exists, activate and sync role/programme/job_id
+  -- If matching profile or auth user exists, activate and sync role/programme/job_id
   select id into existing_user_id from public.profiles where lower(trim(email)) = clean_email;
+  if existing_user_id is null then
+    select id into existing_user_id from auth.users where lower(trim(email)) = clean_email;
+  end if;
+
   if existing_user_id is not null then
-    update public.profiles
+    insert into public.profiles (
+      id, email, full_name, role, programme_id, job_id, position, access_status, created_at, updated_at
+    )
+    values (
+      existing_user_id,
+      clean_email,
+      coalesce((select coalesce(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(clean_email, '@', 1)) from auth.users where id = existing_user_id), 'Learner'),
+      case when clean_role = 'intern' then 'learner' else clean_role end,
+      p_programme_id,
+      p_job_id,
+      v_job_title,
+      'active',
+      now(),
+      now()
+    )
+    on conflict (id) do update
     set
       role = case when clean_role = 'intern' then 'learner' else clean_role end,
       programme_id = p_programme_id,
       job_id = p_job_id,
-      position = coalesce(v_job_title, position),
+      position = coalesce(v_job_title, profiles.position),
       access_status = 'active',
-      updated_at = now()
-    where id = existing_user_id;
+      updated_at = now();
 
     update public.access_invites
     set status = 'active', activated_at = coalesce(activated_at, now())
@@ -518,6 +536,132 @@ create or replace function public.update_user_access(
 returns jsonb as $$
 begin
   return public.update_user_access(p_user_id, p_role, p_programme_id, null::uuid);
+end;
+$$ language plpgsql security definer set search_path = public, pg_temp;
+
+
+-- C. claim_user_invite: atomically claim invite, sync profile with job_id and activate
+create or replace function public.claim_user_invite()
+returns jsonb as $$
+declare
+  v_user_id uuid;
+  v_email text;
+  v_invite record;
+  v_role text;
+  v_programme_id uuid;
+  v_job_id uuid;
+  v_position text;
+  v_name text;
+  v_curr_role text;
+begin
+  v_user_id := auth.uid();
+  if v_user_id is null then
+    return jsonb_build_object('success', false, 'status', 'unauthenticated');
+  end if;
+
+  select lower(trim(email)),
+         coalesce(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1))
+  into v_email, v_name
+  from auth.users
+  where id = v_user_id;
+
+  if v_email is null or v_email = '' then
+    select lower(trim(email)), full_name into v_email, v_name from public.profiles where id = v_user_id;
+  end if;
+
+  if v_email is null or v_email = '' then
+    return jsonb_build_object('success', false, 'status', 'no_email');
+  end if;
+
+  -- If user is already active admin in profiles, preserve role
+  select role into v_curr_role from public.profiles where id = v_user_id;
+  if v_curr_role = 'admin' then
+    update public.profiles
+    set access_status = 'active', updated_at = now()
+    where id = v_user_id;
+
+    return jsonb_build_object(
+      'success', true,
+      'status', 'active',
+      'role', 'admin',
+      'programme_id', null
+    );
+  end if;
+
+  -- Check access_invites for this email
+  select * into v_invite
+  from public.access_invites
+  where lower(trim(email)) = v_email
+  order by created_at desc
+  limit 1;
+
+  if v_invite is not null and v_invite.status in ('invited', 'active') then
+    v_role := case when v_invite.role in ('intern', 'learner') then 'learner' else v_invite.role end;
+    v_programme_id := case when v_role = 'admin' then null else v_invite.programme_id end;
+    v_job_id := case when v_role = 'admin' then null else v_invite.job_id end;
+
+    -- Auto-resolve job_id if missing for learner
+    if v_role = 'learner' and v_job_id is null and v_programme_id is not null then
+      select id into v_job_id from public.jobs where programme_id = v_programme_id order by sort_order asc limit 1;
+    end if;
+
+    if v_job_id is not null then
+      select title into v_position from public.jobs where id = v_job_id;
+    end if;
+
+    insert into public.profiles (
+      id, email, full_name, role, programme_id, job_id, position, access_status, created_at, updated_at
+    )
+    values (
+      v_user_id,
+      v_email,
+      coalesce(v_name, 'Learner'),
+      v_role,
+      v_programme_id,
+      v_job_id,
+      coalesce(v_position, v_invite.position),
+      'active',
+      now(),
+      now()
+    )
+    on conflict (id) do update
+    set
+      role = excluded.role,
+      programme_id = excluded.programme_id,
+      job_id = coalesce(excluded.job_id, profiles.job_id),
+      position = coalesce(excluded.position, profiles.position),
+      access_status = 'active',
+      updated_at = now();
+
+    update public.access_invites
+    set status = 'active', activated_at = coalesce(activated_at, now())
+    where id = v_invite.id;
+
+    return jsonb_build_object(
+      'success', true,
+      'status', 'active',
+      'role', v_role,
+      'programme_id', v_programme_id,
+      'job_id', v_job_id,
+      'pre_invited', true
+    );
+  elsif v_invite is not null and v_invite.status = 'revoked' then
+    update public.profiles
+    set access_status = 'revoked', updated_at = now()
+    where id = v_user_id;
+
+    return jsonb_build_object(
+      'success', false,
+      'status', 'revoked',
+      'message', 'Your access to the portal has been revoked by an administrator.'
+    );
+  else
+    return jsonb_build_object(
+      'success', false,
+      'status', 'pending',
+      'message', 'Your account is pending administrator approval.'
+    );
+  end if;
 end;
 $$ language plpgsql security definer set search_path = public, pg_temp;
 
@@ -1377,6 +1521,9 @@ grant execute on function public.update_user_access(uuid, text, uuid, uuid) to a
 
 revoke execute on function public.update_user_access(uuid, text, uuid) from public, anon;
 grant execute on function public.update_user_access(uuid, text, uuid) to authenticated;
+
+revoke execute on function public.claim_user_invite() from public, anon;
+grant execute on function public.claim_user_invite() to authenticated;
 
 
 -- --------------------------------------------------------------------

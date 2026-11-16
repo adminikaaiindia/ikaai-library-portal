@@ -1122,27 +1122,35 @@
       return await DataLayer.getProfile(user.id);
     },
 
-    async resolveUserAccess(userId, email) {
+    async resolveUserAccess(userId, email, forceRefresh = false) {
       const client = getClient();
       const cleanEmail = (email || '').trim().toLowerCase();
       if (!cleanEmail) return { accessStatus: 'pending' };
 
       // Check session cache first to eliminate repeated network roundtrips
       const cacheKey = `ikaai_acc_${cleanEmail}`;
-      try {
-        const cached = sessionStorage.getItem(cacheKey);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (parsed && parsed.ts && (Date.now() - parsed.ts < 300000)) {
-            return parsed.data;
+      if (!forceRefresh) {
+        try {
+          const cached = sessionStorage.getItem(cacheKey);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.ts && (Date.now() - parsed.ts < 300000) && parsed.data?.accessStatus === 'active') {
+              return parsed.data;
+            }
           }
-        }
-      } catch (e) { }
+        } catch (e) { }
+      } else {
+        try { sessionStorage.removeItem(cacheKey); } catch (e) { }
+      }
 
       const cacheAndReturn = (res) => {
-        try {
-          sessionStorage.setItem(cacheKey, JSON.stringify({ data: res, ts: Date.now() }));
-        } catch (e) { }
+        if (res && res.accessStatus === 'active') {
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify({ data: res, ts: Date.now() }));
+          } catch (e) { }
+        } else {
+          try { sessionStorage.removeItem(cacheKey); } catch (e) { }
+        }
         return res;
       };
 
@@ -1158,6 +1166,7 @@
             accessStatus: rpcRes.status || 'active',
             role: rpcRes.role,
             programmeId: rpcRes.programme_id,
+            jobId: rpcRes.job_id,
             preInvited: Boolean(rpcRes.pre_invited)
           });
         }
@@ -1187,6 +1196,8 @@
                   access_status: 'active',
                   role: inv.role === 'intern' ? 'learner' : inv.role,
                   programme_id: inv.programme_id,
+                  job_id: inv.job_id || null,
+                  position: inv.position || null,
                   updated_at: new Date().toISOString()
                 }, { onConflict: 'id' });
               } catch (updErr) { }
@@ -1203,6 +1214,7 @@
               accessStatus: 'active',
               role: inv.role,
               programmeId: inv.programme_id,
+              jobId: inv.job_id,
               position: inv.position,
               invite: inv,
               preInvited: true
@@ -1980,9 +1992,12 @@
       if (!profileUpdated) {
         let invUpdate = {
           role: cleanRole,
-          programme_id: cleanProg
+          programme_id: cleanProg,
+          status: 'active',
+          activated_at: new Date().toISOString()
         };
         if (cleanJobId) invUpdate.job_id = cleanJobId;
+        if (position) invUpdate.position = position;
         let invQuery = client.from('access_invites').update(invUpdate);
         if (userId) {
           invQuery = invQuery.eq('id', userId);
