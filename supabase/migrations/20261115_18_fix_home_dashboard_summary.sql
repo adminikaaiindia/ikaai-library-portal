@@ -679,3 +679,4 @@ grant execute on function public.get_dashboard_summary() to authenticated;
 notify pgrst, 'reload schema';
 
 commit;
+

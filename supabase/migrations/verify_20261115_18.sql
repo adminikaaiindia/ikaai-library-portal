@@ -20,3 +20,4 @@ where r.routine_schema = 'public'
 
 -- 2. Test execution of get_dashboard_summary (runs under caller's context)
 select public.get_dashboard_summary();
+

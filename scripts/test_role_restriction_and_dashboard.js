@@ -27,3 +27,4 @@ assert(migrationSql.includes('grant execute on function public.get_dashboard_sum
 console.log('✅ PASS: Migration 20261115_18 guarantees 100% type safety and prevents uuid <> text error');
 
 console.log('\n🎉 ALL ROLE RESTRICTION & DASHBOARD CHECKS PASSED!');
+
